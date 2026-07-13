@@ -80,7 +80,7 @@ if _IS_MAC:
         upx=False,             # Mac 上 upx 无效
         console=False,         # windowed
         disable_windowed_traceback=False,
-        target_arch=None,      # 跟随 runner 架构(workflow 用 macos-13 Intel runner 出 x86_64,Apple 芯片 Mac 经 Rosetta 也能跑,通吃)
+        target_arch='universal2',  # 一个 .app 同时含 arm64(Apple)+ x86_64(Intel),双原生通吃
         codesign_identity=None,
         entitlements_file=None,
     )
