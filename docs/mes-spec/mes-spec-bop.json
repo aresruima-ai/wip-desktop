@@ -1,0 +1,6505 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "IMES BOP API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/services/bop/Bop/TimerBopSync": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "定时任务",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BopHead"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BopHead"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BopHead"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/BopSync": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "同步BOP信息",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/ManualBopSync": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "手动下载BOP",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopSyncInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopSyncInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopSyncInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopSyncInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/BopCancel": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "取消BOP",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/MakeTestOverview": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "手动匹配测试一览表",
+        "parameters": [
+          {
+            "name": "bopHeadId",
+            "in": "query",
+            "description": "本地的BOPID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moLotNo",
+            "in": "query",
+            "description": "测试一览表批次号",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/MakeSmt": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "手动匹配SMT,",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopPageList": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取BOP列表",
+        "parameters": [
+          {
+            "name": "ProductCode",
+            "in": "query",
+            "description": "产品编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ProductModel",
+            "in": "query",
+            "description": "产品型号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ProductVersion",
+            "in": "query",
+            "description": "产品版本",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BopId",
+            "in": "query",
+            "description": "BOPID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BopMode",
+            "in": "query",
+            "description": "整部件标识(plantbop 部件/productbop 整机)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BopName",
+            "in": "query",
+            "description": "BOP名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MesBopType",
+            "in": "query",
+            "description": "版本类型",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/MesBopType"
+              }
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/SubscribeMq": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "订阅MQ",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopById": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取BOP详情",
+        "parameters": [
+          {
+            "name": "bopHeadId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopWorkingProcedures": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取 产线工位工序表",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopWorkingProcedureOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopWorkingProcedureOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopWorkingProcedureOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopMaterial": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取物料信息",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopMaterialOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopMaterialOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopMaterialOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopProcessComponent": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取过程组件",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopProcessComponentOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopProcessComponentOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopProcessComponentOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopReplaceMaterial": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取替代料",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopReplaceMaterialOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopReplaceMaterialOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopReplaceMaterialOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopMakeup": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取拼版信息",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopMakeupOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopMakeupOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopMakeupOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopCraft": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取辅料",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopCraftOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopCraftOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopCraftOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopEquipment": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取设备",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopEquipmentOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopEquipmentOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopEquipmentOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopParameter": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取工艺参数",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopParameterOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopParameterOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopParameterOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBopTool": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取工装治具",
+        "parameters": [
+          {
+            "name": "BopHeadId",
+            "in": "query",
+            "description": "BOP -ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialNo",
+            "in": "query",
+            "description": "主料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialCode",
+            "in": "query",
+            "description": "替代料编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialParentCode",
+            "in": "query",
+            "description": "替代料父项编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaterialName",
+            "in": "query",
+            "description": "主替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReplaceMaterialName",
+            "in": "query",
+            "description": "替代料名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopToolOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopToolOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BopToolOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/ReMatchEquip": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "重新匹配BOP设备",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BopDetailBaseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/BatchReMatchEquip": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "批量重新匹配BOP设备信息",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchReMatchEquipInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchReMatchEquipInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchReMatchEquipInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchReMatchEquipInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/DistinctEquip": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "设备数据去重",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/GetBoms": {
+      "get": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "获取BOM",
+        "parameters": [
+          {
+            "name": "partNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productVersion",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/ReplaceMaterialSync": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "替代料同步",
+        "parameters": [
+          {
+            "name": "startTime",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Bop/AutoBuildMoLotBop": {
+      "post": {
+        "tags": [
+          "Bop"
+        ],
+        "summary": "自动匹配BOP",
+        "parameters": [
+          {
+            "name": "preDay",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Qms/GetBasicProcInspRules": {
+      "get": {
+        "tags": [
+          "Qms"
+        ],
+        "summary": "获取所有检验类型",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QmsBasicProcInspRule"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QmsBasicProcInspRule"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QmsBasicProcInspRule"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Qms/GetQmsBasicItemGranularities": {
+      "get": {
+        "tags": [
+          "Qms"
+        ],
+        "summary": "获取追溯颗粒度",
+        "parameters": [
+          {
+            "name": "PartNoArray",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QmsBasicItemGranularity"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QmsBasicItemGranularity"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QmsBasicItemGranularity"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/TcBop/Bop": {
+      "post": {
+        "tags": [
+          "TcBop"
+        ],
+        "summary": "获取BOP信息",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TcBopOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TcBopOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TcBopOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/TcBop/MesBop": {
+      "post": {
+        "tags": [
+          "TcBop"
+        ],
+        "summary": "获取MES标准的BOP数据",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TcBopInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BopAggregate"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BopAggregate"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BopAggregate"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Test/GetSfwInfoTestItem": {
+      "get": {
+        "tags": [
+          "Test"
+        ],
+        "summary": "获取测试一览表",
+        "parameters": [
+          {
+            "name": "startTime",
+            "in": "query",
+            "description": "版本发放日期开始时间",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "版本发放日期结束时间",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotNumber",
+            "in": "query",
+            "description": "批次号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "swBizModel",
+            "in": "query",
+            "description": "软件管理模式",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SfwInfoTestOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SfwInfoTestOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SfwInfoTestOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Test/TimeSync": {
+      "post": {
+        "tags": [
+          "Test"
+        ],
+        "summary": "手动同步",
+        "parameters": [
+          {
+            "name": "forceUpdate",
+            "in": "query",
+            "description": "是否强制刷新",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SfwInfoTestInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SfwInfoTestInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SfwInfoTestInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SfwInfoTestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestOverview"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestOverview"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestOverview"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/bop/Test/DoMoOrderWork": {
+      "post": {
+        "tags": [
+          "Test"
+        ],
+        "summary": "",
+        "parameters": [
+          {
+            "name": "preDay",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/bop/Test/SyncSfwInfoTestItem": {
+      "post": {
+        "tags": [
+          "Test"
+        ],
+        "summary": "获取测试一览表",
+        "parameters": [
+          {
+            "name": "forceUpdate",
+            "in": "query",
+            "description": "是否强制更新",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "批次集合",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestOverview"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestOverview"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestOverview"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchReMatchEquipInput": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "description": "起始日期",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "结束日期",
+            "format": "date-time"
+          },
+          "bopMode": {
+            "type": "string",
+            "description": "plantbop 部件; productbop 整机",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopAggregate": {
+        "type": "object",
+        "properties": {
+          "bopHead": {
+            "$ref": "#/components/schemas/BopHeadItem"
+          },
+          "bopMakeup": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopMakeupItem"
+            },
+            "description": "拼版信息",
+            "nullable": true
+          },
+          "bopWorkingProcedure": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopWorkingProcedureItem"
+            },
+            "description": "产线工位工序",
+            "nullable": true
+          },
+          "bopParameter": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopParameterItem"
+            },
+            "description": "参数",
+            "nullable": true
+          },
+          "bopMateria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopMaterialItem"
+            },
+            "description": "物料",
+            "nullable": true
+          },
+          "bopProcessComponents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopProcessComponentsItem"
+            },
+            "description": "过程组件",
+            "nullable": true
+          },
+          "bopReplaceMaterial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopReplaceMaterialItem"
+            },
+            "description": "替代料",
+            "nullable": true
+          },
+          "bopCraft": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopCraftItem"
+            },
+            "description": "辅料",
+            "nullable": true
+          },
+          "bopEquipment": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopEquipmentItem"
+            },
+            "description": "设备",
+            "nullable": true
+          },
+          "bopTool": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopToolItem"
+            },
+            "description": "治具",
+            "nullable": true
+          },
+          "bopNote": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopNoteItem"
+            },
+            "description": "操作说明和注意事项",
+            "nullable": true
+          },
+          "bopPicture": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopPictureItem"
+            },
+            "description": "ESOP图片",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 聚合大对象"
+      },
+      "BopCraftItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "serialNumber": {
+            "type": "string",
+            "description": "辅料编号",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "辅料用量",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "辅料单位",
+            "nullable": true
+          },
+          "crafeType": {
+            "type": "string",
+            "description": "工艺辅料、低耗辅料",
+            "nullable": true
+          },
+          "objectName": {
+            "type": "string",
+            "description": "辅料名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "辅料"
+      },
+      "BopCraftOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "serialNumber": {
+            "type": "string",
+            "description": "辅料编号",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "辅料用量",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "辅料单位",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 辅料信息"
+      },
+      "BopCraftOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopCraftOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopDetailBaseInput": {
+        "type": "object",
+        "properties": {
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP -ID",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "BopEquipmentItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "description": "类别",
+            "nullable": true
+          },
+          "programName": {
+            "type": "string",
+            "description": "设备程序名称",
+            "nullable": true
+          },
+          "programPath": {
+            "type": "string",
+            "description": "设备程序路径",
+            "nullable": true
+          },
+          "burnChecksumValue": {
+            "type": "string",
+            "description": "烧录Checksum值",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "设备"
+      },
+      "BopEquipmentOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "description": "类别",
+            "nullable": true
+          },
+          "programName": {
+            "type": "string",
+            "description": "设备程序名称",
+            "nullable": true
+          },
+          "programPath": {
+            "type": "string",
+            "description": "设备程序路径",
+            "nullable": true
+          },
+          "burnChecksumValue": {
+            "type": "string",
+            "description": "烧录Checksum值",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 设备信息"
+      },
+      "BopEquipmentOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopEquipmentOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopHead": {
+        "type": "object",
+        "properties": {
+          "creatorUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModifierUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "attribute1": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域1",
+            "nullable": true
+          },
+          "attribute2": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域2",
+            "nullable": true
+          },
+          "attribute3": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域3",
+            "nullable": true
+          },
+          "attribute4": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域4",
+            "nullable": true
+          },
+          "attribute5": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域5",
+            "nullable": true
+          },
+          "attribute6": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域6",
+            "nullable": true
+          },
+          "attribute7": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域7",
+            "nullable": true
+          },
+          "attribute8": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域8",
+            "nullable": true
+          },
+          "attribute9": {
+            "type": "integer",
+            "description": "弹性域9",
+            "format": "int32",
+            "nullable": true
+          },
+          "attribute10": {
+            "type": "integer",
+            "description": "弹性域10",
+            "format": "int32",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "逻辑删除，true：删除，false：未删除"
+          },
+          "id": {
+            "maxLength": 64,
+            "type": "string",
+            "description": "主键",
+            "nullable": true
+          },
+          "bopId": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "BOPID唯一标识",
+            "nullable": true
+          },
+          "bopName": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "BOP名称",
+            "nullable": true
+          },
+          "bopVersion": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "BOP版本",
+            "nullable": true
+          },
+          "bopType": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "BOP类型",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "单一产品数量",
+            "format": "int32"
+          },
+          "panelNum": {
+            "type": "integer",
+            "description": "单套拼板数",
+            "format": "int32",
+            "nullable": true
+          },
+          "setNum": {
+            "type": "integer",
+            "description": "拼板套数",
+            "format": "int32",
+            "nullable": true
+          },
+          "productModel": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "产品型号",
+            "nullable": true
+          },
+          "productCode": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "productVersion": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "产品代码版本",
+            "nullable": true
+          },
+          "makeup": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "是否拼版工艺",
+            "nullable": true
+          },
+          "productCombinationCode": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "产品组合编码",
+            "nullable": true
+          },
+          "makeupNo": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "拼板号",
+            "nullable": true
+          },
+          "makeupWay": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "拼板方式",
+            "nullable": true
+          },
+          "radiumCarving": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "镭雕方式",
+            "nullable": true
+          },
+          "reworkOrder": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "返工单",
+            "nullable": true
+          },
+          "testNo": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "测试一览表批次",
+            "nullable": true
+          },
+          "countLineQty": {
+            "type": "integer",
+            "description": "BOP头表关联表的行数总和",
+            "format": "int32"
+          },
+          "makeupType": {
+            "$ref": "#/components/schemas/MakeupType"
+          },
+          "mesBopType": {
+            "$ref": "#/components/schemas/MesBopType"
+          },
+          "bopStatus": {
+            "type": "integer",
+            "description": "BOP 状态（0 有效；1 失效）",
+            "format": "int32",
+            "nullable": true
+          },
+          "bopMode": {
+            "type": "string",
+            "description": "整机部件标识",
+            "nullable": true
+          },
+          "lineInfo": {
+            "type": "string",
+            "description": "产线信息",
+            "nullable": true
+          },
+          "isMateTestOverview": {
+            "type": "boolean",
+            "description": "是否批次测试一览表",
+            "nullable": true
+          },
+          "isMateSmt": {
+            "type": "boolean",
+            "description": "是否批次SMT",
+            "nullable": true
+          },
+          "origin": {
+            "$ref": "#/components/schemas/BopOrigin"
+          },
+          "dateReleased": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "发布日期",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP头表"
+      },
+      "BopHeadItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopType": {
+            "type": "string",
+            "description": "BOP类型",
+            "nullable": true
+          },
+          "bopId": {
+            "type": "string",
+            "description": "BOPID唯一标识",
+            "nullable": true
+          },
+          "bopName": {
+            "type": "string",
+            "description": "BOP名称",
+            "nullable": true
+          },
+          "bopVersion": {
+            "type": "string",
+            "description": "BOP版本",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "单一产品数量",
+            "format": "int32"
+          },
+          "panelNum": {
+            "type": "integer",
+            "description": "单套拼板数",
+            "format": "int32",
+            "nullable": true
+          },
+          "setNum": {
+            "type": "integer",
+            "description": "拼板套数",
+            "format": "int32",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "产品型号",
+            "nullable": true
+          },
+          "productCode": {
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "productVersion": {
+            "type": "string",
+            "description": "产品代码版本",
+            "nullable": true
+          },
+          "makeup": {
+            "type": "string",
+            "description": "是否拼版工艺",
+            "nullable": true
+          },
+          "productCombinationCode": {
+            "type": "string",
+            "description": "产品组合编码",
+            "nullable": true
+          },
+          "makeupNo": {
+            "type": "string",
+            "description": "拼板号",
+            "nullable": true
+          },
+          "makeupWay": {
+            "type": "string",
+            "description": "拼板方式",
+            "nullable": true
+          },
+          "radiumCarving": {
+            "type": "string",
+            "description": "镭雕方式",
+            "nullable": true
+          },
+          "reworkOrder": {
+            "type": "string",
+            "description": "返工单",
+            "nullable": true
+          },
+          "testNo": {
+            "type": "string",
+            "description": "测试一览表批次",
+            "nullable": true
+          },
+          "countLineQty": {
+            "type": "integer",
+            "description": "BOP头表关联表的行数总和",
+            "format": "int32"
+          },
+          "makeupType": {
+            "$ref": "#/components/schemas/MakeupType"
+          },
+          "lineInfo": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "dateReleased": {
+            "type": "string",
+            "description": "发布日期",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP HEAD"
+      },
+      "BopMakeupItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "makeupNo": {
+            "type": "string",
+            "description": "拼板任务号",
+            "nullable": true
+          },
+          "makeupType": {
+            "$ref": "#/components/schemas/MakeupType"
+          },
+          "productModel": {
+            "type": "string",
+            "description": "产品机型",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "产品数量",
+            "format": "double"
+          },
+          "designator": {
+            "type": "string",
+            "description": "拼板序号",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "工艺面次",
+            "nullable": true
+          },
+          "layerSequence": {
+            "type": "integer",
+            "description": "面次顺序号",
+            "format": "int32",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "Bop Head ID",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "拼版"
+      },
+      "BopMakeupOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "makeupNo": {
+            "type": "string",
+            "description": "拼板任务号",
+            "nullable": true
+          },
+          "makeupType": {
+            "$ref": "#/components/schemas/MakeupType"
+          },
+          "productModel": {
+            "type": "string",
+            "description": "产品机型",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "产品数量",
+            "format": "double"
+          },
+          "designator": {
+            "type": "integer",
+            "description": "拼板序号",
+            "format": "int32"
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "工艺面次",
+            "nullable": true
+          },
+          "layerSequence": {
+            "type": "integer",
+            "description": "面次顺序号",
+            "format": "int32",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 拼版信息"
+      },
+      "BopMakeupOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopMakeupOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopMaterialItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "materialNo": {
+            "type": "string",
+            "description": "物料编号",
+            "nullable": true
+          },
+          "bopProcessComponentsId": {
+            "type": "string",
+            "description": "过程组件id",
+            "nullable": true
+          },
+          "materialDesignator": {
+            "type": "string",
+            "description": "物料位号",
+            "nullable": true
+          },
+          "materialQty": {
+            "type": "number",
+            "description": "物料用量",
+            "format": "double",
+            "nullable": true
+          },
+          "materialUnit": {
+            "type": "string",
+            "description": "物料单位",
+            "nullable": true
+          },
+          "bort": {
+            "type": "string",
+            "description": "B/T面次",
+            "nullable": true
+          },
+          "ascend": {
+            "type": "string",
+            "description": "追溯颗粒度",
+            "nullable": true
+          },
+          "pPartGroup": {
+            "type": "string",
+            "description": "父级成套物料编码",
+            "nullable": true
+          },
+          "cPartGroup": {
+            "type": "string",
+            "description": "子级成套物料编码",
+            "nullable": true
+          },
+          "replaceType": {
+            "type": "string",
+            "description": "成套物料主替类型",
+            "nullable": true
+          },
+          "operationType": {
+            "type": "string",
+            "description": "操作类型",
+            "nullable": true
+          },
+          "materialName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "processComponentId": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "workProcessConsume": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "materialType": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "isSafe": {
+            "type": "string",
+            "description": "物料是安规物料则插入图标",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 物料"
+      },
+      "BopMaterialOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "materialNo": {
+            "type": "string",
+            "description": "物料编号",
+            "nullable": true
+          },
+          "bopProcessComponentsId": {
+            "type": "string",
+            "description": "过程组件id",
+            "nullable": true
+          },
+          "materialDesignator": {
+            "type": "string",
+            "description": "物料位号",
+            "nullable": true
+          },
+          "materialQty": {
+            "type": "number",
+            "description": "物料用量",
+            "format": "double",
+            "nullable": true
+          },
+          "materialUnit": {
+            "type": "string",
+            "description": "物料单位",
+            "nullable": true
+          },
+          "bort": {
+            "type": "string",
+            "description": "B/T面次",
+            "nullable": true
+          },
+          "ascend": {
+            "type": "string",
+            "description": "追溯颗粒度",
+            "nullable": true
+          },
+          "pPartGroup": {
+            "type": "string",
+            "description": "父级成套物料编码",
+            "nullable": true
+          },
+          "cPartGroup": {
+            "type": "string",
+            "description": "子级成套物料编码",
+            "nullable": true
+          },
+          "replaceType": {
+            "type": "string",
+            "description": "成套物料主替类型",
+            "nullable": true
+          },
+          "operationType": {
+            "type": "string",
+            "description": "操作类型",
+            "nullable": true
+          },
+          "materialType": {
+            "type": "string",
+            "description": "物料类型",
+            "nullable": true
+          },
+          "materialName": {
+            "type": "string",
+            "description": "物料名称",
+            "nullable": true
+          },
+          "processComponentId": {
+            "type": "string",
+            "description": "过程组件ID",
+            "nullable": true
+          },
+          "workProcessConsume": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "workingProcedureSequence": {
+            "type": "integer",
+            "description": "工序序号",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 物料信息"
+      },
+      "BopMaterialOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopMaterialOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopNoteItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "noteType": {
+            "$ref": "#/components/schemas/BopNoteType"
+          },
+          "no": {
+            "type": "integer",
+            "description": "序号",
+            "format": "int32"
+          },
+          "content": {
+            "type": "string",
+            "description": "内容",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "治具"
+      },
+      "BopNoteType": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "BopOrigin": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer",
+        "description": "工单来源",
+        "format": "int32"
+      },
+      "BopOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "bopId": {
+            "type": "string",
+            "description": "BOPID唯一标识",
+            "nullable": true
+          },
+          "bopName": {
+            "type": "string",
+            "description": "BOP名称",
+            "nullable": true
+          },
+          "bopVersion": {
+            "type": "string",
+            "description": "BOP版本",
+            "nullable": true
+          },
+          "bopType": {
+            "type": "string",
+            "description": "BOP类型",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "单一产品数量",
+            "format": "int32"
+          },
+          "productModel": {
+            "type": "string",
+            "description": "产品型号",
+            "nullable": true
+          },
+          "productCode": {
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "productVersion": {
+            "type": "string",
+            "description": "产品代码版本",
+            "nullable": true
+          },
+          "makeup": {
+            "type": "string",
+            "description": "是否拼版工艺",
+            "nullable": true
+          },
+          "productCombinationCode": {
+            "type": "string",
+            "description": "产品组合编码",
+            "nullable": true
+          },
+          "makeupNo": {
+            "type": "string",
+            "description": "拼板号",
+            "nullable": true
+          },
+          "makeupWay": {
+            "type": "string",
+            "description": "拼板方式",
+            "nullable": true
+          },
+          "radiumCarving": {
+            "type": "string",
+            "description": "镭雕方式",
+            "nullable": true
+          },
+          "reworkOrder": {
+            "type": "string",
+            "description": "返工单",
+            "nullable": true
+          },
+          "testNo": {
+            "type": "string",
+            "description": "测试一览表批次",
+            "nullable": true
+          },
+          "countLineQty": {
+            "type": "integer",
+            "description": "BOP头表关联表的行数总和",
+            "format": "int32"
+          },
+          "makeupType": {
+            "$ref": "#/components/schemas/MakeupType"
+          },
+          "mesBopType": {
+            "$ref": "#/components/schemas/MesBopType"
+          },
+          "mesBopTypeDesc": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "makeupTypeDesc": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopStatus": {
+            "type": "integer",
+            "description": "BOP 状态（0 未失效；1 失效）",
+            "format": "int32"
+          },
+          "bopMode": {
+            "type": "string",
+            "description": "整机部件标识",
+            "nullable": true
+          },
+          "lineInfo": {
+            "type": "string",
+            "description": "产线信息",
+            "nullable": true
+          },
+          "isMateTestOverview": {
+            "type": "boolean",
+            "description": "是否批次测试一览表",
+            "nullable": true
+          },
+          "isMateSmt": {
+            "type": "boolean",
+            "description": "是否批次SMT"
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP列表响应实体"
+      },
+      "BopOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopParameterItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "parameterId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "parameterType": {
+            "type": "integer",
+            "description": "参数类型（5设备参数，10治具参数，15环境参数，20工艺参数）",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "description": "参数名称",
+            "nullable": true
+          },
+          "value": {
+            "type": "string",
+            "description": "参数值",
+            "nullable": true
+          },
+          "uom": {
+            "type": "string",
+            "description": "单位",
+            "nullable": true
+          },
+          "standardUpperLimit": {
+            "type": "number",
+            "description": "参数值标准上限",
+            "format": "double",
+            "nullable": true
+          },
+          "standardLowerLimit": {
+            "type": "number",
+            "description": "参数值标准下限",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP  参数表"
+      },
+      "BopParameterOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "parameterId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "parameterType": {
+            "type": "integer",
+            "description": "参数类型（5设备参数，10治具参数，15环境参数，20工艺参数）",
+            "format": "int32"
+          },
+          "parameterTypeDesc": {
+            "type": "string",
+            "description": "参数类型",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "参数名称",
+            "nullable": true
+          },
+          "value": {
+            "type": "string",
+            "description": "参数值",
+            "nullable": true
+          },
+          "standardUpperLimit": {
+            "type": "number",
+            "description": "参数值标准上限",
+            "format": "double",
+            "nullable": true
+          },
+          "standardLowerLimit": {
+            "type": "number",
+            "description": "参数值标准下限",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 工艺参数"
+      },
+      "BopParameterOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopParameterOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopPictureItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "pictureUrl": {
+            "type": "string",
+            "description": "图片Url",
+            "nullable": true
+          },
+          "pictureName": {
+            "type": "string",
+            "description": "图片显示名称",
+            "nullable": true
+          },
+          "pictureType": {
+            "type": "string",
+            "description": "图片类型，normal ：工序小图，large ：工序大图",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "治具"
+      },
+      "BopProcessComponentOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "materialDesignator": {
+            "type": "string",
+            "description": "物料位号",
+            "nullable": true
+          },
+          "bort": {
+            "type": "string",
+            "description": "B/T面次",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "单位",
+            "nullable": true
+          },
+          "workProcessConsume": {
+            "type": "string",
+            "description": "标识（初始化、已消耗）",
+            "nullable": true
+          },
+          "ascend": {
+            "type": "string",
+            "description": "追溯颗粒度",
+            "nullable": true
+          },
+          "qty": {
+            "type": "integer",
+            "description": "数量",
+            "format": "int32"
+          },
+          "processComponentsPartNo": {
+            "type": "string",
+            "description": "过程组件料号",
+            "nullable": true
+          },
+          "processComponentsName": {
+            "type": "string",
+            "description": "过程组件名称",
+            "nullable": true
+          },
+          "processComponentsId": {
+            "type": "string",
+            "description": "过程组件名称ID",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "类型（物料、过程组件）",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 过程组件"
+      },
+      "BopProcessComponentOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopProcessComponentOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopProcessComponentsItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "materialDesignator": {
+            "type": "string",
+            "description": "物料位号",
+            "nullable": true
+          },
+          "bort": {
+            "type": "string",
+            "description": "B/T面次",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "单位",
+            "nullable": true
+          },
+          "workProcessConsume": {
+            "type": "string",
+            "description": "标识（初始化、已消耗）",
+            "nullable": true
+          },
+          "ascend": {
+            "type": "string",
+            "description": "追溯颗粒度",
+            "nullable": true
+          },
+          "qty": {
+            "type": "number",
+            "description": "数量",
+            "format": "double",
+            "nullable": true
+          },
+          "processComponentsPartNo": {
+            "type": "string",
+            "description": "过程组件料号",
+            "nullable": true
+          },
+          "processComponentsName": {
+            "type": "string",
+            "description": "过程组件名称",
+            "nullable": true
+          },
+          "processComponentsId": {
+            "type": "string",
+            "description": "过程组件名称ID",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "类型（物料、过程组件）",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 过程组件"
+      },
+      "BopReplaceMaterialItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "materialId": {
+            "type": "string",
+            "description": "物料表ID",
+            "nullable": true
+          },
+          "replaceMaterialCode": {
+            "type": "string",
+            "description": "替代料编码",
+            "nullable": true
+          },
+          "completeSetReplaceCode": {
+            "type": "string",
+            "description": "成套替代编码",
+            "nullable": true
+          },
+          "isCompleteSetReplace": {
+            "type": "boolean",
+            "description": "是否成套替代"
+          },
+          "replaceMaterialParentCode": {
+            "type": "string",
+            "description": "替代料父项编码",
+            "nullable": true
+          },
+          "replaceratio": {
+            "type": "string",
+            "description": "替代比例",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 替代料"
+      },
+      "BopReplaceMaterialOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "materialNo": {
+            "type": "string",
+            "description": "主料编码",
+            "nullable": true
+          },
+          "materialName": {
+            "type": "string",
+            "description": "主料编码名称",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "materialId": {
+            "type": "string",
+            "description": "物料表ID",
+            "nullable": true
+          },
+          "replaceMaterialCode": {
+            "type": "string",
+            "description": "替代料编码",
+            "nullable": true
+          },
+          "replaceMaterialName": {
+            "type": "string",
+            "description": "替代料名称",
+            "nullable": true
+          },
+          "completeSetReplaceCode": {
+            "type": "string",
+            "description": "成套替代编码",
+            "nullable": true
+          },
+          "isCompleteSetReplace": {
+            "type": "boolean",
+            "description": "是否成套替代"
+          },
+          "replaceMaterialParentCode": {
+            "type": "string",
+            "description": "替代料父项编码",
+            "nullable": true
+          },
+          "replaceRatio": {
+            "type": "string",
+            "description": "替代比例",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 替代料"
+      },
+      "BopReplaceMaterialOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopReplaceMaterialOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopSyncInput": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "工厂BOP唯一标识",
+            "nullable": true
+          },
+          "revision": {
+            "type": "string",
+            "description": "工厂BOP版本号",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "手动下载BOP信息"
+      },
+      "BopToolItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "治具名称",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "治具型号",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "治具用量",
+            "format": "double"
+          },
+          "type": {
+            "type": "string",
+            "description": "类型",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "conditionParameter": {
+            "type": "string",
+            "description": "仪器治工具的参数",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "治具"
+      },
+      "BopToolOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "workingProcedureId": {
+            "type": "string",
+            "description": "产线工位表ID",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "治具名称",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "治具型号",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "治具用量",
+            "format": "double"
+          },
+          "type": {
+            "type": "string",
+            "description": "类型",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP 工装治具"
+      },
+      "BopToolOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopToolOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BopWorkingProcedureItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线编码",
+            "nullable": true
+          },
+          "stationNum": {
+            "type": "string",
+            "description": "工位人数",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "stationSopName": {
+            "type": "string",
+            "description": "工位SOP名称",
+            "nullable": true
+          },
+          "stationSopAddress": {
+            "type": "string",
+            "description": "工位SOP地址",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workingProcedureSequence": {
+            "type": "integer",
+            "description": "工序顺序号",
+            "format": "int32",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "workshopSectionSequence": {
+            "type": "integer",
+            "description": "工段顺序号",
+            "format": "int32",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "checkSign": {
+            "type": "string",
+            "description": "检验标识",
+            "nullable": true
+          },
+          "checkType": {
+            "type": "string",
+            "description": "检验类型",
+            "nullable": true
+          },
+          "designManHour": {
+            "type": "string",
+            "description": "设计工时（DT）",
+            "nullable": true
+          },
+          "post": {
+            "type": "string",
+            "description": "岗位资质",
+            "nullable": true
+          },
+          "productCode": {
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "productVersion": {
+            "type": "string",
+            "description": "产品代码版本",
+            "nullable": true
+          },
+          "processComponentsCode": {
+            "type": "string",
+            "description": "过程组件编码",
+            "nullable": true
+          },
+          "processComponentsName": {
+            "type": "string",
+            "description": "过程组件名称",
+            "nullable": true
+          },
+          "isExecute": {
+            "type": "boolean",
+            "description": "是否执行",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "工艺面次",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "pcbSize": {
+            "type": "string",
+            "description": "PCB尺寸",
+            "nullable": true
+          },
+          "carrierSize": {
+            "type": "string",
+            "description": "载具尺寸",
+            "nullable": true
+          },
+          "isImportant": {
+            "type": "string",
+            "description": "是否重要工序",
+            "nullable": true
+          },
+          "gxSigns": {
+            "type": "string",
+            "description": "工序图标标识，安规、安全、EMC、ESD，然后插入对应图片标识",
+            "nullable": true
+          },
+          "isPreProcessing": {
+            "type": "string",
+            "description": "是否前加工工序",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "产线工位工序"
+      },
+      "BopWorkingProcedureOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "唯一ID",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "修改时间",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "bopHeadId": {
+            "type": "string",
+            "description": "BOP_HEAD头表ID",
+            "nullable": true
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "产线编码",
+            "nullable": true
+          },
+          "stationNum": {
+            "type": "string",
+            "description": "工位人数",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码",
+            "nullable": true
+          },
+          "stationSopName": {
+            "type": "string",
+            "description": "工位SOP名称",
+            "nullable": true
+          },
+          "stationSopAddress": {
+            "type": "string",
+            "description": "工位SOP地址",
+            "nullable": true
+          },
+          "workingProcedureCode": {
+            "type": "string",
+            "description": "工序编码",
+            "nullable": true
+          },
+          "workingProcedureName": {
+            "type": "string",
+            "description": "工序名称",
+            "nullable": true
+          },
+          "workingProcedureSequence": {
+            "type": "integer",
+            "description": "工序顺序号",
+            "format": "int32",
+            "nullable": true
+          },
+          "workshopSectionCode": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "workshopSectionSequence": {
+            "type": "integer",
+            "description": "工段顺序号",
+            "format": "int32",
+            "nullable": true
+          },
+          "mesId": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "mesCollectWorkingProcedure": {
+            "type": "string",
+            "description": "MES采集工序",
+            "nullable": true
+          },
+          "checkSign": {
+            "type": "string",
+            "description": "检验标识",
+            "nullable": true
+          },
+          "checkType": {
+            "type": "string",
+            "description": "检验类型",
+            "nullable": true
+          },
+          "designManHour": {
+            "type": "string",
+            "description": "设计工时（DT）",
+            "nullable": true
+          },
+          "post": {
+            "type": "string",
+            "description": "岗位资质",
+            "nullable": true
+          },
+          "productCode": {
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "productVersion": {
+            "type": "string",
+            "description": "产品代码版本",
+            "nullable": true
+          },
+          "processComponentsCode": {
+            "type": "string",
+            "description": "过程组件编码",
+            "nullable": true
+          },
+          "processComponentsName": {
+            "type": "string",
+            "description": "过程组件名称",
+            "nullable": true
+          },
+          "isExecute": {
+            "type": "boolean",
+            "description": "是否执行SOP",
+            "nullable": true
+          },
+          "processLayer": {
+            "type": "string",
+            "description": "工艺面次",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "pcbSize": {
+            "type": "string",
+            "description": "PCB尺寸",
+            "nullable": true
+          },
+          "carrierSize": {
+            "type": "string",
+            "description": "载具尺寸",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "BOP产线工位工序表"
+      },
+      "BopWorkingProcedureOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BopWorkingProcedureOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EdoSourceCategoryEnum": {
+        "enum": [
+          100,
+          200,
+          300
+        ],
+        "type": "integer",
+        "description": "简道云 EDO 数据类别枚举",
+        "format": "int32"
+      },
+      "MakeupType": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "description": "拼板类型",
+        "format": "int32"
+      },
+      "MesBopType": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "description": "MES BOP 类型",
+        "format": "int32"
+      },
+      "QmsBasicItemGranularity": {
+        "type": "object",
+        "properties": {
+          "itemNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "classCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "maxClass": {
+            "type": "string",
+            "nullable": true
+          },
+          "midClass": {
+            "type": "string",
+            "nullable": true
+          },
+          "minClass": {
+            "type": "string",
+            "nullable": true
+          },
+          "buCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "buName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cusCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "cusName": {
+            "type": "string",
+            "nullable": true
+          },
+          "traceGranularity": {
+            "type": "string",
+            "nullable": true
+          },
+          "invGranularity": {
+            "type": "string",
+            "nullable": true
+          },
+          "updTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isCollectLot": {
+            "type": "string",
+            "nullable": true
+          },
+          "orgCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QmsBasicProcInspRule": {
+        "type": "object",
+        "properties": {
+          "classCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "factoryCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "factoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "typeCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "typeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "stageCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "stageName": {
+            "type": "string",
+            "nullable": true
+          },
+          "station_no": {
+            "type": "string",
+            "nullable": true
+          },
+          "stationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkPeriod": {
+            "type": "string",
+            "nullable": true
+          },
+          "pushMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "isEnabled": {
+            "type": "string",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "string",
+            "nullable": true
+          },
+          "crtUser": {
+            "type": "string",
+            "nullable": true
+          },
+          "crtName": {
+            "type": "string",
+            "nullable": true
+          },
+          "crtHost": {
+            "type": "string",
+            "nullable": true
+          },
+          "crtTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updUser": {
+            "type": "string",
+            "nullable": true
+          },
+          "updName": {
+            "type": "string",
+            "nullable": true
+          },
+          "updHost": {
+            "type": "string",
+            "nullable": true
+          },
+          "updTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "insQty": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cusCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "cusName": {
+            "type": "string",
+            "nullable": true
+          },
+          "prodModel": {
+            "type": "string",
+            "nullable": true
+          },
+          "lotNumber": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SfwInfoTestInput": {
+        "type": "object",
+        "properties": {
+          "startTime": {
+            "type": "string",
+            "description": "版本发放日期开始时间",
+            "nullable": true
+          },
+          "endTime": {
+            "type": "string",
+            "description": "版本发放日期结束时间",
+            "nullable": true
+          },
+          "lotNumber": {
+            "type": "string",
+            "description": "批次号",
+            "nullable": true
+          },
+          "swBizModel": {
+            "type": "string",
+            "description": "软件管理模式",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "测试一览表入参"
+      },
+      "SfwInfoTestOutput": {
+        "type": "object",
+        "properties": {
+          "sfwInfoNumber": {
+            "type": "string",
+            "description": "软件信息表编号",
+            "nullable": true
+          },
+          "sfwInfoLifecycle": {
+            "type": "string",
+            "description": "软件信息表生命周期",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "产品型号",
+            "nullable": true
+          },
+          "prodCode": {
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "moLotNumber": {
+            "type": "string",
+            "description": "发放生产批次",
+            "nullable": true
+          },
+          "assMoLotNumber": {
+            "type": "string",
+            "description": "关联生产批次",
+            "nullable": true
+          },
+          "testScheduleList": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestSchedule"
+            },
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "测试一览表响应实体"
+      },
+      "TcBopAction": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "description": "序号",
+            "format": "int32"
+          },
+          "content": {
+            "type": "string",
+            "description": "内容",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "操作说明"
+      },
+      "TcBopCraft": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "辅料编号",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "辅料用量",
+            "format": "double",
+            "nullable": true
+          },
+          "uom": {
+            "type": "string",
+            "description": "辅料单位",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "工艺辅料、低耗辅料",
+            "nullable": true
+          },
+          "object_name": {
+            "type": "string",
+            "description": "辅料名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "辅料"
+      },
+      "TcBopData": {
+        "type": "object",
+        "properties": {
+          "bopType": {
+            "type": "string",
+            "description": "整机部件标识",
+            "nullable": true
+          },
+          "productmodel": {
+            "type": "string",
+            "description": "产品型号：整机产品型号/板卡产品全称",
+            "nullable": true
+          },
+          "productcode": {
+            "type": "string",
+            "description": "产品代码 001.001.0027961",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "单一产品数量",
+            "format": "int32",
+            "nullable": true
+          },
+          "panelNum": {
+            "type": "integer",
+            "description": "单套拼板数",
+            "format": "int32",
+            "nullable": true
+          },
+          "setNum": {
+            "type": "integer",
+            "description": "拼板套数",
+            "format": "int32",
+            "nullable": true
+          },
+          "testNO": {
+            "type": "string",
+            "description": "测试一览表批次",
+            "nullable": true
+          },
+          "item_id": {
+            "type": "string",
+            "description": "BOPID唯一标识",
+            "nullable": true
+          },
+          "productrev": {
+            "type": "string",
+            "description": "产品代码版本",
+            "nullable": true
+          },
+          "snSign": {
+            "type": "string",
+            "description": "是否更换SN",
+            "nullable": true
+          },
+          "uph": {
+            "type": "string",
+            "description": "预估UPH",
+            "nullable": true
+          },
+          "revision": {
+            "type": "string",
+            "description": "BOP版本",
+            "nullable": true
+          },
+          "rework": {
+            "type": "string",
+            "description": "返工单",
+            "nullable": true
+          },
+          "type": {
+            "type": "integer",
+            "description": "1(单一产品)/2（返工)/",
+            "format": "int32"
+          },
+          "makeupNO": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "object_name": {
+            "type": "string",
+            "description": "BOP名称 例如；交互智能平板、SKGG202304260008-01/返工",
+            "nullable": true
+          },
+          "makeupType": {
+            "type": "integer",
+            "description": "",
+            "format": "int32",
+            "nullable": true
+          },
+          "reworkNO": {
+            "type": "string",
+            "description": "返工批次号",
+            "nullable": true
+          },
+          "lineInfo": {
+            "type": "string",
+            "description": "例如：BJCJ-SMT-LD01@BJCJ-SMT-SMT08@BJCJ-SMT-SMT08@BJCJ-DIP-MI01@BJCJ-DIP-TEST01@BJCJ-SMT-LD02@BJCJ-SMT-SMT08@BJCJ-SMT-SMT08@BJCJ-SMT-SMT07@BJCJ-SMT-SMT07@BJCJ-SMT-SMT07@BJCJ-SMT-SMT07@BJCJ-SMT-SMT04@BJCJ-SMT-SMT04@BJCJ-SMT-SMT04",
+            "nullable": true
+          },
+          "dateReleased": {
+            "type": "string",
+            "description": "发布日期",
+            "nullable": true
+          },
+          "makeup": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopMakeup"
+            },
+            "description": "拼版",
+            "nullable": true
+          },
+          "line": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToBopLine"
+            },
+            "description": "产线",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "TC BOP"
+      },
+      "TcBopEquip": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "object_name": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "类",
+            "nullable": true
+          },
+          "software": {
+            "type": "string",
+            "description": "程序名称",
+            "nullable": true
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "工位编码（MES本地使用）",
+            "nullable": true
+          },
+          "catetory": {
+            "$ref": "#/components/schemas/EdoSourceCategoryEnum"
+          }
+        },
+        "additionalProperties": false,
+        "description": "设备"
+      },
+      "TcBopInput": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "工厂BOP唯一标识",
+            "nullable": true
+          },
+          "revision": {
+            "type": "string",
+            "description": "工厂BOP版本号",
+            "nullable": true
+          },
+          "releasedAfter": {
+            "type": "string",
+            "description": "发布时间晚于 例如：2023-5 月-01 00:00  【注意Json中的日期格式】",
+            "nullable": true
+          },
+          "releasedBefore": {
+            "type": "string",
+            "description": "发布时间早于 例如：2023-5 月-31 23:59  【注意Json中的日期格式】",
+            "nullable": true
+          },
+          "bomCode": {
+            "type": "string",
+            "description": "EBOM的编码",
+            "nullable": true
+          },
+          "bomVersion": {
+            "type": "string",
+            "description": "EBOM的版本",
+            "nullable": true
+          },
+          "system": {
+            "type": "string",
+            "description": "系统编码 TCBOP",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "TcBopItem": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "物料或过程组件料号",
+            "nullable": true
+          },
+          "object_name": {
+            "type": "string",
+            "description": "物料或者过程组件名称",
+            "nullable": true
+          },
+          "name_id": {
+            "type": "string",
+            "description": "过程组件名称ID",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "物料",
+            "nullable": true
+          },
+          "alter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "替代料1",
+            "nullable": true
+          },
+          "workProcess_consume": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "item": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopItem"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "designator": {
+            "type": "string",
+            "description": "物料位号",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "物料用量",
+            "format": "double",
+            "nullable": true
+          },
+          "uom": {
+            "type": "string",
+            "description": "物料单位",
+            "nullable": true
+          },
+          "borT": {
+            "type": "string",
+            "description": "B/T面次",
+            "nullable": true
+          },
+          "ascend": {
+            "type": "string",
+            "description": "追溯颗粒度",
+            "nullable": true
+          },
+          "subGroupCode": {
+            "type": "string",
+            "description": "替代组编号",
+            "nullable": true
+          },
+          "replaceType": {
+            "type": "string",
+            "description": "SUBSTITUTE/MAIN（替/主）",
+            "nullable": true
+          },
+          "subItemNumber": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopSubItem"
+            },
+            "description": "本次新加的成套替代相关属性",
+            "nullable": true
+          },
+          "objPid": {
+            "type": "string",
+            "description": "替代料所属的008编码",
+            "nullable": true
+          },
+          "operationType": {
+            "type": "string",
+            "description": "DELETE",
+            "nullable": true
+          },
+          "isSafe": {
+            "type": "string",
+            "description": "物料是安规物料则插入图标",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "物料或过程组件"
+      },
+      "TcBopMakeup": {
+        "type": "object",
+        "properties": {
+          "designator": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "borT": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "productmodel": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "btSequence": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "TcBopMeop": {
+        "type": "object",
+        "properties": {
+          "pcbSize": {
+            "type": "string",
+            "description": "pcb尺寸",
+            "nullable": true
+          },
+          "meopCode": {
+            "type": "string",
+            "description": "工序名称编码",
+            "nullable": true
+          },
+          "workProcessCode": {
+            "type": "string",
+            "description": "过程组件编码 例如：ZJ-GC-977",
+            "nullable": true
+          },
+          "workProcessName": {
+            "type": "string",
+            "description": "过程组件名称 例如：MIC板组件",
+            "nullable": true
+          },
+          "item_id": {
+            "type": "string",
+            "description": "工序1编码 例如：Meop0000017099",
+            "nullable": true
+          },
+          "meS_meop": {
+            "type": "string",
+            "description": "例如：背板投线|ZZ120",
+            "nullable": true
+          },
+          "soP_name": {
+            "type": "string",
+            "description": "SOP名称",
+            "nullable": true
+          },
+          "soP_url": {
+            "type": "string",
+            "description": "SOP地址",
+            "nullable": true
+          },
+          "gD_sequence": {
+            "type": "string",
+            "description": "工段顺序号",
+            "nullable": true
+          },
+          "meS_id": {
+            "type": "string",
+            "description": "MES采集工序编码",
+            "nullable": true
+          },
+          "checksign": {
+            "type": "string",
+            "description": "检验标识",
+            "nullable": true
+          },
+          "theorymeoptime": {
+            "type": "number",
+            "description": "设计工时（DT）",
+            "format": "double"
+          },
+          "meop_Name": {
+            "type": "string",
+            "description": "MES采集工序名称",
+            "nullable": true
+          },
+          "sequence": {
+            "type": "integer",
+            "description": "工序顺序号",
+            "format": "int32"
+          },
+          "checktype": {
+            "type": "string",
+            "description": "检验类型",
+            "nullable": true
+          },
+          "gD_id": {
+            "type": "string",
+            "description": "工段编码",
+            "nullable": true
+          },
+          "carrierSize": {
+            "type": "string",
+            "description": "载具尺寸",
+            "nullable": true
+          },
+          "meopSign": {
+            "type": "string",
+            "description": "工序返工标识",
+            "nullable": true
+          },
+          "isImportant": {
+            "type": "string",
+            "description": "是否重要工序",
+            "nullable": true
+          },
+          "isPreProcessing": {
+            "type": "string",
+            "description": "是否前加工工序",
+            "nullable": true
+          },
+          "item": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopItem"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "craft": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopCraft"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "equip": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopEquip"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "tool": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopTool"
+            },
+            "description": "",
+            "nullable": true
+          },
+          "parameter": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopParam"
+            },
+            "description": "参数",
+            "nullable": true
+          },
+          "pictures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopPicture"
+            },
+            "description": "SOP图片文件",
+            "nullable": true
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopAction"
+            },
+            "description": "SOP操作说明",
+            "nullable": true
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopNote"
+            },
+            "description": "SOP注意事项",
+            "nullable": true
+          },
+          "gxSigns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "工序图标标识，安规、安全、EMC、ESD，然后插入对应图片标识",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "TcBopNote": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "description": "序号",
+            "format": "int32"
+          },
+          "content": {
+            "type": "string",
+            "description": "内容",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "注意事项"
+      },
+      "TcBopOutput": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          },
+          "msg": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopData"
+            },
+            "description": "BOP 数据载体",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "TC BOP 响应实体"
+      },
+      "TcBopParam": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "参数名称",
+            "nullable": true
+          },
+          "mid": {
+            "type": "string",
+            "description": "参数值",
+            "nullable": true
+          },
+          "uom": {
+            "type": "string",
+            "description": "参数单位",
+            "nullable": true
+          },
+          "max": {
+            "type": "string",
+            "description": "参数上限",
+            "nullable": true
+          },
+          "min": {
+            "type": "string",
+            "description": "参数下限",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "TcBopPicture": {
+        "type": "object",
+        "properties": {
+          "pictureUrl": {
+            "type": "string",
+            "description": "图片Url",
+            "nullable": true
+          },
+          "pictureName": {
+            "type": "string",
+            "description": "图片显示名称",
+            "nullable": true
+          },
+          "pictureType": {
+            "type": "string",
+            "description": "图片类型，normal ：工序小图，large ：工序大图",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "SOP图片"
+      },
+      "TcBopStation": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "工位人数",
+            "format": "int32",
+            "nullable": true
+          },
+          "post": {
+            "type": "string",
+            "description": "岗位名称",
+            "nullable": true
+          },
+          "item_id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "meop": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopMeop"
+            },
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "工位信息"
+      },
+      "TcBopSubItem": {
+        "type": "object",
+        "properties": {
+          "subItemGroup": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "subItemCode": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "subUom": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "本次新加的成套替代相关属性"
+      },
+      "TcBopTool": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "治工具型号ID",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "治工具型号",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "类别（类型包括治工具、仪器仪表、辅助工具）",
+            "nullable": true
+          },
+          "object_name": {
+            "type": "string",
+            "description": "治工具名称",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "string",
+            "description": "治工具用量",
+            "nullable": true
+          },
+          "conditionParameter": {
+            "type": "string",
+            "description": "仪器治工具的参数",
+            "nullable": true
+          },
+          "parameter": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopParam"
+            },
+            "description": "参数",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "治工具"
+      },
+      "TestItemConf": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "testItemObjId": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "testItem": {
+            "type": "string",
+            "description": "测试项 例如：PC-老化测试",
+            "nullable": true
+          },
+          "attribute1": {
+            "type": "string",
+            "description": "测试项用途",
+            "nullable": true
+          },
+          "isNeedTest": {
+            "type": "integer",
+            "description": "是否需要测试",
+            "format": "int32",
+            "nullable": true
+          },
+          "seq": {
+            "type": "number",
+            "description": "测试序号",
+            "format": "double",
+            "nullable": true
+          },
+          "testItemId": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "crtUser": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "crtName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "crtTime": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "crtHost": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "updUser": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "updName": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "updTime": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "updHost": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "TestOverview": {
+        "type": "object",
+        "properties": {
+          "creatorUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModifierUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "逻辑删除，true：删除，false：未删除"
+          },
+          "id": {
+            "maxLength": 32,
+            "minLength": 0,
+            "type": "string",
+            "description": "主键",
+            "nullable": true
+          },
+          "testOverviewHeadId": {
+            "type": "string",
+            "description": "测试一览表头表ID",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "生产批次",
+            "nullable": true
+          },
+          "testNo": {
+            "type": "string",
+            "description": "测试一览表编码",
+            "nullable": true
+          },
+          "testItem": {
+            "type": "string",
+            "description": "测试项",
+            "nullable": true
+          },
+          "testItemCode": {
+            "type": "string",
+            "description": "测试室工序编码",
+            "nullable": true
+          },
+          "isNeedTest": {
+            "type": "integer",
+            "description": "是否必需测试",
+            "format": "int32",
+            "nullable": true
+          },
+          "seq": {
+            "type": "number",
+            "description": "测试序号",
+            "format": "double",
+            "nullable": true
+          },
+          "sourceTestItemId": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "sourceTestItemObjId": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "测试预览表"
+      },
+      "TestSchedule": {
+        "type": "object",
+        "properties": {
+          "testScheduleNumber": {
+            "type": "string",
+            "description": "测试一览表编号",
+            "nullable": true
+          },
+          "testItemConfList": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestItemConf"
+            },
+            "description": "",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "测试计划"
+      },
+      "ToBopLine": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "产线编码",
+            "nullable": true
+          },
+          "bt": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "lr": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "carrier": {
+            "type": "string",
+            "description": "是否有载具",
+            "nullable": true
+          },
+          "station": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TcBopStation"
+            },
+            "description": "工位信息",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "产线"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Bop",
+      "description": "BOP 相关接口服务"
+    },
+    {
+      "name": "Qms",
+      "description": ""
+    },
+    {
+      "name": "Test",
+      "description": ""
+    },
+    {
+      "name": "TcBop",
+      "description": ""
+    }
+  ]
+}

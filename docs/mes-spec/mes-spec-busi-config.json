@@ -1,0 +1,1820 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "IMES BUSI-CONFIG API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/services/busi-config/BasConfig/GetDictTreeByCode": {
+      "get": {
+        "tags": [
+          "BasConfig"
+        ],
+        "summary": "获取数据词典",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/BasConfig/GetDictTreeByCodes": {
+      "get": {
+        "tags": [
+          "BasConfig"
+        ],
+        "summary": "根据类别列表批量获取数据字典",
+        "parameters": [
+          {
+            "name": "typeCodes",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DictCacheItem"
+                    }
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DictCacheItem"
+                    }
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DictCacheItem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/BasConfig/GetEnumInfo": {
+      "get": {
+        "tags": [
+          "BasConfig"
+        ],
+        "summary": "获取枚举值",
+        "parameters": [
+          {
+            "name": "EnumName",
+            "in": "query",
+            "description": "枚举名称",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ExcludeValues",
+            "in": "query",
+            "description": "排除values",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          },
+          {
+            "name": "ApplendHeadChoice",
+            "in": "query",
+            "description": "头部是否附加请选择",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Sorted",
+            "in": "query",
+            "description": "是否排序",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnumInfoDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnumInfoDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnumInfoDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/BasConfig/GetEnumInfos": {
+      "get": {
+        "tags": [
+          "BasConfig"
+        ],
+        "summary": "获取批量枚举值",
+        "parameters": [
+          {
+            "name": "enumNames",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "applendHeadChoice",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EnumInfoDto"
+                    }
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EnumInfoDto"
+                    }
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EnumInfoDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/MsdConfig/GetList": {
+      "get": {
+        "tags": [
+          "MsdConfig"
+        ],
+        "summary": "获取所有MSD对照配置",
+        "parameters": [
+          {
+            "name": "HumiditySensitiveLevel",
+            "in": "query",
+            "description": "湿敏等级",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsdConfigOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsdConfigOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsdConfigOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/MsdConfig/Insert": {
+      "post": {
+        "tags": [
+          "MsdConfig"
+        ],
+        "summary": "MSD对照配置添加",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigInsertInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigInsertInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigInsertInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigInsertInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/MsdConfig/Update": {
+      "put": {
+        "tags": [
+          "MsdConfig"
+        ],
+        "summary": "MSD对照配置更新",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigUpdateInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigUpdateInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigUpdateInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MsdConfigUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/MsdConfig/Delete": {
+      "delete": {
+        "tags": [
+          "MsdConfig"
+        ],
+        "summary": "MSD对照配置删除",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/OperationReturnConfig/Match": {
+      "post": {
+        "tags": [
+          "OperationReturnConfig"
+        ],
+        "summary": "匹配返回工序配置",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchOperationReturnInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchOperationReturnInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchOperationReturnInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchOperationReturnInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchOperationReturnOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchOperationReturnOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchOperationReturnOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/PrintConfig/GetList": {
+      "get": {
+        "tags": [
+          "PrintConfig"
+        ],
+        "summary": "获取打印配置列表-分页",
+        "parameters": [
+          {
+            "name": "ProductModel",
+            "in": "query",
+            "description": "机型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "CusCode",
+            "in": "query",
+            "description": "客户编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WorkOperationCode",
+            "in": "query",
+            "description": "工序主键id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "LabelType",
+            "in": "query",
+            "description": "标签类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPageListOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPageListOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPageListOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/PrintConfig/Create": {
+      "post": {
+        "tags": [
+          "PrintConfig"
+        ],
+        "summary": "新增",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/PrintConfig/Update": {
+      "put": {
+        "tags": [
+          "PrintConfig"
+        ],
+        "summary": "编辑",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/PrintConfig/Delete": {
+      "delete": {
+        "tags": [
+          "PrintConfig"
+        ],
+        "summary": "批量删除",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/AddItem": {
+      "post": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "添加快码",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/GetCacheItemOrNullByCode": {
+      "get": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "根据类型和编码获取快码",
+        "parameters": [
+          {
+            "name": "typeCode",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeItemCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeItemCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeItemCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/GetOrAddItem": {
+      "get": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "获取或添加快码",
+        "parameters": [
+          {
+            "name": "typeCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ItemCode",
+            "in": "query",
+            "description": "编码",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ItemValue",
+            "in": "query",
+            "description": "含义",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Explain",
+            "in": "query",
+            "description": "说明",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Remark",
+            "in": "query",
+            "description": "备注",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BeginEffectiveTime",
+            "in": "query",
+            "description": "有效开始时间",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "EndEffectiveTime",
+            "in": "query",
+            "description": "有效结束时间",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "TypeId",
+            "in": "query",
+            "description": "类型Id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "IsActive",
+            "in": "query",
+            "description": "是否有效",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeItemCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeItemCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeItemCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/DeleteItem": {
+      "delete": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "删除快码",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/UpdateItem": {
+      "put": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "修改快码",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/AddType": {
+      "post": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "添加类型",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeTypeDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeTypeDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeTypeDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QcodeTypeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/GetTypeByCode": {
+      "get": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "根据code获取类型",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeTypeDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeTypeDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeTypeDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/DeleteType": {
+      "delete": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "删除类型",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/busi-config/Qcode/GetTypeList": {
+      "get": {
+        "tags": [
+          "Qcode"
+        ],
+        "summary": "分页获取类型",
+        "parameters": [
+          {
+            "name": "IsActive",
+            "in": "query",
+            "description": "是否有效",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "TypeCode",
+            "in": "query",
+            "description": "编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Level",
+            "in": "query",
+            "description": "级别",
+            "schema": {
+              "$ref": "#/components/schemas/QcodeTypeLevel"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeTypeDtoPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeTypeDtoPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcodeTypeDtoPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DictCacheItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "itemCode": {
+            "type": "string",
+            "description": "字典编码",
+            "nullable": true
+          },
+          "itemValue": {
+            "type": "string",
+            "description": "字典值",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "字典名称",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "是否默认"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "orderNum": {
+            "type": "integer",
+            "description": "序号",
+            "format": "int32"
+          },
+          "dictTypeId": {
+            "type": "string",
+            "description": "类型Id",
+            "nullable": true
+          },
+          "dictTypeName": {
+            "type": "string",
+            "description": "类型名称",
+            "nullable": true
+          },
+          "dictTypeCode": {
+            "type": "string",
+            "description": "类型code",
+            "nullable": true
+          },
+          "hierarchyId": {
+            "type": "string",
+            "description": "层数Id，#分割",
+            "nullable": true
+          },
+          "tenantId": {
+            "type": "integer",
+            "description": "租户Id",
+            "format": "int32",
+            "nullable": true
+          },
+          "attribute1": {
+            "type": "string",
+            "description": "弹性域1",
+            "nullable": true
+          },
+          "attribute2": {
+            "type": "string",
+            "description": "弹性域2",
+            "nullable": true
+          },
+          "attribute3": {
+            "type": "string",
+            "description": "弹性域3",
+            "nullable": true
+          },
+          "attribute4": {
+            "type": "string",
+            "description": "弹性域4",
+            "nullable": true
+          },
+          "attribute5": {
+            "type": "string",
+            "description": "弹性域5",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "EnumInfoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "枚举值",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "description": "枚举名称",
+            "nullable": true
+          },
+          "desc": {
+            "type": "string",
+            "description": "枚举描述",
+            "nullable": true
+          },
+          "sorted": {
+            "type": "integer",
+            "description": "排序",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "枚举dto"
+      },
+      "FileInfo": {
+        "required": [
+          "fileName",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件路径"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id",
+            "nullable": true
+          },
+          "md5": {
+            "type": "string",
+            "description": "内容Md5",
+            "nullable": true
+          },
+          "length": {
+            "type": "integer",
+            "description": "内容长度",
+            "format": "int64"
+          },
+          "fileSize": {
+            "type": "string",
+            "description": "文件大小",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "附件入参"
+      },
+      "GetPageListOutput": {
+        "required": [
+          "labelType",
+          "workOperationCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "cusCode": {
+            "type": "string",
+            "description": "客户编码",
+            "nullable": true
+          },
+          "cusName": {
+            "type": "string",
+            "description": "客户名称",
+            "nullable": true
+          },
+          "workOperationCode": {
+            "type": "string",
+            "description": "工序主键id"
+          },
+          "labelType": {
+            "type": "string",
+            "description": "标签类型"
+          },
+          "barcodeType": {
+            "type": "string",
+            "description": "条码类型",
+            "nullable": true
+          },
+          "templateId": {
+            "type": "string",
+            "description": "模板标签id",
+            "nullable": true
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileInfo"
+          },
+          "printQty": {
+            "type": "integer",
+            "description": "打印数量",
+            "format": "int32"
+          },
+          "dataSource": {
+            "$ref": "#/components/schemas/PrintDataSource"
+          },
+          "workOperationName": {
+            "type": "string",
+            "description": "工序名称",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetPageListOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetPageListOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MatchOperationReturnInput": {
+        "required": [
+          "workOpeartionCode"
+        ],
+        "type": "object",
+        "properties": {
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "customer": {
+            "type": "string",
+            "description": "客户",
+            "nullable": true
+          },
+          "workOpeartionCode": {
+            "type": "string",
+            "description": "工序编码"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MatchOperationReturnOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "returnOperationId": {
+            "type": "string",
+            "description": "返回工序Id",
+            "nullable": true
+          },
+          "isAllowChange": {
+            "type": "boolean",
+            "description": "是否可修改返回工序"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MsdConfigInsertInput": {
+        "required": [
+          "exposureTime",
+          "exposureWarnTime",
+          "humidityMaxLimit",
+          "humiditySensitiveLevel",
+          "temperatureMaxLimit"
+        ],
+        "type": "object",
+        "properties": {
+          "humiditySensitiveLevel": {
+            "type": "string",
+            "description": "湿敏等级"
+          },
+          "exposureTime": {
+            "type": "number",
+            "description": "可暴露时间",
+            "format": "double"
+          },
+          "exposureWarnTime": {
+            "type": "number",
+            "description": "暴露警告时间",
+            "format": "double"
+          },
+          "humidityMaxLimit": {
+            "type": "number",
+            "description": "湿度上限",
+            "format": "double"
+          },
+          "temperatureMaxLimit": {
+            "type": "number",
+            "description": "温度上限",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增数据对象"
+      },
+      "MsdConfigOutput": {
+        "type": "object",
+        "properties": {
+          "humiditySensitiveLevel": {
+            "type": "string",
+            "description": "湿敏等级",
+            "nullable": true
+          },
+          "exposureTime": {
+            "type": "number",
+            "description": "可暴露时间",
+            "format": "double"
+          },
+          "exposureWarnTime": {
+            "type": "number",
+            "description": "暴露警告时间",
+            "format": "double",
+            "nullable": true
+          },
+          "humidityMaxLimit": {
+            "type": "number",
+            "description": "湿度上限",
+            "format": "double"
+          },
+          "temperatureMaxLimit": {
+            "type": "number",
+            "description": "温度上限",
+            "format": "double"
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "输出数据对象"
+      },
+      "MsdConfigOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MsdConfigOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MsdConfigUpdateInput": {
+        "required": [
+          "exposureTime",
+          "exposureWarnTime",
+          "humidityMaxLimit",
+          "id",
+          "temperatureMaxLimit"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "主键Id"
+          },
+          "exposureTime": {
+            "type": "number",
+            "description": "可暴露时间",
+            "format": "double"
+          },
+          "exposureWarnTime": {
+            "type": "number",
+            "description": "暴露警告时间",
+            "format": "double"
+          },
+          "humidityMaxLimit": {
+            "type": "number",
+            "description": "湿度上限",
+            "format": "double"
+          },
+          "temperatureMaxLimit": {
+            "type": "number",
+            "description": "温度上限",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "更新数据对象"
+      },
+      "PrintConfigDto": {
+        "required": [
+          "labelType",
+          "workOperationCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "cusCode": {
+            "type": "string",
+            "description": "客户编码",
+            "nullable": true
+          },
+          "cusName": {
+            "type": "string",
+            "description": "客户名称",
+            "nullable": true
+          },
+          "workOperationCode": {
+            "type": "string",
+            "description": "工序主键id"
+          },
+          "labelType": {
+            "type": "string",
+            "description": "标签类型"
+          },
+          "barcodeType": {
+            "type": "string",
+            "description": "条码类型",
+            "nullable": true
+          },
+          "templateId": {
+            "type": "string",
+            "description": "模板标签id",
+            "nullable": true
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileInfo"
+          },
+          "printQty": {
+            "type": "integer",
+            "description": "打印数量",
+            "format": "int32"
+          },
+          "dataSource": {
+            "$ref": "#/components/schemas/PrintDataSource"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PrintDataSource": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "QcodeItemCacheItem": {
+        "type": "object",
+        "properties": {
+          "itemCode": {
+            "type": "string",
+            "description": "编码",
+            "nullable": true
+          },
+          "itemValue": {
+            "type": "string",
+            "description": "含义",
+            "nullable": true
+          },
+          "explain": {
+            "type": "string",
+            "description": "说明",
+            "nullable": true
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "beginEffectiveTime": {
+            "type": "string",
+            "description": "有效开始时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endEffectiveTime": {
+            "type": "string",
+            "description": "有效结束时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QcodeItemDto": {
+        "required": [
+          "itemCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "itemCode": {
+            "type": "string",
+            "description": "编码"
+          },
+          "itemValue": {
+            "type": "string",
+            "description": "含义",
+            "nullable": true
+          },
+          "explain": {
+            "type": "string",
+            "description": "说明",
+            "nullable": true
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "beginEffectiveTime": {
+            "type": "string",
+            "description": "有效开始时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endEffectiveTime": {
+            "type": "string",
+            "description": "有效结束时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "typeId": {
+            "type": "string",
+            "description": "类型Id",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否有效"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QcodeTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "typeCode": {
+            "type": "string",
+            "description": "类型code",
+            "nullable": true
+          },
+          "typeValue": {
+            "type": "string",
+            "description": "含义",
+            "nullable": true
+          },
+          "explain": {
+            "type": "string",
+            "description": "说明",
+            "nullable": true
+          },
+          "appName": {
+            "type": "string",
+            "description": "应用",
+            "nullable": true
+          },
+          "level": {
+            "$ref": "#/components/schemas/QcodeTypeLevel"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否有效"
+          },
+          "qcodeItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QcodeItemDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QcodeTypeDtoPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QcodeTypeDto"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QcodeTypeLevel": {
+        "enum": [
+          1,
+          2,
+          4
+        ],
+        "type": "integer",
+        "format": "int32"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Qcode",
+      "description": "快码维护"
+    },
+    {
+      "name": "MsdConfig",
+      "description": "MSD对照配置"
+    }
+  ]
+}

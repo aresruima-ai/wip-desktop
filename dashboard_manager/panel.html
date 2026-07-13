@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI看板管理器 · 控制面板</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--gray:#8b949e;--green:#3ecf8e;--red:#e05260;--accent:#58a6ff;--warn:#f0b429}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:20px;min-height:100vh}
+  h1{font-size:18px;margin-bottom:4px}
+  .ts{color:var(--gray);font-size:12px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+  .card .label{font-size:12px;color:var(--gray);margin-bottom:6px}
+  .card .value{font-size:18px;font-weight:600}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .dg{background:var(--green)}.dr{background:var(--red)}.dy{background:var(--gray)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  button{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px 16px;cursor:pointer;font-size:14px}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.danger:hover{border-color:var(--red);color:var(--red)}
+  .log{background:#010409;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:Consolas,monospace;font-size:12px;height:320px;overflow-y:auto;white-space:pre-wrap;line-height:1.5}
+  .log .w{color:var(--warn)}.log .e{color:var(--red)}.log .i{color:var(--text)}
+  .ok{color:var(--green)}.bad{color:var(--red)}
+</style>
+</head>
+<body>
+<h1>🛡 AI看板管理器 · 控制面板</h1>
+<div class="ts" id="ts">连接中...</div>
+<div class="grid" id="cards"></div>
+<div class="actions">
+  <button onclick="act('restart-node')" class="danger">重启看板</button>
+  <button onclick="act('restart-kiosk')">重启投屏</button>
+  <button id="muteBtn" onclick="act('toggle-mute')">暂停守护</button>
+  <button onclick="loadLogs()">刷新日志</button>
+</div>
+<div class="log" id="log">日志加载中...</div>
+<script>
+const KEY=new URLSearchParams(location.search).get('key')||'';
+const qs=KEY?('?key='+KEY):'';
+const fmt=v=>(v===null||v===undefined)?'-':v;
+const dot=s=>{const c={运行中:'dg',熔断:'dr',已停止:'dy'}[s]||'dy';return '<span class="dot '+c+'"></span>';};
+async function loadStatus(){
+  try{
+    const s=await(await fetch('/api/status'+qs)).json();
+    document.getElementById('ts').textContent='更新于 '+new Date().toLocaleTimeString()+(s.muted?'   ⏸ 已暂停守护':'');
+    const cards=[
+      {l:'看板状态',v:dot(s.node_status)+s.node_status},
+      {l:'Node PID',v:fmt(s.node_pid)},
+      {l:'累计重启',v:fmt(s.restart_count)},
+      {l:'连续崩溃',v:fmt(s.consecutive_crashes)},
+      {l:'探活',v:s.last_health_ok===null?'-':(s.last_health_ok?'<span class="ok">✓ 正常</span>':'<span class="bad">✗ 失败</span>')},
+      {l:'MES Cookie',v:s.last_has_cookie===null?'-':(s.last_has_cookie?'有':'<span class="bad">丢失</span>')},
+      {l:'熔断',v:s.circuit_open?'<span class="bad">熔断中</span>':'正常'},
+      {l:'投屏 PID',v:fmt(s.kiosk_pid)},
+      {l:'运行时长',v:fmt(s.uptime)+'s'},
+    ];
+    document.getElementById('cards').innerHTML=cards.map(c=>'<div class="card"><div class="label">'+c.l+'</div><div class="value">'+c.v+'</div></div>').join('');
+    document.getElementById('muteBtn').textContent=s.muted?'恢复守护':'暂停守护';
+  }catch(e){document.getElementById('ts').textContent='状态获取失败: '+e;}
+}
+async function act(action){
+  if(!confirm('确认执行: '+action+' ?'))return;
+  try{
+    const r=await fetch('/api/'+action+qs,{method:'POST'});
+    alert(await r.text());
+    loadStatus();loadLogs();
+  }catch(e){alert('失败: '+e);}
+}
+async function loadLogs(){
+  try{
+    const t=await(await fetch('/api/logs'+qs)).text();
+    const html=t.split('\n').map(l=>{
+      if(l.includes('[ERROR]'))return '<span class="e">'+l+'</span>';
+      if(l.includes('[WARNING]'))return '<span class="w">'+l+'</span>';
+      return '<span class="i">'+l+'</span>';
+    }).join('\n');
+    const el=document.getElementById('log');
+    el.innerHTML=html;el.scrollTop=el.scrollHeight;
+  }catch(e){}
+}
+loadStatus();loadLogs();
+setInterval(loadStatus,3000);
+setInterval(loadLogs,10000);
+</script>
+</body>
+</html>

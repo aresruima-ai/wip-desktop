@@ -1,0 +1,4696 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "IMES IAS API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/services/ias/AcchmentFile/InsertAcchmentFile": {
+      "post": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "添加附件信息",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFileInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFileInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFileInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/SaveAcchmentFile": {
+      "post": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "上传附件及可绑定业务id  outId  fileTypeCode",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/InsertFirstAcchmentFile": {
+      "post": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "添加附件信息--固定模板",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFirstFileInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFirstFileInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFirstFileInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcchmentFirstFileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/DeleteAcchmentFile": {
+      "delete": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "删除附件信息",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "附件ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/GetAcchmentFileList": {
+      "get": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "查询附件信息列表",
+        "parameters": [
+          {
+            "name": "outId",
+            "in": "query",
+            "description": "业务单号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileTypeCode",
+            "in": "query",
+            "description": "文件类型",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/GetMultiAcchmentFileList": {
+      "get": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "查询附件列表",
+        "parameters": [
+          {
+            "name": "outIdList",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "fileTypeCode",
+            "in": "query",
+            "description": "文件类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isViewDeleted",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/GetAcchmentFirstFileListByFileType": {
+      "get": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "根据文件类型获取文件列表",
+        "parameters": [
+          {
+            "name": "commonFileType",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "$ref": "#/components/schemas/CommonFileType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/GetAcchmentFileByOutId": {
+      "get": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "查询最后上传的附件-单个",
+        "parameters": [
+          {
+            "name": "outId",
+            "in": "query",
+            "description": "业务关联Id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAcchmentFileOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/UploadFile": {
+      "post": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "上传附件-通用",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/UploadFileByForm": {
+      "post": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "表单上传附件",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file",
+                  "FileTypeCode",
+                  "OutId"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "上传的压缩包文件",
+                    "format": "binary"
+                  },
+                  "FileTypeCode": {
+                    "type": "string",
+                    "description": "文件类型（可默认固定或数据字典选择,可参考  CMES_PROC_FILE_TYPE）"
+                  },
+                  "OutId": {
+                    "type": "string",
+                    "description": "外部关联的ID"
+                  },
+                  "IsUnique": {
+                    "type": "boolean",
+                    "description": "OutId 和 FileTypeCode 是否是唯一的"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                },
+                "FileTypeCode": {
+                  "style": "form"
+                },
+                "OutId": {
+                  "style": "form"
+                },
+                "IsUnique": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/UploadFileForFR": {
+      "post": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "上传附件-帆软【会同时上传一份附件到帆软服务器】",
+        "parameters": [
+          {
+            "name": "busDirName",
+            "in": "query",
+            "description": "业务目录名称【条码，箱唛头打印】",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/DownloadFile": {
+      "get": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "下载文件-根据附件主键id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "附件主键id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/AcchmentFile/DownloadFileByOutId": {
+      "get": {
+        "tags": [
+          "AcchmentFile"
+        ],
+        "summary": "下载文件-根据附件对外关联id(下载其中一份)",
+        "parameters": [
+          {
+            "name": "outId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/BusinessLog/GetList": {
+      "get": {
+        "tags": [
+          "BusinessLog"
+        ],
+        "summary": "查询",
+        "parameters": [
+          {
+            "name": "InstanceId",
+            "in": "query",
+            "description": "流程实例Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "NodeCode",
+            "in": "query",
+            "description": "流程节点编码",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Filter",
+            "in": "query",
+            "description": "模糊查询条件",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessLogOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessLogOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessLogOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/ChAndEnSet/GetList": {
+      "get": {
+        "tags": [
+          "ChAndEnSet"
+        ],
+        "summary": "获取中英文对照关系列表-分页",
+        "parameters": [
+          {
+            "name": "ChineseName",
+            "in": "query",
+            "description": "中文名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EnglishName",
+            "in": "query",
+            "description": "英文名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BusinessType",
+            "in": "query",
+            "description": "业务类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChAndEnSetOuputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChAndEnSetOuputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChAndEnSetOuputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/ChAndEnSet/Create": {
+      "post": {
+        "tags": [
+          "ChAndEnSet"
+        ],
+        "summary": "创建中英文对照关系设置",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ChAndEnSet/Update": {
+      "put": {
+        "tags": [
+          "ChAndEnSet"
+        ],
+        "summary": "更新中英文对照关系设置",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChAndEnSetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ChAndEnSet/Delete": {
+      "delete": {
+        "tags": [
+          "ChAndEnSet"
+        ],
+        "summary": "删除中英文对照关系设置",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ChAndEnSet/GenerateTemplate": {
+      "post": {
+        "tags": [
+          "ChAndEnSet"
+        ],
+        "summary": "下载模板",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ChAndEnSet/Import": {
+      "post": {
+        "tags": [
+          "ChAndEnSet"
+        ],
+        "summary": "导入中英文对照关系文件",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/DataDimention/GetDropDownList": {
+      "get": {
+        "tags": [
+          "DataDimention"
+        ],
+        "parameters": [
+          {
+            "name": "Code",
+            "in": "query",
+            "description": "编号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "名称",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataDimentionDropDownOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataDimentionDropDownOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataDimentionDropDownOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/GetMfgItemByCode": {
+      "get": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "获取数据字典Item",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/GetItemByCode": {
+      "get": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "获取当前租户数据字典Item",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/QueryItemByCode": {
+      "post": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "获取数据字典Item",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/RemovItemCache": {
+      "post": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "清除缓存",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/GetMfgItemsByTypeCode": {
+      "get": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "获取数据字典列表",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/GetItemsByTypeCode": {
+      "get": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "获取当前租户数据字典列表",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/QueryItemsByTypeCode": {
+      "post": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "获取数据字典列表",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DictCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Dict/RemovTypeCodeCache": {
+      "post": {
+        "tags": [
+          "Dict"
+        ],
+        "summary": "清除类型缓存",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/CreateExcelTemplate": {
+      "post": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "新增",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/UpdateExcelTemplate": {
+      "put": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "修改",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/DeleteExcelTemplate": {
+      "delete": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "删除",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/DownLoadExcelTemplate": {
+      "post": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "下载Excel模板",
+        "parameters": [
+          {
+            "name": "templateNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/GetExcelTemplateList": {
+      "get": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "获取列表",
+        "parameters": [
+          {
+            "name": "Filter",
+            "in": "query",
+            "description": "搜索字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sorting",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplateOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplateOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplateOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/GetExcelTemplate": {
+      "get": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "获取",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplateDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplateDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplateDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/CreateExcelTemplatePlaceHolder": {
+      "post": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "新增明细",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/UpdateExcelTemplatePlaceHolder": {
+      "put": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "修改明细",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/DeleteExcelTemplatePlaceHolder": {
+      "delete": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "删除明细",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/GetExcelTemplatePlaceHolderList": {
+      "get": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "获取明细列表",
+        "parameters": [
+          {
+            "name": "ParentId",
+            "in": "query",
+            "description": "父Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Filter",
+            "in": "query",
+            "description": "搜索字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sorting",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/GetExcelTemplatePlaceHolder": {
+      "get": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "summary": "获取明细",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/RefreshExcelCache": {
+      "post": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/ExcelTemplate/GetSelectTemplateList": {
+      "get": {
+        "tags": [
+          "ExcelTemplate"
+        ],
+        "parameters": [
+          {
+            "name": "Filter",
+            "in": "query",
+            "description": "搜索字段【模板编码或者名称】",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TemplateType",
+            "in": "query",
+            "description": "模板类型【枚举：TemplateType】",
+            "schema": {
+              "$ref": "#/components/schemas/TemplateType"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/StringSelectModelDtoPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StringSelectModelDtoPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StringSelectModelDtoPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/GetCurrentLanguage": {
+      "get": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "获取当前用户语言",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationLanguage"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationLanguage"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationLanguage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/ChangeCulture": {
+      "post": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "切换语言",
+        "parameters": [
+          {
+            "name": "cultureName",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/GetLanguages": {
+      "get": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "Gets list of all languages",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationLanguage"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationLanguage"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationLanguage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/Add": {
+      "post": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "Adds a new language.",
+        "requestBody": {
+          "description": "The language.",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/Remove": {
+      "delete": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "Deletes a language.",
+        "parameters": [
+          {
+            "name": "languageName",
+            "in": "query",
+            "description": "Name of the language.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/Update": {
+      "put": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "Updates a language.",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/GetLanguageTexts": {
+      "get": {
+        "tags": [
+          "Localization"
+        ],
+        "parameters": [
+          {
+            "name": "languageName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationLanguageText"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationLanguageText"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationLanguageText"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/InsertOrUpdateText": {
+      "post": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "Insert or updates a language text.",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguageText"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguageText"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguageText"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationLanguageText"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Localization/DeleteText": {
+      "delete": {
+        "tags": [
+          "Localization"
+        ],
+        "summary": "Delete language text.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/MqHelper/Publish": {
+      "post": {
+        "tags": [
+          "MqHelper"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/MqHelper/PublishObject": {
+      "post": {
+        "tags": [
+          "MqHelper"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/MqHelper/Subscribe": {
+      "post": {
+        "tags": [
+          "MqHelper"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/RedisHelper/SyncString": {
+      "post": {
+        "tags": [
+          "RedisHelper"
+        ],
+        "summary": "Redis 同步",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pattern",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/RoleDataAuthConfig/GetList": {
+      "get": {
+        "tags": [
+          "RoleDataAuthConfig"
+        ],
+        "summary": "查询",
+        "parameters": [
+          {
+            "name": "RoleCode",
+            "in": "query",
+            "description": "角色编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRoleDataAuthConfigDtoPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRoleDataAuthConfigDtoPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRoleDataAuthConfigDtoPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/RoleDataAuthConfig/Get": {
+      "get": {
+        "tags": [
+          "RoleDataAuthConfig"
+        ],
+        "summary": "获取业务对象最新的流程ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/RoleDataAuthConfig/Add": {
+      "post": {
+        "tags": [
+          "RoleDataAuthConfig"
+        ],
+        "summary": "新增",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/RoleDataAuthConfig/Update": {
+      "put": {
+        "tags": [
+          "RoleDataAuthConfig"
+        ],
+        "summary": "更新",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/RoleDataAuthConfig/Delete": {
+      "delete": {
+        "tags": [
+          "RoleDataAuthConfig"
+        ],
+        "summary": "删除",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Tenant/GetMfgTenants": {
+      "get": {
+        "tags": [
+          "Tenant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Tenant/GetTenants": {
+      "get": {
+        "tags": [
+          "Tenant"
+        ],
+        "summary": "获取所有租户",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Tenant/GetById": {
+      "get": {
+        "tags": [
+          "Tenant"
+        ],
+        "summary": "根据Id获取租户信息",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Tenant/GetByName": {
+      "get": {
+        "tags": [
+          "Tenant"
+        ],
+        "summary": "根据名称获取租户信息",
+        "parameters": [
+          {
+            "name": "tenancyName",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Tenant/RemoveCache": {
+      "delete": {
+        "tags": [
+          "Tenant"
+        ],
+        "summary": "清除缓存",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Tenant/RemoveTenantCache": {
+      "delete": {
+        "tags": [
+          "Tenant"
+        ],
+        "summary": "清除缓存",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/GetUser": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "获取用户信息(MFG接口直连)",
+        "parameters": [
+          {
+            "name": "userIdArray",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/AbpCachePayload"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/AbpCachePayload"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/AbpCachePayload"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/GetUserByAccount": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "获取用户信息(MFG接口直连)",
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryMfgUserOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryMfgUserOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryMfgUserOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/GetUserDataPermissions": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "获取用户数据权限",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetUserDataAuthOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetUserDataAuthOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetUserDataAuthOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/GetUserDataAuthCacheItem": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "根据用户获取数据权限配置",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDataAuthCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDataAuthCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDataAuthCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/GetById": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "获取用户信息(缓存+MFG接口)",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCacheItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCacheItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCacheItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/GetByIds": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "获取用户信息(缓存+MFG接口)",
+        "parameters": [
+          {
+            "name": "userIds",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserCacheItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserCacheItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserCacheItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/RemoveCache": {
+      "delete": {
+        "tags": [
+          "User"
+        ],
+        "summary": "清除用户缓存",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/User/RemoveDataAuthCache": {
+      "delete": {
+        "tags": [
+          "User"
+        ],
+        "summary": "清除用户缓存",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Workflow/GetList": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "查询",
+        "parameters": [
+          {
+            "name": "OrderId",
+            "in": "query",
+            "description": "单据主键Id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "OrderNo",
+            "in": "query",
+            "description": "单据号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WfTemplateCode",
+            "in": "query",
+            "description": "流程模板编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WfInstanceId",
+            "in": "query",
+            "description": "流程实例ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBusinessWfInstanceOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBusinessWfInstanceOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBusinessWfInstanceOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Workflow/GetLastInstance": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "获取业务对象最新的流程ID",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/ias/Workflow/AddBusinessWfInstance": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "绑定业务流程实例",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessWfInstanceInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessWfInstanceInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessWfInstanceInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessWfInstanceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Workflow/UpdateResult": {
+      "put": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "更新业务流程实例执行结果",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdBusinessWfInstanceInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdBusinessWfInstanceInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdBusinessWfInstanceInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdBusinessWfInstanceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/ias/Workflow/Delete": {
+      "delete": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "删除",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AbpCachePayload": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/UserCacheItem"
+          }
+        },
+        "additionalProperties": false,
+        "description": "ABP 缓存格式解析数据"
+      },
+      "AcchmentFileInput": {
+        "required": [
+          "fileName",
+          "outId",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "outId": {
+            "type": "string",
+            "description": "业务Id"
+          },
+          "fileTypeCode": {
+            "type": "string",
+            "description": "附件单据类型",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "description": "文件大小",
+            "format": "int64"
+          },
+          "md5": {
+            "type": "string",
+            "description": "Md5",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "上传附件文件信息"
+      },
+      "AcchmentFirstFileInput": {
+        "required": [
+          "commonFileType",
+          "fileName",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "commonFileType": {
+            "$ref": "#/components/schemas/CommonFileType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ApplicationLanguage": {
+        "required": [
+          "displayName",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "creatorUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModifierUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "逻辑删除，true：删除，false：未删除"
+          },
+          "id": {
+            "maxLength": 32,
+            "minLength": 0,
+            "type": "string",
+            "description": "主键",
+            "nullable": true
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "Gets or sets the name of the culture, like \"zh-CN\" or \"en-US\"."
+          },
+          "displayName": {
+            "maxLength": 64,
+            "minLength": 0,
+            "type": "string",
+            "description": "Gets or sets the display name."
+          },
+          "icon": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "Gets or sets the icon.",
+            "nullable": true
+          },
+          "isDisabled": {
+            "type": "boolean",
+            "description": "Is this language active. Inactive languages are not get by Cvte.Mes.Com.Core.Localization.IApplicationLanguageManager."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a language of the application."
+      },
+      "ApplicationLanguageText": {
+        "required": [
+          "key",
+          "languageName",
+          "source",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "creatorUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModifierUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "逻辑删除，true：删除，false：未删除"
+          },
+          "id": {
+            "maxLength": 32,
+            "minLength": 0,
+            "type": "string",
+            "description": "主键",
+            "nullable": true
+          },
+          "languageName": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "Language name (culture name). Matches to Cvte.Mes.Com.Core.Localization.ApplicationLanguage.Name."
+          },
+          "source": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "Localization source name"
+          },
+          "key": {
+            "maxLength": 256,
+            "minLength": 0,
+            "type": "string",
+            "description": "Localization key"
+          },
+          "value": {
+            "maxLength": 67108864,
+            "minLength": 0,
+            "type": "string",
+            "description": "Localized value"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Used to store a localization text."
+      },
+      "BusinessLogOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "日志ID",
+            "nullable": true
+          },
+          "level": {
+            "type": "string",
+            "description": "日志级别[DEBUG,INFO,WARN,ERROR,FATAL]",
+            "nullable": true
+          },
+          "billIds": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "description": "日志信息",
+            "nullable": true
+          },
+          "stackTrace": {
+            "type": "string",
+            "description": "异常堆栈信息",
+            "nullable": true
+          },
+          "optUser": {
+            "type": "string",
+            "description": "操作人",
+            "nullable": true
+          },
+          "optTime": {
+            "type": "string",
+            "description": "操作时间",
+            "format": "date-time"
+          },
+          "zipkinTraceId": {
+            "type": "string",
+            "description": "链路ID",
+            "nullable": true
+          },
+          "ccloudTraceId": {
+            "type": "string",
+            "description": "鲸云链路ID",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BusinessLogOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BusinessLogOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BusinessWfInstanceInput": {
+        "required": [
+          "orderId",
+          "wfInstanceCreateTime",
+          "wfInstanceId",
+          "wfTemplateCode"
+        ],
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "单据主键Id"
+          },
+          "orderNo": {
+            "type": "string",
+            "description": "单据号",
+            "nullable": true
+          },
+          "wfTemplateCode": {
+            "type": "string",
+            "description": "流程模板编码"
+          },
+          "wfInstanceId": {
+            "type": "string",
+            "description": "流程实例ID"
+          },
+          "wfInstanceCreateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "wfJsonParams": {
+            "type": "string",
+            "description": "参数",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChAndEnSetDto": {
+        "required": [
+          "businessType",
+          "chineseName",
+          "englishName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "中英文对照关系主键id",
+            "nullable": true
+          },
+          "chineseName": {
+            "type": "string",
+            "description": "中文名称"
+          },
+          "englishName": {
+            "type": "string",
+            "description": "英文名称"
+          },
+          "businessType": {
+            "type": "string",
+            "description": "业务类型【数据字典：CMES_CKD_CHANDENSET】"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CommonFileType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "type": "integer",
+        "description": "文件类型",
+        "format": "int32"
+      },
+      "DataAuthCondition": {
+        "type": "object",
+        "properties": {
+          "operator": {
+            "$ref": "#/components/schemas/Operators"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "匹配值或通配符",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DataDimentionDropDownOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "主键id",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "编号",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DictCacheItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "",
+            "nullable": true
+          },
+          "itemCode": {
+            "type": "string",
+            "description": "字典编码",
+            "nullable": true
+          },
+          "itemValue": {
+            "type": "string",
+            "description": "字典值",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "字典名称",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "是否默认"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "orderNum": {
+            "type": "integer",
+            "description": "序号",
+            "format": "int32"
+          },
+          "dictTypeId": {
+            "type": "string",
+            "description": "类型Id",
+            "nullable": true
+          },
+          "dictTypeName": {
+            "type": "string",
+            "description": "类型名称",
+            "nullable": true
+          },
+          "dictTypeCode": {
+            "type": "string",
+            "description": "类型code",
+            "nullable": true
+          },
+          "hierarchyId": {
+            "type": "string",
+            "description": "层数Id，#分割",
+            "nullable": true
+          },
+          "tenantId": {
+            "type": "integer",
+            "description": "租户Id",
+            "format": "int32",
+            "nullable": true
+          },
+          "attribute1": {
+            "type": "string",
+            "description": "弹性域1",
+            "nullable": true
+          },
+          "attribute2": {
+            "type": "string",
+            "description": "弹性域2",
+            "nullable": true
+          },
+          "attribute3": {
+            "type": "string",
+            "description": "弹性域3",
+            "nullable": true
+          },
+          "attribute4": {
+            "type": "string",
+            "description": "弹性域4",
+            "nullable": true
+          },
+          "attribute5": {
+            "type": "string",
+            "description": "弹性域5",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "EmptyProcessType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "type": "integer",
+        "description": "空值处理类型",
+        "format": "int32"
+      },
+      "ExcelTemplateDto": {
+        "required": [
+          "templateName",
+          "templateNo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "templateNo": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "模板编号"
+          },
+          "templateName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "模板名称"
+          },
+          "isMultiSheet": {
+            "type": "boolean",
+            "description": "是否多Sheet"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Excel导入模板"
+      },
+      "ExcelTemplateOutput": {
+        "required": [
+          "templateName",
+          "templateNo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "templateNo": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "模板编号"
+          },
+          "templateName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "模板名称"
+          },
+          "isMultiSheet": {
+            "type": "boolean",
+            "description": "是否多Sheet"
+          },
+          "lastModifierUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Excel导入模板"
+      },
+      "ExcelTemplateOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExcelTemplateOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExcelTemplatePlaceHolderDto": {
+        "required": [
+          "excelTemplateId",
+          "propertyName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "excelTemplateId": {
+            "type": "string",
+            "description": "Excel模板Id"
+          },
+          "placeHolderType": {
+            "$ref": "#/components/schemas/PlaceHolderType"
+          },
+          "propertyName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "属性名称"
+          },
+          "placeHolderName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "占位符名称",
+            "nullable": true
+          },
+          "splitStr": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "分隔符",
+            "nullable": true
+          },
+          "valueIndex": {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer",
+            "description": "索引",
+            "format": "int32"
+          },
+          "rowIndex": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "description": "Excel行Index",
+            "format": "int32"
+          },
+          "columnIndex": {
+            "maxLength": 10,
+            "minLength": 0,
+            "type": "string",
+            "description": "Excel列Index",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "description": "父Id",
+            "nullable": true
+          },
+          "emptyProcessType": {
+            "$ref": "#/components/schemas/EmptyProcessType"
+          },
+          "endSign": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "结束标识",
+            "nullable": true
+          },
+          "defaultValue": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "默认值",
+            "nullable": true
+          },
+          "prefix": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "前缀",
+            "nullable": true
+          },
+          "suffix": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "后缀",
+            "nullable": true
+          },
+          "orderIndex": {
+            "type": "integer",
+            "description": "排序号",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否活跃"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExcelTemplatePlaceHolderDto"
+            },
+            "description": "子",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Excel导入模板占位符"
+      },
+      "GetAcchmentFileOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "附件Id",
+            "nullable": true
+          },
+          "fileTypeCode": {
+            "type": "string",
+            "description": "附件类型",
+            "nullable": true
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名称",
+            "nullable": true
+          },
+          "path": {
+            "type": "string",
+            "description": "文件路径",
+            "nullable": true
+          },
+          "md5": {
+            "type": "string",
+            "description": "内容Md5",
+            "nullable": true
+          },
+          "length": {
+            "type": "integer",
+            "description": "内容长度",
+            "format": "int64"
+          },
+          "outId": {
+            "type": "string",
+            "description": "外键",
+            "nullable": true
+          },
+          "createTime": {
+            "type": "string",
+            "description": "上传时间",
+            "format": "date-time"
+          },
+          "downLoadUrl": {
+            "type": "string",
+            "description": "下载路径",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "逻辑删除，true：删除，false：未删除"
+          },
+          "sourceUniqueValue": {
+            "type": "string",
+            "description": "源唯一标志",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "文件附件信息"
+      },
+      "GetBusinessWfInstanceOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderId": {
+            "type": "string",
+            "description": "单据主键Id",
+            "nullable": true
+          },
+          "orderNo": {
+            "type": "string",
+            "description": "单据号",
+            "nullable": true
+          },
+          "wfTemplateCode": {
+            "type": "string",
+            "description": "流程模板编码",
+            "nullable": true
+          },
+          "wfInstanceId": {
+            "type": "string",
+            "description": "流程实例ID",
+            "nullable": true
+          },
+          "wfJsonParams": {
+            "type": "string",
+            "description": "参数",
+            "nullable": true
+          },
+          "isSuccess": {
+            "type": "boolean",
+            "description": "运行是否成功",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "description": "失败原因",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetBusinessWfInstanceOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetBusinessWfInstanceOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetChAndEnSetOuput": {
+        "required": [
+          "businessType",
+          "chineseName",
+          "englishName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "中英文对照关系主键id",
+            "nullable": true
+          },
+          "chineseName": {
+            "type": "string",
+            "description": "中文名称"
+          },
+          "englishName": {
+            "type": "string",
+            "description": "英文名称"
+          },
+          "businessType": {
+            "type": "string",
+            "description": "业务类型【数据字典：CMES_CKD_CHANDENSET】"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后更新时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后更新人",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetChAndEnSetOuputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetChAndEnSetOuput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetRoleDataAuthConfigDto": {
+        "required": [
+          "dataDimentionCode",
+          "roleCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "roleCode": {
+            "type": "string",
+            "description": "角色编码"
+          },
+          "dataDimentionCode": {
+            "type": "string",
+            "description": "数据维度编号"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/Operators"
+          },
+          "value": {
+            "type": "string",
+            "description": "匹配值或通配符",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetRoleDataAuthConfigDtoPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetRoleDataAuthConfigDto"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetUserDataAuthOutput": {
+        "type": "object",
+        "properties": {
+          "dataDimentionCode": {
+            "type": "string",
+            "description": "数据维度编号",
+            "nullable": true
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DataAuthCondition"
+            },
+            "description": "数据过滤条件",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Operators": {
+        "enum": [
+          1,
+          2,
+          10,
+          11,
+          20,
+          21
+        ],
+        "type": "integer",
+        "description": "运算符",
+        "format": "int32"
+      },
+      "PlaceHolderType": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "type": "integer",
+        "description": "占位符类型",
+        "format": "int32"
+      },
+      "QueryMfgUserInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "MFG ID",
+            "nullable": true
+          },
+          "account": {
+            "type": "string",
+            "description": "账号",
+            "nullable": true
+          },
+          "accountType": {
+            "type": "string",
+            "description": "账号类型",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "名称",
+            "nullable": true
+          },
+          "telephone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "isLock": {
+            "type": "string",
+            "nullable": true
+          },
+          "lockReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "attribute6": {
+            "type": "string",
+            "description": "MES用户ID",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryMfgUserOutput": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryMfgUserInfo"
+            },
+            "description": "用户结果",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "StringSelectModelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "主键id",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "编号",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "名称",
+            "nullable": true
+          },
+          "params": {
+            "type": "string",
+            "description": "参数",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "公共-选择输出类"
+      },
+      "StringSelectModelDtoPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StringSelectModelDto"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TemplateType": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "description": "模板类型",
+        "format": "int32"
+      },
+      "TenantCacheItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "租户Id",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "description": "租户名称",
+            "nullable": true
+          },
+          "tenancyName": {
+            "type": "string",
+            "description": "租户代号",
+            "nullable": true
+          },
+          "connectionString": {
+            "type": "string",
+            "description": "连接字符串",
+            "nullable": true
+          },
+          "slaveConnectionString": {
+            "type": "string",
+            "description": "从库连接字符串",
+            "nullable": true
+          },
+          "editionId": {
+            "type": "integer",
+            "description": "版本号",
+            "format": "int32",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否活跃"
+          },
+          "accountSuffix": {
+            "type": "string",
+            "description": "账号后缀",
+            "nullable": true
+          },
+          "orgCode": {
+            "type": "string",
+            "description": "业务组织代码",
+            "nullable": true
+          },
+          "factoryNo": {
+            "type": "string",
+            "description": "工厂代码",
+            "nullable": true,
+            "readOnly": true
+          },
+          "tenancyNo": {
+            "type": "string",
+            "description": "租户编号",
+            "nullable": true
+          },
+          "domainName": {
+            "type": "string",
+            "description": "域名",
+            "nullable": true
+          },
+          "isScanEveryBox": {
+            "type": "boolean",
+            "description": "是否每箱扫描"
+          },
+          "customData": {
+            "nullable": true
+          },
+          "busType": {
+            "type": "string",
+            "description": "业务类别：ZJ/BJ/MDZJ/MDBJ   整机/部件/模块化整机/模块化部件",
+            "nullable": true
+          },
+          "stType": {
+            "type": "string",
+            "description": "租户类别：FACTORY ： 工厂，SUPPLIER：供应商，etc……",
+            "nullable": true
+          },
+          "attribute2": {
+            "type": "string",
+            "description": "工厂编码,多个用逗号隔开",
+            "nullable": true
+          },
+          "attribute7": {
+            "type": "string",
+            "description": "工厂编码,多个用逗号隔开",
+            "nullable": true
+          },
+          "barcodePrefix": {
+            "type": "string",
+            "description": "条码前缀",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdBusinessWfInstanceInput": {
+        "required": [
+          "orderId",
+          "wfInstanceId"
+        ],
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "单据主键Id"
+          },
+          "wfInstanceId": {
+            "type": "string",
+            "description": "流程实例ID"
+          },
+          "isSuccess": {
+            "type": "boolean",
+            "description": "运行是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "失败原因",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UploadFileOutput": {
+        "type": "object",
+        "properties": {
+          "acchmentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "filePathOrFileId": {
+            "type": "string",
+            "description": "文件路径或者文件Id",
+            "nullable": true
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名称",
+            "nullable": true
+          },
+          "md5": {
+            "type": "string",
+            "description": "内容Md5",
+            "nullable": true
+          },
+          "length": {
+            "type": "integer",
+            "description": "内容长度",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserCacheItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string",
+            "description": "用户名称",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "description": "邮箱",
+            "nullable": true
+          },
+          "account": {
+            "type": "string",
+            "description": "用户账号",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "用户号码",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否活跃"
+          },
+          "tenantId": {
+            "type": "integer",
+            "description": "租户Id",
+            "format": "int32",
+            "nullable": true
+          },
+          "uType": {
+            "$ref": "#/components/schemas/UserType"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "用户权限信息",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserDataAuthCacheItem": {
+        "type": "object",
+        "properties": {
+          "roleCode": {
+            "type": "string",
+            "description": "角色编码",
+            "nullable": true
+          },
+          "dataDimentionCode": {
+            "type": "string",
+            "description": "数据维度编号",
+            "nullable": true
+          },
+          "operator": {
+            "$ref": "#/components/schemas/Operators"
+          },
+          "value": {
+            "type": "string",
+            "description": "匹配值或通配符",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "虚拟组件缓存信息"
+      },
+      "UserType": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "description": "用户类型",
+        "format": "int32"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AcchmentFile",
+      "description": "附件上传"
+    },
+    {
+      "name": "ExcelTemplate",
+      "description": "Excel导入模板服务"
+    },
+    {
+      "name": "Dict",
+      "description": "租户查询"
+    },
+    {
+      "name": "Tenant",
+      "description": "租户查询"
+    },
+    {
+      "name": "User",
+      "description": "用户查询"
+    },
+    {
+      "name": "MqHelper",
+      "description": "Redis 辅助工具"
+    },
+    {
+      "name": "RedisHelper",
+      "description": "Redis 辅助工具"
+    },
+    {
+      "name": "Localization",
+      "description": "本地化"
+    },
+    {
+      "name": "Workflow",
+      "description": "流程基础功能"
+    },
+    {
+      "name": "RoleDataAuthConfig",
+      "description": "角色数据权限配置"
+    },
+    {
+      "name": "BusinessLog",
+      "description": "流程基础功能"
+    }
+  ]
+}

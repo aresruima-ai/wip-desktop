@@ -1,0 +1,2505 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "IMES OQC API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/services/oqc/InspCompletion/InspCompletionStationCrossing": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "OQC 检验统一入口",
+        "requestBody": {
+          "description": "任务单信息",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/InspBatchCompletionStationCrossing": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "OQC 检验统一入口（循环遍历）",
+        "requestBody": {
+          "description": "任务单信息",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/InspBatchCompletionStationCrossing2": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "OQC 批量送检算法",
+        "requestBody": {
+          "description": "任务单信息",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspStationCrossingBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/PackInspCompletionStationCrossing": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "包装推送检验批",
+        "requestBody": {
+          "description": "任务单信息",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspCompletionStationCrossingBatchInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspCompletionStationCrossingBatchInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspCompletionStationCrossingBatchInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspCompletionStationCrossingBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspCompletionStationCrossingOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/HckdToSkdInsp": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "HCKD-SKD 检验批复制",
+        "parameters": [
+          {
+            "name": "fromContainerName",
+            "in": "query",
+            "description": "HCKD 条码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workOperationCode",
+            "in": "query",
+            "description": "HCKD 检验工序",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "toContainerName",
+            "in": "query",
+            "description": "SKD 条码",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/RePushBySnWGJY": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "完工检验重推",
+        "parameters": [
+          {
+            "name": "containerName",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workOperationCode",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/RePushByLotWGJY": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "完工检验根据批次重推",
+        "parameters": [
+          {
+            "name": "lotNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetInspCompletionSnList": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "根据任务单获取SN过站采集信息",
+        "parameters": [
+          {
+            "name": "WorkOperationCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TaskNo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BarCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "OrderNum",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "CalcType",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/InspCompletionSamplingCalcTypeEnum"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionSnListOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionSnListOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionSnListOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetLotSnCount": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "获取已推送给QMS的SN数量",
+        "parameters": [
+          {
+            "name": "taskNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/OqcPreVerification": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "OQC 产前检验",
+        "parameters": [
+          {
+            "name": "moLotNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetLotSnCountByMo": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "获取已推送给QMS的SN数量",
+        "parameters": [
+          {
+            "name": "moLotNo",
+            "in": "query",
+            "description": "批次",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskNo",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OqcLotSnCountOuput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OqcLotSnCountOuput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OqcLotSnCountOuput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetQmsWgjyRule": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "获取抽样规则",
+        "parameters": [
+          {
+            "name": "lotNumber",
+            "in": "query",
+            "description": "批次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "surplusInsQty",
+            "in": "query",
+            "description": "剩余数量",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "isTail",
+            "in": "query",
+            "description": "是否清尾",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isSkd",
+            "in": "query",
+            "description": "是否SKD工单",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsInspectionRuleOutputQmsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsInspectionRuleOutputQmsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsInspectionRuleOutputQmsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetQmsKeYanRule": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "获取客验计划",
+        "parameters": [
+          {
+            "name": "moLotNo",
+            "in": "query",
+            "description": "剩余数量",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsCustomerInspOutputQmsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsCustomerInspOutputQmsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsCustomerInspOutputQmsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetInspCompletionSamplingOutputs": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "获取SN完工检过站最后一条信息（不含样本）",
+        "parameters": [
+          {
+            "name": "ContainerNames",
+            "in": "query",
+            "description": "ContainerName 集合",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionSamplingOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionSamplingOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionSamplingOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/GetInspCompletionOutputs": {
+      "get": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "获取SN完工检过站信息（含样本）",
+        "parameters": [
+          {
+            "name": "barCode",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspCompletionOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/SubscribeMq": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "订阅MQ",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/InspCompletionReworkOrRepair": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "返工事件",
+        "parameters": [
+          {
+            "name": "reworkOrderId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/IsPushMode2": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "是否是离线模式推送",
+        "parameters": [
+          {
+            "name": "moLotNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workOperationCode",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkType",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string",
+              "default": "WGJY"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/IsPushQms": {
+      "post": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "判断是否需要推送QMS和推送方式",
+        "parameters": [
+          {
+            "name": "moLotNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workOperationCode",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkType",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string",
+              "default": "WGJY"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsRuleMakeOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsRuleMakeOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QmsRuleMakeOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspCompletion/RemoveQmsCache": {
+      "delete": {
+        "tags": [
+          "InspCompletion"
+        ],
+        "summary": "清除制程报检规则",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspFirst/GetInspFirstLotSnRange": {
+      "get": {
+        "tags": [
+          "InspFirst"
+        ],
+        "summary": "获取过站的SN范围",
+        "parameters": [
+          {
+            "name": "TaskMesStatus",
+            "in": "query",
+            "description": "任务单状态",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TaskOrderMesStatusType"
+              }
+            }
+          },
+          {
+            "name": "QueryRangeType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MoLotNo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TaskNo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Classes",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WorkOperationCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WorkSectionCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "LineCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Status",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "CheckType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "BarCodeType",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "StartTime",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "EndTime",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspFirstLotSnRangeDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspFirstLotSnRangeDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspFirstLotSnRangeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspFirst/GetItem": {
+      "get": {
+        "tags": [
+          "InspFirst"
+        ],
+        "summary": "获取条码信息",
+        "parameters": [
+          {
+            "name": "moOrderId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContainerCacheShortItem"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContainerCacheShortItem"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContainerCacheShortItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspFirst/GetSingleItem": {
+      "get": {
+        "tags": [
+          "InspFirst"
+        ],
+        "summary": "获取单个条码缓存信息",
+        "parameters": [
+          {
+            "name": "moOrderId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "containerName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerCacheShortItem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerCacheShortItem"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerCacheShortItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspFirst/GetCalendarDays": {
+      "get": {
+        "tags": [
+          "InspFirst"
+        ],
+        "summary": "根据任务单获取工作日历",
+        "parameters": [
+          {
+            "name": "taskNo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "calendarType",
+            "in": "query",
+            "description": "日历类型:5 日历，10 加班",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkCalendarDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkCalendarDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkCalendarDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspFirst/RePushTimer": {
+      "post": {
+        "tags": [
+          "InspFirst"
+        ],
+        "summary": "推送监控定时服务",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/InspFirst/RePushMq": {
+      "post": {
+        "tags": [
+          "InspFirst"
+        ],
+        "summary": "首件MQ重推（基于本地已有首件的记录，QMS没有）",
+        "requestBody": {
+          "description": "首件MQ重推",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RePushMqInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RePushMqInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RePushMqInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RePushMqInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/oqc/ObaInspect/PauseSnByObaInsp": {
+      "post": {
+        "tags": [
+          "ObaInspect"
+        ],
+        "summary": "根据OBA检验单暂停SN过站",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseSnByObaInspInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseSnByObaInspInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseSnByObaInspInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseSnByObaInspInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PauseSnByObaInspOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PauseSnByObaInspOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PauseSnByObaInspOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/ObaInspect/ReconverSnByObaInsp": {
+      "post": {
+        "tags": [
+          "ObaInspect"
+        ],
+        "summary": "根据OBA检验单解禁SN过站",
+        "parameters": [
+          {
+            "name": "inspNo",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/oqc/ObaInspectOrder/GetObaInspectOrders": {
+      "get": {
+        "tags": [
+          "ObaInspectOrder"
+        ],
+        "summary": "获取OBA检验单",
+        "parameters": [
+          {
+            "name": "InspNo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MoLotNo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ContainerName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ObaInspStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ObaInspectOrderDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ObaInspectOrderDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ObaInspectOrderDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/oqc/ObaInspectOrder/CompleteObaOrder": {
+      "post": {
+        "tags": [
+          "ObaInspectOrder"
+        ],
+        "summary": "更新单据完工状态",
+        "parameters": [
+          {
+            "name": "inspNo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ContainerCacheShortItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "条码ID",
+            "nullable": true
+          },
+          "containerName": {
+            "type": "string",
+            "description": "条码",
+            "nullable": true
+          },
+          "moOrderId": {
+            "type": "string",
+            "description": "批次ID",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "批次号",
+            "nullable": true
+          },
+          "taskOrderId": {
+            "type": "string",
+            "description": "任务单ID",
+            "nullable": true
+          },
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单编码",
+            "nullable": true
+          },
+          "barcodeType": {
+            "type": "string",
+            "description": "条码类型",
+            "nullable": true
+          },
+          "orderNumber": {
+            "type": "integer",
+            "description": "排序编码",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "条码缓存简短信息"
+      },
+      "InspCompletionOutput": {
+        "type": "object",
+        "properties": {
+          "barCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderNum": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspId": {
+            "type": "string",
+            "nullable": true
+          },
+          "listLotId": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkListId": {
+            "type": "string",
+            "nullable": true
+          },
+          "snId": {
+            "type": "string",
+            "nullable": true
+          },
+          "qmsInspId": {
+            "type": "string",
+            "nullable": true
+          },
+          "qmsInspNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "unqualified": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspStatus": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "creationTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lotCreationTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isSample": {
+            "type": "boolean"
+          },
+          "boxCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "palletCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerBarcode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspCompletionSamplingCalcTypeEnum": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "InspCompletionSamplingOutput": {
+        "type": "object",
+        "properties": {
+          "barCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderNum": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspId": {
+            "type": "string",
+            "nullable": true
+          },
+          "listLotId": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkListId": {
+            "type": "string",
+            "nullable": true
+          },
+          "snId": {
+            "type": "string",
+            "nullable": true
+          },
+          "qmsInspId": {
+            "type": "string",
+            "nullable": true
+          },
+          "qmsInspNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "unqualified": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspStatus": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "creationTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lotCreationTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspCompletionSnInput": {
+        "type": "object",
+        "properties": {
+          "snCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "fromContainerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "boxCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "palletCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerBarcode": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspCompletionSnListOutput": {
+        "type": "object",
+        "properties": {
+          "snNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "checkListId": {
+            "type": "string",
+            "nullable": true
+          },
+          "containerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderNum": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unqualified": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tenantId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspCompletionStationCrossingBatchInput": {
+        "type": "object",
+        "properties": {
+          "barCodeList": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InspCompletionSnInput"
+            },
+            "nullable": true
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "triggerCustomerInspAction": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskOrderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspCompletionStationCrossingOutput": {
+        "type": "object",
+        "properties": {
+          "needInspCompletion": {
+            "type": "boolean"
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "isSample": {
+            "type": "boolean"
+          },
+          "barCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "snNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "orderNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspectionTypeList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "sampleTypeList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "ttl": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspContainerItem": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "barcodeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspExtendItem": {
+        "type": "object",
+        "properties": {
+          "submitContainerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "crossingContainerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InspContainerItem"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspFirstLotSnRangeDto": {
+        "type": "object",
+        "properties": {
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "containerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineName": {
+            "type": "string",
+            "nullable": true
+          },
+          "classes": {
+            "type": "string",
+            "nullable": true
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "workSectionCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "checkType": {
+            "type": "string",
+            "nullable": true
+          },
+          "moveOutTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspStationCrossingBatchInput": {
+        "required": [
+          "barCodeList"
+        ],
+        "type": "object",
+        "properties": {
+          "barCodeList": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InspCompletionSnInput"
+            }
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "triggerCustomerInspAction": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskOrderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "filterInspType": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspStationCrossingInput": {
+        "required": [
+          "barCode"
+        ],
+        "type": "object",
+        "properties": {
+          "barCode": {
+            "type": "string"
+          },
+          "palletCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "boxCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerBarcode": {
+            "type": "string",
+            "nullable": true
+          },
+          "workOperationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "triggerCustomerInspAction": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskOrderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "filterInspType": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InspExtendItem"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ObaInspectOrderDto": {
+        "required": [
+          "inspId",
+          "inspNo",
+          "moLotNo"
+        ],
+        "type": "object",
+        "properties": {
+          "inspId": {
+            "type": "string"
+          },
+          "inspNo": {
+            "type": "string"
+          },
+          "moLotNo": {
+            "type": "string"
+          },
+          "containerNames": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ObaInspStatus": {
+        "enum": [
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "OqcLotSnCountDto": {
+        "type": "object",
+        "properties": {
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "sendCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OqcLotSnCountOuput": {
+        "type": "object",
+        "properties": {
+          "moLotNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "sendCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OqcLotSnCountDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PauseSnByObaInspInput": {
+        "required": [
+          "inspId",
+          "inspNo",
+          "moLotNo"
+        ],
+        "type": "object",
+        "properties": {
+          "inspId": {
+            "type": "string"
+          },
+          "inspNo": {
+            "type": "string"
+          },
+          "moLotNo": {
+            "type": "string"
+          },
+          "inspSnList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PauseSnByObaInspOutput": {
+        "type": "object",
+        "properties": {
+          "sn": {
+            "type": "string",
+            "nullable": true
+          },
+          "isSuccess": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QmsCustomerInspOutput": {
+        "type": "object",
+        "properties": {
+          "customerInsPlanNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "orgCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "cusCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "cusName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lotNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "cobiDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "inspLotNumber": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "cobiQty": {
+            "type": "number",
+            "format": "double"
+          },
+          "sampelType": {
+            "type": "string",
+            "nullable": true
+          },
+          "cqaName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cqaUser": {
+            "type": "string",
+            "nullable": true
+          },
+          "factoryCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "crtTime": {
+            "type": "string",
+            "nullable": true
+          },
+          "updTime": {
+            "type": "string",
+            "nullable": true
+          },
+          "sampleRule": {
+            "type": "number",
+            "format": "double"
+          },
+          "snList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QmsCustomerInspOutputQmsResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/QmsCustomerInspOutput"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QmsInspectionRuleOutput": {
+        "type": "object",
+        "properties": {
+          "invOrgCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "factoryCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "prodModel": {
+            "type": "string",
+            "nullable": true
+          },
+          "lotNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "inspLotNumber": {
+            "type": "number",
+            "format": "double"
+          },
+          "originInspLotNumber": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "fixSampleNum": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "sampleMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "sampleModeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "eachQty": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "sampleQty": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QmsInspectionRuleOutputQmsResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/QmsInspectionRuleOutput"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QmsRuleMakeOutput": {
+        "type": "object",
+        "properties": {
+          "typeCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkPeriod": {
+            "type": "string",
+            "nullable": true
+          },
+          "pushMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "typeCodeList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RePushMqInput": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "TaskOrderMesStatusType": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          17,
+          18,
+          19,
+          32,
+          35,
+          -2,
+          -1
+        ],
+        "type": "integer",
+        "description": "工序参数类型",
+        "format": "int32"
+      },
+      "WorkCalendarDto": {
+        "type": "object",
+        "properties": {
+          "workShift": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closingTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "shifts": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateRemark": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "InspFirst",
+      "description": "首件/首检"
+    },
+    {
+      "name": "ObaInspect",
+      "description": "OBA检验单"
+    },
+    {
+      "name": "ObaInspectOrder",
+      "description": "OBA检验单"
+    },
+    {
+      "name": "InspCompletion",
+      "description": "完工检"
+    }
+  ]
+}

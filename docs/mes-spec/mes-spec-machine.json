@@ -1,0 +1,4044 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "IMES MACHINE API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/services/machine/Aoi/Bind": {
+      "post": {
+        "tags": [
+          "Aoi"
+        ],
+        "summary": "绑定条码数据",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AoiBindInput"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AoiBindInput"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AoiBindInput"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AoiBindInput"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/FixTool/Online": {
+      "post": {
+        "tags": [
+          "FixTool"
+        ],
+        "summary": "上线扫描",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOnlineInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOnlineInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOnlineInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOnlineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixToolScanOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixToolScanOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixToolScanOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/FixTool/OfflineScan": {
+      "post": {
+        "tags": [
+          "FixTool"
+        ],
+        "summary": "下线扫描",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixToolScanOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixToolScanOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixToolScanOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/FixTool/OfflineSumbit": {
+      "post": {
+        "tags": [
+          "FixTool"
+        ],
+        "summary": "下线确认提交",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixToolOfflineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/FixToolData/AddList": {
+      "post": {
+        "tags": [
+          "FixToolData"
+        ],
+        "summary": "批量新增",
+        "requestBody": {
+          "description": "新增实体",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FixToolDataImportDto"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FixToolDataImportDto"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FixToolDataImportDto"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FixToolDataImportDto"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/Printing/UpdateUseCount": {
+      "put": {
+        "tags": [
+          "Printing"
+        ],
+        "summary": "更新使用次数",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintingMoveOutInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintingMoveOutInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintingMoveOutInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintingMoveOutInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/ProductModelRecipe/GetProductModelRecipes": {
+      "get": {
+        "tags": [
+          "ProductModelRecipe"
+        ],
+        "summary": "设备程序名称机型关系列表",
+        "parameters": [
+          {
+            "name": "RecipeName",
+            "in": "query",
+            "description": "程序名",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentName",
+            "in": "query",
+            "description": "设备名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentTypeName",
+            "in": "query",
+            "description": "设备类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ProductModel",
+            "in": "query",
+            "description": "机型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductModelRecipeOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductModelRecipeOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductModelRecipeOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/ProductModelRecipe/CreateProductModelRecipe": {
+      "post": {
+        "tags": [
+          "ProductModelRecipe"
+        ],
+        "summary": "新增",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductModelRecipeInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductModelRecipeInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductModelRecipeInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductModelRecipeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/ProductModelRecipe/UpdateProductModelRecipe": {
+      "put": {
+        "tags": [
+          "ProductModelRecipe"
+        ],
+        "summary": "更新",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductModelRecipeInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductModelRecipeInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductModelRecipeInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductModelRecipeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/ProductModelRecipe/DeleteProductModelRecipe": {
+      "delete": {
+        "tags": [
+          "ProductModelRecipe"
+        ],
+        "summary": "删除",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/GetRecipeList": {
+      "get": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "获取设备程序列表",
+        "parameters": [
+          {
+            "name": "RecipeName",
+            "in": "query",
+            "description": "程序名",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentName",
+            "in": "query",
+            "description": "设备名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentTypeName",
+            "in": "query",
+            "description": "设备类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ProductModel",
+            "in": "query",
+            "description": "机型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PartNo",
+            "in": "query",
+            "description": "产品代码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MoLotNo",
+            "in": "query",
+            "description": "批次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MoPbGroup",
+            "in": "query",
+            "description": "合并拼版批",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Bort",
+            "in": "query",
+            "description": "面次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/GetRecipeParams": {
+      "get": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "获取参数",
+        "parameters": [
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentName",
+            "in": "query",
+            "description": "设备名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentTypeName",
+            "in": "query",
+            "description": "设备类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ProductModel",
+            "in": "query",
+            "description": "机型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PartNo",
+            "in": "query",
+            "description": "产品代码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TaskNo",
+            "in": "query",
+            "description": "任务单号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Bort",
+            "in": "query",
+            "description": "面次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeParamsOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeParamsOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeParamsOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/RecipeActiveUpload": {
+      "post": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "程序(编辑完成)上传",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/RecipeInfoUpload": {
+      "post": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "程序(带参数)上抛",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/RecipeParameterInfo": {
+      "post": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "程序参数变更",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUploadInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/GetRecipeNameBySn": {
+      "get": {
+        "tags": [
+          "Recipe"
+        ],
+        "parameters": [
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Lane",
+            "in": "query",
+            "description": "轨道",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sn",
+            "in": "query",
+            "description": "条码",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRecipeNameBySnOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRecipeNameBySnOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRecipeNameBySnOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/Recipe/DeleteRecipe": {
+      "delete": {
+        "tags": [
+          "Recipe"
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeCheck/BarcodeRecipeCheck": {
+      "post": {
+        "tags": [
+          "RecipeCheck"
+        ],
+        "summary": "条码切换程序",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoRecipeCheckOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoRecipeCheckOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoRecipeCheckOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeCheck/CustomRecipeCheck": {
+      "post": {
+        "tags": [
+          "RecipeCheck"
+        ],
+        "summary": "人工切换程序",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCheckInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoRecipeCheckOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoRecipeCheckOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoRecipeCheckOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeRule/Add": {
+      "post": {
+        "tags": [
+          "RecipeRule"
+        ],
+        "summary": "新增",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeRuleDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeRuleDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeRuleDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeRuleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeRule/Update": {
+      "put": {
+        "tags": [
+          "RecipeRule"
+        ],
+        "summary": "更新",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecipeRuleInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecipeRuleInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecipeRuleInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecipeRuleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeRule/Delete": {
+      "delete": {
+        "tags": [
+          "RecipeRule"
+        ],
+        "summary": "删除",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeRule/GetList": {
+      "get": {
+        "tags": [
+          "RecipeRule"
+        ],
+        "summary": "列表",
+        "parameters": [
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentName",
+            "in": "query",
+            "description": "设备名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentTypeName",
+            "in": "query",
+            "description": "设备类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeRuleOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeRuleOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeRuleOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeStack/GetBomCheckResult": {
+      "get": {
+        "tags": [
+          "RecipeStack"
+        ],
+        "summary": "获取Bom比对结果",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BomCheckOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BomCheckOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BomCheckOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeStack/ConfirmSyncRecipeStack": {
+      "post": {
+        "tags": [
+          "RecipeStack"
+        ],
+        "summary": "强制同步料站表",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRecipeStackInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRecipeStackInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRecipeStackInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRecipeStackInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeStack/GetRecipeStackByTaskNo": {
+      "get": {
+        "tags": [
+          "RecipeStack"
+        ],
+        "summary": "获取任务单栈位表",
+        "parameters": [
+          {
+            "name": "taskNo",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeStack"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeStack"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeStack"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/RecipeStack/GetRecipeStacks": {
+      "get": {
+        "tags": [
+          "RecipeStack"
+        ],
+        "summary": "获取栈位表列表",
+        "parameters": [
+          {
+            "name": "RecipeName",
+            "in": "query",
+            "description": "程序名",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备编码",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "PartNo",
+            "in": "query",
+            "description": "物料代码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MoLotNo",
+            "in": "query",
+            "description": "批次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TaskNo",
+            "in": "query",
+            "description": "任务单",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "IsSeriesProduction",
+            "in": "query",
+            "description": "是否连打",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Bort",
+            "in": "query",
+            "description": "面次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Lane",
+            "in": "query",
+            "description": "轨道",
+            "schema": {
+              "$ref": "#/components/schemas/Lane"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeStackOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeStackOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeStackOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraper/SteelMeshScraperOnline": {
+      "post": {
+        "tags": [
+          "SteelMeshScraper"
+        ],
+        "summary": "钢网、刮刀 上线",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOnlineInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOnlineInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOnlineInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOnlineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperOnlineOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperOnlineOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperOnlineOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraper/SteelMeshScraperOffline": {
+      "post": {
+        "tags": [
+          "SteelMeshScraper"
+        ],
+        "summary": "钢网、刮刀 下线",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraper/ScanSteelMeshScraperOffline": {
+      "post": {
+        "tags": [
+          "SteelMeshScraper"
+        ],
+        "summary": "下线扫描钢网、刮刀（下线检测）",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperOfflineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperOfflineOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperOfflineOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperOfflineOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraperConfig/AddConfig": {
+      "post": {
+        "tags": [
+          "SteelMeshScraperConfig"
+        ],
+        "summary": "添加",
+        "requestBody": {
+          "description": "新增实体",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraperConfig/AddListConfig": {
+      "post": {
+        "tags": [
+          "SteelMeshScraperConfig"
+        ],
+        "summary": "添加集合",
+        "requestBody": {
+          "description": "新增实体",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigInput"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraperConfig/UpdateConfig": {
+      "put": {
+        "tags": [
+          "SteelMeshScraperConfig"
+        ],
+        "summary": "更新",
+        "requestBody": {
+          "description": "更新实体",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigUpdateInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigUpdateInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigUpdateInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteelMeshScraperConfigUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraperConfig/DeleteConfig": {
+      "delete": {
+        "tags": [
+          "SteelMeshScraperConfig"
+        ],
+        "summary": "删除",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "删除",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraperConfig/GetPaged": {
+      "get": {
+        "tags": [
+          "SteelMeshScraperConfig"
+        ],
+        "summary": "分页获取",
+        "parameters": [
+          {
+            "name": "ProductPartNo",
+            "in": "query",
+            "description": "产品编码",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "ProductModel",
+            "in": "query",
+            "description": "机型",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentNo",
+            "in": "query",
+            "description": "设备编码",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "EquipmentName",
+            "in": "query",
+            "description": "设备名称",
+            "schema": {
+              "maxLength": 300,
+              "type": "string"
+            }
+          },
+          {
+            "name": "FtOriProdSeq",
+            "in": "query",
+            "description": "原厂编码",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "IsActive",
+            "in": "query",
+            "description": "是否有效",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/SteelMeshScraperConfig/TryGetConfig": {
+      "post": {
+        "tags": [
+          "SteelMeshScraperConfig"
+        ],
+        "summary": "获取配置信息",
+        "parameters": [
+          {
+            "name": "productPartNo",
+            "in": "query",
+            "description": "产品编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ftOriCode",
+            "in": "query",
+            "description": "原厂编码",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteelMeshScraperConfigOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/machine/TigerMachine/Test": {
+      "post": {
+        "tags": [
+          "TigerMachine"
+        ],
+        "summary": "测试接口",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AoiBindInput": {
+        "required": [
+          "containerName",
+          "puzzleNo"
+        ],
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "条码"
+          },
+          "puzzleNo": {
+            "type": "integer",
+            "description": "拼板位置号",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "绑定数据对象"
+      },
+      "AutoRecipeCheckOutput": {
+        "type": "object",
+        "properties": {
+          "machineCode": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "barcode": {
+            "type": "string",
+            "description": "条码",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "recipeLotNumber": {
+            "type": "string",
+            "description": "程序批次",
+            "nullable": true
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "stage": {
+            "type": "string",
+            "description": "模组序号",
+            "nullable": true
+          },
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "taskOrderAllCount": {
+            "type": "number",
+            "description": "工单总数",
+            "format": "double"
+          },
+          "taskOrderOverCount": {
+            "type": "integer",
+            "description": "工单完成数量",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "SN切换程序出参"
+      },
+      "BomCheckItem": {
+        "type": "object",
+        "properties": {
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "productCode": {
+            "type": "string",
+            "description": "成品编码",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "stage": {
+            "type": "integer",
+            "description": "模组序号",
+            "format": "int32"
+          },
+          "unit": {
+            "type": "integer",
+            "description": "单元 1为前侧  2为后侧",
+            "format": "int32"
+          },
+          "mainAddress": {
+            "type": "string",
+            "description": "站位",
+            "nullable": true
+          },
+          "subAddress": {
+            "type": "string",
+            "description": "子站位",
+            "nullable": true
+          },
+          "partNo": {
+            "type": "string",
+            "description": "贴片料号",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "description": "贴片位号",
+            "nullable": true
+          },
+          "fPartNo": {
+            "type": "string",
+            "description": "投料单料号",
+            "nullable": true
+          },
+          "fParentPartNo": {
+            "type": "string",
+            "description": "投料(主料)",
+            "nullable": true
+          },
+          "fPosition": {
+            "type": "string",
+            "description": "投料单位号",
+            "nullable": true
+          },
+          "binValue": {
+            "type": "string",
+            "description": "Bin值",
+            "nullable": true
+          },
+          "checkResult": {
+            "type": "boolean",
+            "description": "校验结果",
+            "readOnly": true
+          },
+          "binCheckResult": {
+            "type": "boolean",
+            "description": "Bin校验结果",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "校验项"
+      },
+      "BomCheckOutput": {
+        "type": "object",
+        "properties": {
+          "moLotNo": {
+            "type": "string",
+            "description": "批次",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "partNo": {
+            "type": "string",
+            "description": "产品料号",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "bort": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "checkResult": {
+            "type": "boolean",
+            "description": "校验结果",
+            "readOnly": true
+          },
+          "bomCheckItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BomCheckItem"
+            },
+            "description": "校验项",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "料站表比对结果"
+      },
+      "BomCheckType": {
+        "enum": [
+          2,
+          4,
+          6,
+          8
+        ],
+        "type": "integer",
+        "description": "栈位表比对类型",
+        "format": "int32"
+      },
+      "CreateProductModelRecipeInput": {
+        "type": "object",
+        "properties": {
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "设备程序名称",
+            "nullable": true
+          },
+          "isControlRecipe": {
+            "type": "boolean",
+            "description": "是否需要管控设备程序"
+          },
+          "recipeCheckMode": {
+            "$ref": "#/components/schemas/RecipeCheckMode"
+          },
+          "equipmentNos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "设备编码",
+            "nullable": true
+          },
+          "productModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "机型",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增设备机型程序入参"
+      },
+      "FixToolDataImportDto": {
+        "required": [
+          "code",
+          "creationTime",
+          "operationType",
+          "taskOrderNo",
+          "toolUsage",
+          "useCount",
+          "workOperationName"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "治具编码"
+          },
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号"
+          },
+          "operationType": {
+            "$ref": "#/components/schemas/ProdToolHistoryOperationType"
+          },
+          "workOperationName": {
+            "type": "string",
+            "description": "工序名称"
+          },
+          "toolUsage": {
+            "type": "integer",
+            "description": "剩余总次数",
+            "format": "int32"
+          },
+          "useCount": {
+            "type": "integer",
+            "description": "使用次数",
+            "format": "int32"
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "操作时间",
+            "format": "date-time"
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "操作人",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "FixToolOfflineInput": {
+        "required": [
+          "toolCode"
+        ],
+        "type": "object",
+        "properties": {
+          "toolCode": {
+            "type": "string",
+            "description": "工治具编码"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FixToolOnlineInput": {
+        "required": [
+          "taskOrderNo",
+          "toolCode",
+          "workOperationCode"
+        ],
+        "type": "object",
+        "properties": {
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号"
+          },
+          "toolCode": {
+            "type": "string",
+            "description": "工治具编码"
+          },
+          "workOperationCode": {
+            "type": "string",
+            "description": "Mes采集工序编号"
+          },
+          "type": {
+            "type": "string",
+            "description": "设备类型【一级.二级分类】",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "FixToolScanOutput": {
+        "type": "object",
+        "properties": {
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "toolCode": {
+            "type": "string",
+            "description": "工治具编码",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "工治具型号",
+            "nullable": true
+          },
+          "toolName": {
+            "type": "string",
+            "description": "工治具名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetRecipeNameBySnOutput": {
+        "type": "object",
+        "properties": {
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "sn": {
+            "type": "string",
+            "description": "条码",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "taskOrderAllCount": {
+            "type": "number",
+            "description": "任务单总数",
+            "format": "double"
+          },
+          "taskOrderOverCount": {
+            "type": "integer",
+            "description": "任务单完成数量",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "根据条码获取程序名"
+      },
+      "Lane": {
+        "enum": [
+          0,
+          1,
+          2
+        ],
+        "type": "integer",
+        "description": "轨道",
+        "format": "int32"
+      },
+      "PrintingMoveOutInput": {
+        "required": [
+          "equipmentCode",
+          "scraperUseCount",
+          "vehicleUseCount"
+        ],
+        "type": "object",
+        "properties": {
+          "equipmentCode": {
+            "type": "string",
+            "description": "设备编码"
+          },
+          "scraperUseCount": {
+            "type": "integer",
+            "description": "刮刀使用次数",
+            "format": "int32"
+          },
+          "vehicleUseCount": {
+            "type": "integer",
+            "description": "钢网使用次数",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "条码过站数据对象"
+      },
+      "ProdToolHistoryOperationType": {
+        "enum": [
+          5,
+          10
+        ],
+        "type": "integer",
+        "description": "操作类型",
+        "format": "int32"
+      },
+      "ProductModelRecipeOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "设备程序名称",
+            "nullable": true
+          },
+          "isControlRecipe": {
+            "type": "boolean",
+            "description": "是否需要管控设备程序"
+          },
+          "recipeCheckMode": {
+            "$ref": "#/components/schemas/RecipeCheckMode"
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "机型设备程序列表输出"
+      },
+      "ProductModelRecipeOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductModelRecipeOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecipeCheckInput": {
+        "type": "object",
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "description": "条码",
+            "nullable": true
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "stage": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "machineCode": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "SN切换程序入参"
+      },
+      "RecipeCheckMode": {
+        "enum": [
+          10,
+          20,
+          30
+        ],
+        "type": "integer",
+        "description": "整机程序校验逻辑",
+        "format": "int32"
+      },
+      "RecipeMatchType": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer",
+        "description": "程序匹配类型",
+        "format": "int32"
+      },
+      "RecipeOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "partNo": {
+            "type": "string",
+            "description": "产品代码",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "批次",
+            "nullable": true
+          },
+          "lineCode": {
+            "type": "string",
+            "description": "线体",
+            "nullable": true
+          },
+          "bort": {
+            "type": "string",
+            "description": "面次",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "设备程序名称",
+            "nullable": true
+          },
+          "recipeFilePath": {
+            "type": "string",
+            "description": "设备程序路径",
+            "nullable": true
+          },
+          "recipeVersion": {
+            "type": "string",
+            "description": "设备程序版本",
+            "nullable": true
+          },
+          "pcbVersion": {
+            "type": "string",
+            "description": "PCB版本",
+            "nullable": true
+          },
+          "bomVersion": {
+            "type": "string",
+            "description": "Bom版本",
+            "nullable": true
+          },
+          "workStation": {
+            "type": "string",
+            "description": "工位",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "description": "位号",
+            "nullable": true
+          },
+          "prodMode": {
+            "type": "string",
+            "description": "生产模式",
+            "nullable": true
+          },
+          "stencil": {
+            "type": "string",
+            "description": "钢网",
+            "nullable": true
+          },
+          "constantElecSpec": {
+            "type": "string",
+            "description": "恒流规格",
+            "nullable": true
+          },
+          "electricityValue": {
+            "type": "string",
+            "description": "电流值",
+            "nullable": true
+          },
+          "recipeStackStatus": {
+            "$ref": "#/components/schemas/RecipeStackStatus"
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "moPbGroup": {
+            "type": "string",
+            "description": "合并拼版批",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "设备程序输出"
+      },
+      "RecipeOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecipeParameterInput": {
+        "type": "object",
+        "properties": {
+          "typeCode": {
+            "type": "string",
+            "description": "程式的栈位信息",
+            "nullable": true
+          },
+          "itemGroup": {
+            "type": "string",
+            "description": "标记同一个对象",
+            "nullable": true
+          },
+          "itemCode": {
+            "type": "string",
+            "description": "对象对应的属性编号",
+            "nullable": true
+          },
+          "itemName": {
+            "type": "string",
+            "description": "属性名称",
+            "nullable": true
+          },
+          "itemValue": {
+            "type": "string",
+            "description": "属性值",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "程序参数上传入参"
+      },
+      "RecipeParamsOutput": {
+        "type": "object",
+        "properties": {
+          "taskNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "Id",
+            "nullable": true
+          },
+          "recipeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "设备程序名",
+            "nullable": true
+          },
+          "sortNo": {
+            "type": "integer",
+            "description": "参数顺序号",
+            "format": "int32"
+          },
+          "typeCode": {
+            "type": "string",
+            "description": "程式的栈位信息",
+            "nullable": true
+          },
+          "itemGroup": {
+            "type": "string",
+            "description": "标记同一个对象",
+            "nullable": true
+          },
+          "itemCode": {
+            "type": "string",
+            "description": "参数编号",
+            "nullable": true
+          },
+          "itemName": {
+            "type": "string",
+            "description": "参数名称",
+            "nullable": true
+          },
+          "itemValue": {
+            "type": "string",
+            "description": "参数设定值",
+            "nullable": true
+          },
+          "standardValue": {
+            "type": "string",
+            "description": "标准值",
+            "nullable": true
+          },
+          "parameterMax": {
+            "type": "number",
+            "description": "参数上限",
+            "format": "double",
+            "nullable": true
+          },
+          "parameterMin": {
+            "type": "number",
+            "description": "参数下限",
+            "format": "double",
+            "nullable": true
+          },
+          "parameterUnit": {
+            "type": "string",
+            "description": "单位",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "设备程序参数输出"
+      },
+      "RecipeParamsOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeParamsOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecipeRuleDto": {
+        "type": "object",
+        "properties": {
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "boolean",
+            "description": "机型"
+          },
+          "partNo": {
+            "type": "boolean",
+            "description": "产品代码"
+          },
+          "moLotNo": {
+            "type": "boolean",
+            "description": "批次"
+          },
+          "lineCode": {
+            "type": "boolean",
+            "description": "线体"
+          },
+          "bort": {
+            "type": "boolean",
+            "description": "面次"
+          },
+          "pcbVersion": {
+            "type": "boolean",
+            "description": "PCB版本"
+          },
+          "bomVersion": {
+            "type": "boolean",
+            "description": "Bom版本"
+          },
+          "workStation": {
+            "type": "boolean",
+            "description": "工位"
+          },
+          "position": {
+            "type": "boolean",
+            "description": "位号"
+          },
+          "prodMode": {
+            "type": "boolean",
+            "description": "生产模式"
+          },
+          "stencil": {
+            "type": "boolean",
+            "description": "钢网"
+          },
+          "constantElecSpec": {
+            "type": "boolean",
+            "description": "恒流规格"
+          },
+          "electricityValue": {
+            "type": "boolean",
+            "description": "电流值"
+          },
+          "recipeVersion": {
+            "type": "boolean",
+            "description": "版本号"
+          },
+          "isBurnControl": {
+            "type": "boolean",
+            "description": "是否需要烧录软件"
+          },
+          "isRecipeControl": {
+            "type": "boolean",
+            "description": "是否需要管控设备程序"
+          },
+          "isRecipeChange": {
+            "type": "boolean",
+            "description": "是否需要下发程序"
+          },
+          "recipeMatchType": {
+            "$ref": "#/components/schemas/RecipeMatchType"
+          }
+        },
+        "additionalProperties": false,
+        "description": "程序名规则Dto"
+      },
+      "RecipeRuleOutput": {
+        "type": "object",
+        "properties": {
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "boolean",
+            "description": "机型"
+          },
+          "partNo": {
+            "type": "boolean",
+            "description": "产品代码"
+          },
+          "moLotNo": {
+            "type": "boolean",
+            "description": "批次"
+          },
+          "lineCode": {
+            "type": "boolean",
+            "description": "线体"
+          },
+          "bort": {
+            "type": "boolean",
+            "description": "面次"
+          },
+          "pcbVersion": {
+            "type": "boolean",
+            "description": "PCB版本"
+          },
+          "bomVersion": {
+            "type": "boolean",
+            "description": "Bom版本"
+          },
+          "workStation": {
+            "type": "boolean",
+            "description": "工位"
+          },
+          "position": {
+            "type": "boolean",
+            "description": "位号"
+          },
+          "prodMode": {
+            "type": "boolean",
+            "description": "生产模式"
+          },
+          "stencil": {
+            "type": "boolean",
+            "description": "钢网"
+          },
+          "constantElecSpec": {
+            "type": "boolean",
+            "description": "恒流规格"
+          },
+          "electricityValue": {
+            "type": "boolean",
+            "description": "电流值"
+          },
+          "recipeVersion": {
+            "type": "boolean",
+            "description": "版本号"
+          },
+          "isBurnControl": {
+            "type": "boolean",
+            "description": "是否需要烧录软件"
+          },
+          "isRecipeControl": {
+            "type": "boolean",
+            "description": "是否需要管控设备程序"
+          },
+          "isRecipeChange": {
+            "type": "boolean",
+            "description": "是否需要下发程序"
+          },
+          "recipeMatchType": {
+            "$ref": "#/components/schemas/RecipeMatchType"
+          },
+          "id": {
+            "type": "string",
+            "description": "id",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "程序名规则列表输出"
+      },
+      "RecipeRuleOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeRuleOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecipeStack": {
+        "type": "object",
+        "properties": {
+          "creatorUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "lastModifierUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "attribute1": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域1",
+            "nullable": true
+          },
+          "attribute2": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域2",
+            "nullable": true
+          },
+          "attribute3": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域3",
+            "nullable": true
+          },
+          "attribute4": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域4",
+            "nullable": true
+          },
+          "attribute5": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域5",
+            "nullable": true
+          },
+          "attribute6": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域6",
+            "nullable": true
+          },
+          "attribute7": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域7",
+            "nullable": true
+          },
+          "attribute8": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "弹性域8",
+            "nullable": true
+          },
+          "attribute9": {
+            "type": "integer",
+            "description": "弹性域9",
+            "format": "int32",
+            "nullable": true
+          },
+          "attribute10": {
+            "type": "integer",
+            "description": "弹性域10",
+            "format": "int32",
+            "nullable": true
+          },
+          "deletionUserName": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": "string",
+            "description": "删除人名称",
+            "nullable": true
+          },
+          "deleterUserId": {
+            "type": "integer",
+            "description": "删除人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "deletionTime": {
+            "type": "string",
+            "description": "删除时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "逻辑删除，true：删除，false：未删除"
+          },
+          "id": {
+            "maxLength": 64,
+            "type": "string",
+            "description": "主键",
+            "nullable": true
+          },
+          "recipeName": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "stage": {
+            "type": "integer",
+            "description": "模组序号 从1开始表示",
+            "format": "int32"
+          },
+          "unit": {
+            "type": "integer",
+            "description": "单元 1为前侧  2为后侧",
+            "format": "int32"
+          },
+          "stack": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "栈位 Feeder栈位：TBL3-5L  托盘栈位  TBL3-1T",
+            "nullable": true
+          },
+          "mainAddress": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "主地址-IF使用",
+            "nullable": true
+          },
+          "subAddress": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "子地址-IF使用",
+            "nullable": true
+          },
+          "partNo": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "料号",
+            "nullable": true
+          },
+          "feederType": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "供料器类型",
+            "nullable": true
+          },
+          "onceUse": {
+            "type": "integer",
+            "description": "单次用量",
+            "format": "int32"
+          },
+          "position": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "点位 多个点位用逗号分隔",
+            "nullable": true
+          },
+          "pitch": {
+            "type": "integer",
+            "description": "单次进给长度",
+            "format": "int32"
+          },
+          "skip": {
+            "type": "integer",
+            "description": "跳过标志 0默认,1跳过",
+            "format": "int32"
+          },
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "批次号",
+            "nullable": true
+          },
+          "taskNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "stackVersion": {
+            "type": "integer",
+            "description": "栈位表版本号",
+            "format": "int32"
+          },
+          "replaceMaterial": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "替代料",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "料站表"
+      },
+      "RecipeStackOutput": {
+        "type": "object",
+        "properties": {
+          "recipeName": {
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "stage": {
+            "type": "integer",
+            "description": "模组序号 从1开始表示",
+            "format": "int32"
+          },
+          "unit": {
+            "type": "integer",
+            "description": "单元 1为前侧  2为后侧",
+            "format": "int32"
+          },
+          "stack": {
+            "type": "string",
+            "description": "栈位 Feeder栈位：TBL3-5L  托盘栈位  TBL3-1T",
+            "nullable": true
+          },
+          "mainAddress": {
+            "type": "string",
+            "description": "主地址-IF使用",
+            "nullable": true
+          },
+          "subAddress": {
+            "type": "string",
+            "description": "子地址-IF使用",
+            "nullable": true
+          },
+          "partNo": {
+            "type": "string",
+            "description": "料号",
+            "nullable": true
+          },
+          "feederType": {
+            "type": "string",
+            "description": "供料器类型",
+            "nullable": true
+          },
+          "onceUse": {
+            "type": "integer",
+            "description": "单次用量",
+            "format": "int32"
+          },
+          "position": {
+            "type": "string",
+            "description": "点位 多个点位用逗号分隔",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "批次号",
+            "nullable": true
+          },
+          "stackVersion": {
+            "type": "integer",
+            "description": "版本号",
+            "format": "int32"
+          },
+          "bort": {
+            "type": "string",
+            "description": "版面",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "栈位表明细"
+      },
+      "RecipeStackOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeStackOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecipeStackStatus": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "type": "integer",
+        "description": "料站表状态",
+        "format": "int32"
+      },
+      "RecipeUploadInput": {
+        "type": "object",
+        "properties": {
+          "localTime": {
+            "type": "string",
+            "description": "消息产生时间",
+            "format": "date-time"
+          },
+          "machineCode": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "lane": {
+            "type": "string",
+            "description": "轨道",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "程序名称",
+            "nullable": true
+          },
+          "recipeGroupName": {
+            "type": "string",
+            "description": "程序组名称",
+            "nullable": true
+          },
+          "recipeVersion": {
+            "type": "string",
+            "description": "程序版本",
+            "nullable": true
+          },
+          "operatorCode": {
+            "type": "string",
+            "description": "操作员代码",
+            "nullable": true
+          },
+          "recipeFilePath": {
+            "type": "string",
+            "description": "程序文件路径",
+            "nullable": true
+          },
+          "modelList": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeParameterInput"
+            },
+            "description": "附加信息(参数)",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "程序上传入参"
+      },
+      "SteelMeshScraperConfigInput": {
+        "type": "object",
+        "properties": {
+          "productPartNo": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "产品编码",
+            "nullable": true
+          },
+          "productModel": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "maxLength": 300,
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "ftOriProdSeq": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "原厂编码",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否有效",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "钢网BOP校验配置"
+      },
+      "SteelMeshScraperConfigOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "主键ID",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人",
+            "nullable": true
+          },
+          "lastModifierUserId": {
+            "type": "integer",
+            "description": "最后修改人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人",
+            "nullable": true
+          },
+          "creatorUserId": {
+            "type": "integer",
+            "description": "创建人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time"
+          },
+          "productPartNo": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "产品编码",
+            "nullable": true
+          },
+          "productModel": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "maxLength": 300,
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "ftOriProdSeq": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "原厂编码",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否有效"
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "SteelMeshScraperConfigOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SteelMeshScraperConfigOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SteelMeshScraperConfigUpdateInput": {
+        "type": "object",
+        "properties": {
+          "productPartNo": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "产品编码",
+            "nullable": true
+          },
+          "productModel": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "equipmentNo": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "maxLength": 300,
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "ftOriProdSeq": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "原厂编码",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "是否有效",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "需要更新的配置",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "SteelMeshScraperOfflineInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "钢网编码、刮刀编码",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "类型 CMES_UNIT_GWGD_GWGW  钢网、CMES_UNIT_GWGD_GDGD  刮刀",
+            "nullable": true
+          },
+          "ftOriCode": {
+            "type": "string",
+            "description": "原厂编码",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "钢网、刮刀下线  入参"
+      },
+      "SteelMeshScraperOfflineOutput": {
+        "type": "object",
+        "properties": {
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "equipmentCode": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "钢网编码、刮刀编码",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "钢网型号、刮刀型号",
+            "nullable": true
+          },
+          "describe": {
+            "type": "string",
+            "description": "描述",
+            "nullable": true
+          },
+          "scanResult": {
+            "type": "string",
+            "description": "扫描结果",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "钢网、刮刀下线  输出参数"
+      },
+      "SteelMeshScraperOnlineInput": {
+        "type": "object",
+        "properties": {
+          "taskOrderId": {
+            "type": "string",
+            "description": "任务单id",
+            "nullable": true
+          },
+          "taskOrderNo": {
+            "type": "string",
+            "description": "任务单号",
+            "nullable": true
+          },
+          "equipmentId": {
+            "type": "string",
+            "description": "设备id",
+            "nullable": true
+          },
+          "equipmentCode": {
+            "type": "string",
+            "description": "设备编号",
+            "nullable": true
+          },
+          "toolCode": {
+            "type": "string",
+            "description": "治具编码",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "类型 CMES_UNIT_GWGD_GWGW  钢网、CMES_UNIT_GWGD_GDGD  刮刀",
+            "nullable": true
+          },
+          "ftOriCode": {
+            "type": "string",
+            "description": "原厂编码",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "钢网、刮刀上线  入参"
+      },
+      "SteelMeshScraperOnlineOutput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "钢网编码、刮刀编码",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "钢网型号、刮刀型号",
+            "nullable": true
+          },
+          "describe": {
+            "type": "string",
+            "description": "描述",
+            "nullable": true
+          },
+          "scanResult": {
+            "type": "string",
+            "description": "扫描结果",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "钢网、刮刀上线  输出参数"
+      },
+      "SyncRecipeStackInput": {
+        "type": "object",
+        "properties": {
+          "recipeName": {
+            "type": "string",
+            "description": "程序名",
+            "nullable": true
+          },
+          "moLotNo": {
+            "type": "string",
+            "description": "批次",
+            "nullable": true
+          },
+          "bomCheckType": {
+            "$ref": "#/components/schemas/BomCheckType"
+          }
+        },
+        "additionalProperties": false,
+        "description": "同步料站表入参"
+      },
+      "UpdateProductModelRecipeInput": {
+        "type": "object",
+        "properties": {
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "string",
+            "description": "机型",
+            "nullable": true
+          },
+          "recipeName": {
+            "type": "string",
+            "description": "设备程序名称",
+            "nullable": true
+          },
+          "isControlRecipe": {
+            "type": "boolean",
+            "description": "是否需要管控设备程序"
+          },
+          "recipeCheckMode": {
+            "$ref": "#/components/schemas/RecipeCheckMode"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "更新入参"
+      },
+      "UpdateRecipeRuleInput": {
+        "type": "object",
+        "properties": {
+          "equipmentNo": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "equipmentName": {
+            "type": "string",
+            "description": "设备名称",
+            "nullable": true
+          },
+          "equipmentTypeName": {
+            "type": "string",
+            "description": "设备类型",
+            "nullable": true
+          },
+          "productModel": {
+            "type": "boolean",
+            "description": "机型"
+          },
+          "partNo": {
+            "type": "boolean",
+            "description": "产品代码"
+          },
+          "moLotNo": {
+            "type": "boolean",
+            "description": "批次"
+          },
+          "lineCode": {
+            "type": "boolean",
+            "description": "线体"
+          },
+          "bort": {
+            "type": "boolean",
+            "description": "面次"
+          },
+          "pcbVersion": {
+            "type": "boolean",
+            "description": "PCB版本"
+          },
+          "bomVersion": {
+            "type": "boolean",
+            "description": "Bom版本"
+          },
+          "workStation": {
+            "type": "boolean",
+            "description": "工位"
+          },
+          "position": {
+            "type": "boolean",
+            "description": "位号"
+          },
+          "prodMode": {
+            "type": "boolean",
+            "description": "生产模式"
+          },
+          "stencil": {
+            "type": "boolean",
+            "description": "钢网"
+          },
+          "constantElecSpec": {
+            "type": "boolean",
+            "description": "恒流规格"
+          },
+          "electricityValue": {
+            "type": "boolean",
+            "description": "电流值"
+          },
+          "recipeVersion": {
+            "type": "boolean",
+            "description": "版本号"
+          },
+          "isBurnControl": {
+            "type": "boolean",
+            "description": "是否需要烧录软件"
+          },
+          "isRecipeControl": {
+            "type": "boolean",
+            "description": "是否需要管控设备程序"
+          },
+          "isRecipeChange": {
+            "type": "boolean",
+            "description": "是否需要下发程序"
+          },
+          "recipeMatchType": {
+            "$ref": "#/components/schemas/RecipeMatchType"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "更新入参"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Printing",
+      "description": "印刷"
+    },
+    {
+      "name": "Aoi",
+      "description": "自动光学检测设备"
+    },
+    {
+      "name": "TigerMachine",
+      "description": "协助模块测试接口"
+    },
+    {
+      "name": "FixTool",
+      "description": "通用工治具接口"
+    },
+    {
+      "name": "FixToolData",
+      "description": "通用工治具接口"
+    },
+    {
+      "name": "SteelMeshScraper",
+      "description": "钢网、刮刀"
+    },
+    {
+      "name": "SteelMeshScraperConfig",
+      "description": "钢网上线检验配置"
+    },
+    {
+      "name": "RecipeCheck",
+      "description": "Scada程序切换应用"
+    },
+    {
+      "name": "Recipe",
+      "description": "设备程序应用"
+    },
+    {
+      "name": "RecipeRule",
+      "description": "程序名规则应用"
+    },
+    {
+      "name": "RecipeStack",
+      "description": "料站表应用"
+    }
+  ]
+}

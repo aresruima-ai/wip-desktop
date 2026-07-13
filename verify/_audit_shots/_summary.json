@@ -1,0 +1,112 @@
+[
+  {
+    "name": "portal",
+    "ok": true,
+    "title": "AI数字化平台 · 首页",
+    "sizeKB": 199,
+    "errs": []
+  },
+  {
+    "name": "cockpit",
+    "ok": true,
+    "title": "全域驾驶舱 - AI数字化看板",
+    "sizeKB": 114,
+    "errs": []
+  },
+  {
+    "name": "wip",
+    "ok": true,
+    "title": "WIP 在制品追踪 - AI数字化平台",
+    "sizeKB": 202,
+    "errs": []
+  },
+  {
+    "name": "bad",
+    "ok": true,
+    "title": "工程不良分析 - AI数字化平台",
+    "sizeKB": 211,
+    "errs": [
+      "CE:Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "CE:Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "CE:Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "CE:Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ]
+  },
+  {
+    "name": "oee",
+    "ok": true,
+    "title": "OEE 设备综合效率",
+    "sizeKB": 86,
+    "errs": []
+  },
+  {
+    "name": "kanban",
+    "ok": true,
+    "title": "工作看板 - AI数字化平台",
+    "sizeKB": 204,
+    "errs": []
+  },
+  {
+    "name": "uph",
+    "ok": true,
+    "title": "UPH产出统计 - AI数字化平台",
+    "sizeKB": 124,
+    "errs": []
+  },
+  {
+    "name": "health",
+    "ok": true,
+    "title": "系统健康 - AI数字化平台",
+    "sizeKB": 94,
+    "errs": []
+  },
+  {
+    "name": "line-balance",
+    "ok": true,
+    "title": "生产线平衡看板 - AI数字化平台",
+    "sizeKB": 115,
+    "errs": []
+  },
+  {
+    "name": "fixture-life",
+    "ok": true,
+    "title": "治具与线材寿命 - AI数字化平台",
+    "sizeKB": 1690,
+    "errs": []
+  },
+  {
+    "name": "factory-3d",
+    "ok": true,
+    "title": "数字孪生 - AI数字化平台",
+    "sizeKB": 536,
+    "errs": []
+  },
+  {
+    "name": "ai-center",
+    "ok": true,
+    "title": "AI中心 - AI数字化平台",
+    "sizeKB": 144,
+    "errs": []
+  },
+  {
+    "name": "scroll-board",
+    "ok": true,
+    "title": "滚动看板 · 经营首页",
+    "sizeKB": 170,
+    "errs": []
+  },
+  {
+    "name": "admin",
+    "ok": true,
+    "title": "系统管理 - AI数字化平台",
+    "sizeKB": 48,
+    "errs": []
+  },
+  {
+    "name": "settings",
+    "ok": true,
+    "title": "系统设置 - AI数字化平台",
+    "sizeKB": 44,
+    "errs": []
+  }
+]

@@ -1,0 +1,3009 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "IMES MAN API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/services/man/PersonDepartment/GetPersonnelDepartmentDropDownList": {
+      "get": {
+        "tags": [
+          "PersonDepartment"
+        ],
+        "summary": "获取人员部门下拉框数据",
+        "parameters": [
+          {
+            "name": "accounts",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonDepartmentOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonDepartmentOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonDepartmentOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/PersonTransfer/GetAllList": {
+      "get": {
+        "tags": [
+          "PersonTransfer"
+        ],
+        "summary": "获取所有人员调入调出",
+        "parameters": [
+          {
+            "name": "TeamId",
+            "in": "query",
+            "description": "班组ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonTransferOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonTransferOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonTransferOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/PersonTransfer/GetTransferOutPersonList": {
+      "get": {
+        "tags": [
+          "PersonTransfer"
+        ],
+        "summary": "获取调出人员列表",
+        "parameters": [
+          {
+            "name": "TeamId",
+            "in": "query",
+            "description": "班组Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "姓名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferPersonListOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferPersonListOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferPersonListOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/PersonTransfer/GetTransferInPersonList": {
+      "get": {
+        "tags": [
+          "PersonTransfer"
+        ],
+        "summary": "获取调入人员列表",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferPersonListOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferPersonListOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferPersonListOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/PersonTransfer/TransferOut": {
+      "post": {
+        "tags": [
+          "PersonTransfer"
+        ],
+        "summary": "新增人员调出",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferOut"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferOut"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferOut"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferOut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/PersonTransfer/TransferIn": {
+      "post": {
+        "tags": [
+          "PersonTransfer"
+        ],
+        "summary": "新增人员调入",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferIn"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferIn"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferIn"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonTransferIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/GetList": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "获取所有班组",
+        "parameters": [
+          {
+            "name": "Code",
+            "in": "query",
+            "description": "车间编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "车间名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Type",
+            "in": "query",
+            "description": "班组类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/GetDropDownList": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "获取班组下拉列表数据",
+        "parameters": [
+          {
+            "name": "Code",
+            "in": "query",
+            "description": "编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TeamType",
+            "in": "query",
+            "description": "维修报工传入  CMES_BASIC_DATA_MODELING_TEAMTYPE_10  ，其它可为空",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDropDownOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDropDownOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDropDownOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/Insert": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组添加",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamInsert"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamInsert"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamInsert"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamInsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/Update": {
+      "put": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组更新",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdate"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/Delete": {
+      "delete": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组删除",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/GetMemberList": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "获取所有班组成员",
+        "parameters": [
+          {
+            "name": "TeamId",
+            "in": "query",
+            "description": "班组ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamUserOutput"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamUserOutput"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamUserOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/InsertMember": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组成员添加",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserInsert"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserInsert"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserInsert"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserInsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/UpdateMember": {
+      "put": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组成员更新",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserUpdate"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserUpdate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserUpdate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/DeleteMember": {
+      "delete": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组成员删除",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/ImportMembers": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组成员导入",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserImportInputs"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserImportInputs"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserImportInputs"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUserImportInputs"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/Team/Import": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "班组导入",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TeamInsert"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TeamInsert"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TeamInsert"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TeamInsert"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/TigerMan/Test": {
+      "post": {
+        "tags": [
+          "TigerMan"
+        ],
+        "summary": "测试接口",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/UserCheck/GetList": {
+      "get": {
+        "tags": [
+          "UserCheck"
+        ],
+        "summary": "分页获取人员上岗数据",
+        "parameters": [
+          {
+            "name": "UserCode",
+            "in": "query",
+            "description": "人员编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "UserName",
+            "in": "query",
+            "description": "人员姓名",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Account",
+            "in": "query",
+            "description": "员工帐号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "OperateType",
+            "in": "query",
+            "description": "操作类型",
+            "schema": {
+              "$ref": "#/components/schemas/OperateType"
+            }
+          },
+          {
+            "name": "CalendarDate",
+            "in": "query",
+            "description": "日期",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "LineId",
+            "in": "query",
+            "description": "线体Id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Shifts",
+            "in": "query",
+            "description": "班次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sorting",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserCheckHistoryPagedOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserCheckHistoryPagedOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserCheckHistoryPagedOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/UserCheck/Insert": {
+      "post": {
+        "tags": [
+          "UserCheck"
+        ],
+        "summary": "新增人员上岗数据",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrtUserCheckHistoryInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrtUserCheckHistoryInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrtUserCheckHistoryInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrtUserCheckHistoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrtUserCheckHistoryOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrtUserCheckHistoryOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrtUserCheckHistoryOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/UserCheck/Update": {
+      "put": {
+        "tags": [
+          "UserCheck"
+        ],
+        "summary": "打卡时间修改",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdUserCheckHistoryInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdUserCheckHistoryInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdUserCheckHistoryInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdUserCheckHistoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserCheck/Verify": {
+      "post": {
+        "tags": [
+          "UserCheck"
+        ],
+        "summary": "一键检查",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyUserCheckHistoryInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyUserCheckHistoryInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyUserCheckHistoryInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyUserCheckHistoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserCheck/VefiryCommit": {
+      "post": {
+        "tags": [
+          "UserCheck"
+        ],
+        "summary": "校对提交",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserCheck/Delete": {
+      "delete": {
+        "tags": [
+          "UserCheck"
+        ],
+        "summary": "删除人员上岗数据",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserOnDuty/GetList": {
+      "get": {
+        "tags": [
+          "UserOnDuty"
+        ],
+        "summary": "人员上岗信息分页查询",
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "query",
+            "description": "唯一编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WorkStationCode",
+            "in": "query",
+            "description": "工位编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "WorkStationName",
+            "in": "query",
+            "description": "工位名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "UserCode",
+            "in": "query",
+            "description": "人员编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "UserName",
+            "in": "query",
+            "description": "人员姓名",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Shifts",
+            "in": "query",
+            "description": "班次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "OnDutyTimeStart",
+            "in": "query",
+            "description": "上岗时间",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "OnDutyTimeEnd",
+            "in": "query",
+            "description": "上岗时间",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOnDutyOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOnDutyOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOnDutyOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/UserOnDuty/RemoveUserOnDut": {
+      "delete": {
+        "tags": [
+          "UserOnDuty"
+        ],
+        "summary": "移除人员上岗记录",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserOnDuty/Insert": {
+      "post": {
+        "tags": [
+          "UserOnDuty"
+        ],
+        "summary": "人员上岗添加",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserOnDutyInsert"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserOnDutyInsert"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserOnDutyInsert"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserOnDutyInsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOnDutyInsertOutput"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOnDutyInsertOutput"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOnDutyInsertOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/UserOnDuty/EquipmentPersonnelLogin": {
+      "post": {
+        "tags": [
+          "UserOnDuty"
+        ],
+        "summary": "设备人员登录",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentPersonnelLoginInput"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentPersonnelLoginInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentPersonnelLoginInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentPersonnelLoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserOnDuty/Import": {
+      "post": {
+        "tags": [
+          "UserOnDuty"
+        ],
+        "summary": "导入人员上岗数据",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UserOnDutyInsert"
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UserOnDutyInsert"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UserOnDutyInsert"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UserOnDutyInsert"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/services/man/UserWorkTime/GetList": {
+      "get": {
+        "tags": [
+          "UserWorkTime"
+        ],
+        "summary": "分页获取人员上岗数据",
+        "parameters": [
+          {
+            "name": "UserCode",
+            "in": "query",
+            "description": "人员编码",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "UserName",
+            "in": "query",
+            "description": "人员姓名",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "OperateType",
+            "in": "query",
+            "description": "操作类型",
+            "schema": {
+              "$ref": "#/components/schemas/OperateType"
+            }
+          },
+          {
+            "name": "CalendarDate",
+            "in": "query",
+            "description": "日期",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "LineId",
+            "in": "query",
+            "description": "线体Id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Shifts",
+            "in": "query",
+            "description": "班次",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sorting",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SkipCount",
+            "in": "query",
+            "description": "偏移数量",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserWorkTimePagedOutputPagedResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserWorkTimePagedOutputPagedResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserWorkTimePagedOutputPagedResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/man/UserWorkTime/GetLineWorkTime": {
+      "get": {
+        "tags": [
+          "UserWorkTime"
+        ],
+        "summary": "根据日期获取产线人员工时",
+        "parameters": [
+          {
+            "name": "Date",
+            "in": "query",
+            "description": "日期，只到天",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "StartTime",
+            "in": "query",
+            "description": "开始时间",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "EndTime",
+            "in": "query",
+            "description": "结束时间",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/GetLineWorkTimeOutput"
+                    }
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/GetLineWorkTimeOutput"
+                    }
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/GetLineWorkTimeOutput"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CrtUserCheckHistoryInput": {
+        "required": [
+          "account",
+          "lineId",
+          "operateTime",
+          "operateType",
+          "shifts"
+        ],
+        "type": "object",
+        "properties": {
+          "operateType": {
+            "$ref": "#/components/schemas/OperateType"
+          },
+          "calendarDate": {
+            "type": "string",
+            "description": "日期",
+            "format": "date-time"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "线体Id"
+          },
+          "shifts": {
+            "type": "string",
+            "description": "班次"
+          },
+          "account": {
+            "type": "string",
+            "description": "人员账号"
+          },
+          "operateTime": {
+            "type": "string",
+            "description": "操作时间",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "数据对象"
+      },
+      "CrtUserCheckHistoryOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "account": {
+            "type": "string",
+            "description": "账号",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "description": "姓名",
+            "nullable": true
+          },
+          "staffId": {
+            "type": "string",
+            "description": "工号",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "description": "线体Id",
+            "nullable": true
+          },
+          "lineName": {
+            "type": "string",
+            "description": "产线名称",
+            "nullable": true
+          },
+          "operateTime": {
+            "type": "string",
+            "description": "操作时间",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CrtUserCheckHistoryOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrtUserCheckHistoryOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DataSource": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "EquipmentPersonnelLoginInput": {
+        "type": "object",
+        "properties": {
+          "machineCode": {
+            "type": "string",
+            "description": "设备编码",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "description": "用户名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "设备人员登录入参"
+      },
+      "GetLineWorkTimeOutput": {
+        "type": "object",
+        "properties": {
+          "empNo": {
+            "type": "string",
+            "description": "员工编号",
+            "nullable": true
+          },
+          "empName": {
+            "type": "string",
+            "description": "员工姓名",
+            "nullable": true
+          },
+          "lineId": {
+            "type": "string",
+            "description": "产线ID",
+            "nullable": true
+          },
+          "cAllHour": {
+            "type": "number",
+            "description": "打卡总工时",
+            "format": "double"
+          },
+          "earliestClockDate": {
+            "type": "string",
+            "description": "最早打卡",
+            "format": "date-time"
+          },
+          "lastCardTime": {
+            "type": "string",
+            "description": "最晚打卡",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetUserCheckHistoryPagedOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "operateType": {
+            "$ref": "#/components/schemas/OperateType"
+          },
+          "calendarDate": {
+            "type": "string",
+            "description": "日期",
+            "format": "date-time"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "线体Id",
+            "nullable": true
+          },
+          "lineName": {
+            "type": "string",
+            "description": "产线名称",
+            "nullable": true
+          },
+          "workCenterId": {
+            "type": "string",
+            "description": "工作中心Id",
+            "nullable": true
+          },
+          "workCenterName": {
+            "type": "string",
+            "description": "工作中心名称",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID--人员表班组Id",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string",
+            "description": "班组名称--人员表班组名称",
+            "nullable": true
+          },
+          "shifts": {
+            "type": "string",
+            "description": "班次",
+            "nullable": true
+          },
+          "userCode": {
+            "type": "string",
+            "description": "人员编码 = 工号",
+            "nullable": true
+          },
+          "account": {
+            "type": "string",
+            "description": "账号",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "description": "姓名",
+            "nullable": true
+          },
+          "operateTime": {
+            "type": "string",
+            "description": "操作时间",
+            "format": "date-time"
+          },
+          "workDuration": {
+            "type": "number",
+            "description": "上班时长",
+            "format": "double",
+            "nullable": true
+          },
+          "totalWorkDuration": {
+            "type": "number",
+            "description": "当班总上班时长",
+            "format": "double",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/VerifyStatus"
+          },
+          "verifyUserName": {
+            "type": "string",
+            "description": "校对人名称",
+            "nullable": true
+          },
+          "verifyUserId": {
+            "type": "integer",
+            "description": "校对人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "verifyTime": {
+            "type": "string",
+            "description": "校对时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetUserCheckHistoryPagedOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetUserCheckHistoryPagedOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetUserWorkTimePagedOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "calendarDate": {
+            "type": "string",
+            "description": "日期",
+            "format": "date-time"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "线体Id",
+            "nullable": true
+          },
+          "lineName": {
+            "type": "string",
+            "description": "产线名称",
+            "nullable": true
+          },
+          "shifts": {
+            "type": "string",
+            "description": "班次",
+            "nullable": true
+          },
+          "userCode": {
+            "type": "string",
+            "description": "人员编码 = 工号",
+            "nullable": true
+          },
+          "account": {
+            "type": "string",
+            "description": "账号",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "description": "姓名",
+            "nullable": true
+          },
+          "startDataSource": {
+            "$ref": "#/components/schemas/DataSource"
+          },
+          "startRelationId": {
+            "type": "string",
+            "description": "开始时间关联Id",
+            "nullable": true
+          },
+          "checkInDate": {
+            "type": "string",
+            "description": "开始时间",
+            "format": "date-time"
+          },
+          "endDataSource": {
+            "$ref": "#/components/schemas/DataSource"
+          },
+          "endRelationId": {
+            "type": "string",
+            "description": "结束时间关联Id",
+            "nullable": true
+          },
+          "checkOutDate": {
+            "type": "string",
+            "description": "结束时间",
+            "format": "date-time"
+          },
+          "workDuration": {
+            "type": "number",
+            "description": "上班时长",
+            "format": "double"
+          },
+          "totalWorkDuration": {
+            "type": "number",
+            "description": "当班总上班时长",
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VerifyStatus"
+          },
+          "verifyUserName": {
+            "type": "string",
+            "description": "校对人名称",
+            "nullable": true
+          },
+          "verifyUserId": {
+            "type": "integer",
+            "description": "校对人Id",
+            "format": "int64",
+            "nullable": true
+          },
+          "verifyTime": {
+            "type": "string",
+            "description": "校对时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetUserWorkTimePagedOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetUserWorkTimePagedOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OperateType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "type": "integer",
+        "description": "操作类型",
+        "format": "int32"
+      },
+      "PersonDepartmentOutput": {
+        "type": "object",
+        "properties": {
+          "oid": {
+            "type": "string",
+            "description": "oid",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "编码",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "名称",
+            "nullable": true
+          },
+          "account": {
+            "type": "string",
+            "description": "域账号",
+            "nullable": true
+          },
+          "deptId": {
+            "type": "string",
+            "description": "部门id",
+            "nullable": true
+          },
+          "deptHid": {
+            "type": "string",
+            "description": "部门id",
+            "nullable": true
+          },
+          "deptFullPathName": {
+            "type": "string",
+            "description": "部门名称",
+            "nullable": true
+          },
+          "leadAccount": {
+            "type": "string",
+            "description": "领导账号",
+            "nullable": true
+          },
+          "empType": {
+            "type": "string",
+            "description": "类型",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "人员部门 出参"
+      },
+      "PersonTransferIn": {
+        "required": [
+          "personId",
+          "transferInTeamId"
+        ],
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "人员ID"
+          },
+          "transferInTeamId": {
+            "type": "string",
+            "description": "调入班组ID"
+          }
+        },
+        "additionalProperties": false,
+        "description": "调入数据对象"
+      },
+      "PersonTransferOut": {
+        "required": [
+          "personId",
+          "teamId",
+          "transferOutTeamTime"
+        ],
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "人员ID"
+          },
+          "personCode": {
+            "type": "string",
+            "description": "人员工号",
+            "nullable": true
+          },
+          "personName": {
+            "type": "string",
+            "description": "人员姓名",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID"
+          },
+          "workCenterId": {
+            "type": "string",
+            "description": "工作中心ID",
+            "nullable": true
+          },
+          "transferReasonId": {
+            "type": "string",
+            "description": "人员调度原因ID",
+            "nullable": true
+          },
+          "transferDuration": {
+            "type": "number",
+            "description": "时长",
+            "format": "double"
+          },
+          "transferInTeamId": {
+            "type": "string",
+            "description": "调入班组ID",
+            "nullable": true
+          },
+          "remarks": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "transferOutTeamTime": {
+            "type": "string",
+            "description": "调出时间",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "调出数据对象"
+      },
+      "PersonTransferOutput": {
+        "required": [
+          "personId",
+          "teamId"
+        ],
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "人员ID"
+          },
+          "personCode": {
+            "type": "string",
+            "description": "人员工号",
+            "nullable": true
+          },
+          "personName": {
+            "type": "string",
+            "description": "人员姓名",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID"
+          },
+          "workCenterId": {
+            "type": "string",
+            "description": "工作中心ID",
+            "nullable": true
+          },
+          "transferReasonId": {
+            "type": "string",
+            "description": "人员调度原因ID",
+            "nullable": true
+          },
+          "transferDuration": {
+            "type": "number",
+            "description": "时长",
+            "format": "double"
+          },
+          "transferInTeamId": {
+            "type": "string",
+            "description": "调入班组ID",
+            "nullable": true
+          },
+          "remarks": {
+            "type": "string",
+            "description": "备注",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "teamCode": {
+            "type": "string",
+            "description": "班组编码",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string",
+            "description": "班组名称",
+            "nullable": true
+          },
+          "isDirect": {
+            "type": "boolean",
+            "description": "是否为直接人员"
+          },
+          "transferInTeamName": {
+            "type": "string",
+            "description": "调入班组名称",
+            "nullable": true
+          },
+          "transferOutTeamId": {
+            "type": "string",
+            "description": "调出班组ID",
+            "nullable": true
+          },
+          "transferOutTeamName": {
+            "type": "string",
+            "description": "调出班组名称",
+            "nullable": true
+          },
+          "isAllowTransferIn": {
+            "type": "boolean",
+            "description": "是否允许调入"
+          },
+          "transferOutTeamTime": {
+            "type": "string",
+            "description": "调出时间",
+            "format": "date-time"
+          },
+          "transferInTeamTime": {
+            "type": "string",
+            "description": "调入时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isTransferIn": {
+            "type": "boolean",
+            "description": "是否已经调入"
+          }
+        },
+        "additionalProperties": false,
+        "description": "输出数据对象"
+      },
+      "TeamDropDownOutput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "编码",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "下拉数据对象"
+      },
+      "TeamInsert": {
+        "required": [
+          "code",
+          "name",
+          "teamLeaderId",
+          "type",
+          "workShopId"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "班组编码"
+          },
+          "name": {
+            "type": "string",
+            "description": "班组名称"
+          },
+          "teamLeaderId": {
+            "type": "string",
+            "description": "班组长ID"
+          },
+          "workShopId": {
+            "type": "string",
+            "description": "车间ID"
+          },
+          "type": {
+            "type": "string",
+            "description": "班组类型"
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增数据对象"
+      },
+      "TeamOutput": {
+        "required": [
+          "code",
+          "name",
+          "teamLeaderId",
+          "type",
+          "workShopId"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "班组编码"
+          },
+          "name": {
+            "type": "string",
+            "description": "班组名称"
+          },
+          "teamLeaderId": {
+            "type": "string",
+            "description": "班组长ID"
+          },
+          "workShopId": {
+            "type": "string",
+            "description": "车间ID"
+          },
+          "type": {
+            "type": "string",
+            "description": "班组类型"
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "teamLeaderName": {
+            "type": "string",
+            "description": "班组长姓名",
+            "nullable": true
+          },
+          "workShopName": {
+            "type": "string",
+            "description": "车间名称",
+            "nullable": true
+          },
+          "userCount": {
+            "type": "integer",
+            "description": "成员数量",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "输出数据对象"
+      },
+      "TeamOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TeamUpdate": {
+        "required": [
+          "code",
+          "name",
+          "teamLeaderId",
+          "type",
+          "workShopId"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "班组编码"
+          },
+          "name": {
+            "type": "string",
+            "description": "班组名称"
+          },
+          "teamLeaderId": {
+            "type": "string",
+            "description": "班组长ID"
+          },
+          "workShopId": {
+            "type": "string",
+            "description": "车间ID"
+          },
+          "type": {
+            "type": "string",
+            "description": "班组类型"
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "更新数据对象"
+      },
+      "TeamUserImportInput": {
+        "required": [
+          "staffId",
+          "teamCode"
+        ],
+        "type": "object",
+        "properties": {
+          "userRole": {
+            "type": "string",
+            "description": "人员角色",
+            "nullable": true
+          },
+          "userGroup": {
+            "type": "string",
+            "description": "人员组别",
+            "nullable": true
+          },
+          "isDirect": {
+            "type": "boolean",
+            "description": "是否为直接人员"
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "staffId": {
+            "type": "string",
+            "description": "人员工号"
+          },
+          "teamCode": {
+            "type": "string",
+            "description": "班组编码"
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增数据对象"
+      },
+      "TeamUserImportInputs": {
+        "required": [
+          "teamUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "teamUsers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamUserImportInput"
+            },
+            "description": "班组成员列表"
+          },
+          "isOverwrite": {
+            "type": "boolean",
+            "description": "是否覆盖"
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增导入数据对象"
+      },
+      "TeamUserInsert": {
+        "required": [
+          "staffId"
+        ],
+        "type": "object",
+        "properties": {
+          "userRole": {
+            "type": "string",
+            "description": "人员角色",
+            "nullable": true
+          },
+          "userGroup": {
+            "type": "string",
+            "description": "人员组别",
+            "nullable": true
+          },
+          "isDirect": {
+            "type": "boolean",
+            "description": "是否为直接人员"
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "staffId": {
+            "type": "string",
+            "description": "人员工号"
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增数据对象"
+      },
+      "TeamUserOutput": {
+        "type": "object",
+        "properties": {
+          "userRole": {
+            "type": "string",
+            "description": "人员角色",
+            "nullable": true
+          },
+          "userGroup": {
+            "type": "string",
+            "description": "人员组别",
+            "nullable": true
+          },
+          "isDirect": {
+            "type": "boolean",
+            "description": "是否为直接人员"
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "basUserInfoId": {
+            "type": "string",
+            "description": "人员ID",
+            "nullable": true
+          },
+          "basUserInfoStaffId": {
+            "type": "string",
+            "description": "人员工号",
+            "nullable": true
+          },
+          "basUserInfoName": {
+            "type": "string",
+            "description": "人员ID",
+            "nullable": true
+          },
+          "certificationName": {
+            "type": "string",
+            "description": "资质名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "输出数据对象"
+      },
+      "TeamUserUpdate": {
+        "type": "object",
+        "properties": {
+          "userRole": {
+            "type": "string",
+            "description": "人员角色",
+            "nullable": true
+          },
+          "userGroup": {
+            "type": "string",
+            "description": "人员组别",
+            "nullable": true
+          },
+          "isDirect": {
+            "type": "boolean",
+            "description": "是否为直接人员"
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "更新数据对象"
+      },
+      "TransferPersonListOutput": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "用户ID",
+            "nullable": true
+          },
+          "personCode": {
+            "type": "string",
+            "description": "用户账号",
+            "nullable": true
+          },
+          "personName": {
+            "type": "string",
+            "description": "用户姓名",
+            "nullable": true
+          },
+          "workCenterId": {
+            "type": "string",
+            "description": "工作中心ID",
+            "nullable": true
+          },
+          "workCenterCode": {
+            "type": "string",
+            "description": "工作中心编码",
+            "nullable": true
+          },
+          "workCenterName": {
+            "type": "string",
+            "description": "工作中心名称",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "teamCode": {
+            "type": "string",
+            "description": "班组编码",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string",
+            "description": "班组名称",
+            "nullable": true
+          },
+          "duration": {
+            "type": "number",
+            "description": "工时",
+            "format": "double"
+          },
+          "isDirect": {
+            "type": "boolean",
+            "description": "是否直接人员"
+          }
+        },
+        "additionalProperties": false,
+        "description": "查询数据对象"
+      },
+      "UpdUserCheckHistoryInput": {
+        "required": [
+          "id",
+          "operateTime"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "operateTime": {
+            "type": "string",
+            "description": "操作时间",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "编辑入参对象"
+      },
+      "UserOnDutyInsert": {
+        "required": [
+          "onDutyTime",
+          "userCode",
+          "workStationCode"
+        ],
+        "type": "object",
+        "properties": {
+          "workStationCode": {
+            "type": "string",
+            "description": "工位编码"
+          },
+          "userCode": {
+            "type": "string",
+            "description": "人员编码"
+          },
+          "onDutyTime": {
+            "type": "string",
+            "description": "上岗时间",
+            "format": "date-time"
+          },
+          "offDutyTime": {
+            "type": "string",
+            "description": "下班时间",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "新增数据对象"
+      },
+      "UserOnDutyInsertOutput": {
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": "string",
+            "description": "工号",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "description": "人员名称",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string",
+            "description": "班组名称",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": ""
+      },
+      "UserOnDutyOutput": {
+        "required": [
+          "onDutyTime",
+          "userCode",
+          "workStationCode"
+        ],
+        "type": "object",
+        "properties": {
+          "workStationCode": {
+            "type": "string",
+            "description": "工位编码"
+          },
+          "userCode": {
+            "type": "string",
+            "description": "人员编码"
+          },
+          "onDutyTime": {
+            "type": "string",
+            "description": "上岗时间",
+            "format": "date-time"
+          },
+          "offDutyTime": {
+            "type": "string",
+            "description": "下班时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "主键Id",
+            "nullable": true
+          },
+          "creatorUserName": {
+            "type": "string",
+            "description": "创建人名称",
+            "nullable": true
+          },
+          "creationTime": {
+            "type": "string",
+            "description": "创建时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifierUserName": {
+            "type": "string",
+            "description": "最后修改人名称",
+            "nullable": true
+          },
+          "lastModificationTime": {
+            "type": "string",
+            "description": "最后修改时间",
+            "format": "date-time",
+            "nullable": true
+          },
+          "userName": {
+            "type": "string",
+            "description": "人员姓名",
+            "nullable": true
+          },
+          "workStationName": {
+            "type": "string",
+            "description": "工位名称",
+            "nullable": true
+          },
+          "shifts": {
+            "type": "string",
+            "description": "班次",
+            "nullable": true
+          },
+          "shiftsDesc": {
+            "type": "string",
+            "description": "班次描述",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "inTime": {
+            "type": "string",
+            "description": "标准上班时间",
+            "format": "date-time"
+          },
+          "offTime": {
+            "type": "string",
+            "description": "标准下班时间",
+            "format": "date-time"
+          },
+          "duration": {
+            "type": "number",
+            "description": "标准工时",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "输出数据对象"
+      },
+      "UserOnDutyOutputPagedResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserOnDutyOutput"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VerifyStatus": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer",
+        "description": "人员上岗校对状态",
+        "format": "int32"
+      },
+      "VerifyUserCheckHistoryInput": {
+        "type": "object",
+        "properties": {
+          "lineId": {
+            "type": "string",
+            "description": "线体Id",
+            "nullable": true
+          },
+          "workCenterId": {
+            "type": "string",
+            "description": "工作中心Id",
+            "nullable": true
+          },
+          "workCalendarId": {
+            "type": "string",
+            "description": "工作日历Id",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "班组ID",
+            "nullable": true
+          },
+          "shifts": {
+            "type": "string",
+            "description": "班次",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "一键检查数据对象"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "PersonTransfer",
+      "description": "人员调入调出"
+    },
+    {
+      "name": "Team",
+      "description": "班组"
+    },
+    {
+      "name": "TigerMan",
+      "description": "协助模块测试接口"
+    },
+    {
+      "name": "UserCheck",
+      "description": "人员上岗"
+    },
+    {
+      "name": "UserWorkTime",
+      "description": "人员上岗"
+    },
+    {
+      "name": "UserOnDuty",
+      "description": "人员上岗"
+    },
+    {
+      "name": "PersonDepartment",
+      "description": "人员部门"
+    }
+  ]
+}

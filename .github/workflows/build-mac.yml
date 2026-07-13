@@ -1,0 +1,100 @@
+# WIP 桌面端 macOS 打包(GitHub Actions 云端 Mac runner)
+# 触发:手动(dispatch)或 push 到 main/master
+# 产物:WipDesktop.app(macOS,上传为 artifact 供下载)
+# .env 通过 Secret DESKTOP_ENV 注入,不进仓库
+name: Build macOS App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build-mac:
+    runs-on: macos-latest   # Apple Silicon(M1),GitHub 提供,公开仓不计费
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 装 Python 依赖(pywebview + PyInstaller + psutil)
+        run: |
+          python -m pip install --upgrade pip
+          # macOS 上 pywebview 用 PyObjC/cocoa 后端(无需 pythonnet)
+          pip install "pywebview>=4.0" "pyinstaller>=6.0" "psutil>=5.9"
+
+      - name: 装 Node 后端依赖
+        run: |
+          npm ci --omit=optional || npm install --omit=optional
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: 从 Secret 注入 .env
+        run: |
+          printf '%s\n' "$DESKTOP_ENV" > .env
+          echo "[OK] .env 已从 Secret 写入(本地不打印)"
+        env:
+          DESKTOP_ENV: ${{ secrets.DESKTOP_ENV }}
+
+      - name: 检查 .env 完整性
+        run: |
+          for k in MES_USERNAME MES_PASSWORD PORT MONGO_URI MONGO_DB ADMIN_KEY; do
+            grep -q "^$k=" .env || { echo "[FATAL] .env 缺 $k"; exit 1; }
+          done
+          echo "[OK] .env 关键字段齐全"
+
+      - name: 组织 node_runtime(macOS 版)
+        run: |
+          RUNTIME=desktop_wip/node_runtime
+          mkdir -p "$RUNTIME/logs" "$RUNTIME/frontend"
+          NODE_BIN=$(which node)
+          echo "node: $NODE_BIN"
+          cp server.js "$RUNTIME/server.js"
+          cp db.js "$RUNTIME/db.js"
+          cp -r oee_external "$RUNTIME/oee_external"
+          cp -r frontend/dist "$RUNTIME/frontend/dist"
+          cp -r node_modules "$RUNTIME/node_modules"
+          cp .env "$RUNTIME/.env"
+          echo "[OK] node_runtime 就绪"
+
+      - name: 打包依赖自检(防本地 require 遗漏)
+        run: |
+          node -e "const fs=require('fs'),path=require('path');const files=['server.js','db.js'];let miss=[];for(const f of files){const t=fs.readFileSync(path.join('desktop_wip/node_runtime',f),'utf8');const re=[...t.matchAll(/require\(\s*['\x22]\.\/([^'\x22]+)['\x22]\s*\)/g)].map(m=>m[1]);for(const r of re){const b=path.join('desktop_wip/node_runtime',r);if(!fs.existsSync(b)&&!fs.existsSync(b+'.js')&&!fs.existsSync(path.join(b,'index.js')))miss.push(f+' -> ./'+r);}}if(miss.length){console.error('[FATAL] 缺失本地依赖:\n  '+miss.join('\n  '));process.exit(1);}else{console.log('  本地依赖自检通过');}"
+
+      - name: PyInstaller 打包(console=False 在 macOS 自动出 .app bundle)
+        run: |
+          cd desktop_wip
+          pyinstaller --noconfirm build.spec
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: 验证产物
+        run: |
+          if [ -d "desktop_wip/dist/WipDesktop.app" ]; then
+            echo "[OK] WipDesktop.app 已生成"
+            ls -la desktop_wip/dist/
+            du -sh desktop_wip/dist/WipDesktop.app
+          elif [ -f "desktop_wip/dist/WipDesktop" ]; then
+            echo "[WARN] 生成的是单文件可执行,非 .app bundle"
+            ls -la desktop_wip/dist/
+          else
+            echo "[FATAL] 未找到产物"
+            ls -la desktop_wip/dist/ || true
+            exit 1
+          fi
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: WipDesktop-macOS
+          path: desktop_wip/dist/*
+          retention-days: 30
+
+      - name: 诊断信息(失败时辅助排查)
+        if: always()
+        run: |
+          echo "=== warn-build.txt(尾部)===" && cat desktop_wip/build/build/warn-*.txt 2>/dev/null | tail -30 || true

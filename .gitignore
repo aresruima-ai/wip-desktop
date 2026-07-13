@@ -1,0 +1,47 @@
+# 日志与临时产物
+*.log
+_*.tmp
+_gate_result.json
+_regression_result.json
+_scan_result.json
+
+# 验证/探针脚本产物
+_shots/
+
+# 归档目录(历史临时产物整理归档,勿提交)
+_archive/
+
+# 凭据(切勿提交)
+.env
+
+# 开发期探针/验证临时脚本(部分含明文凭据,勿提交;2026-06-25 已整理归档至 _archive/)
+/_probe*.js
+/_verify*.js
+/_v_*.js
+/_ct_probe.js
+
+# 依赖
+node_modules/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# ===== Python / PyInstaller(macOS 桌面端打包)=====
+__pycache__/
+*.py[cod]
+desktop_wip/build/
+desktop_wip/dist/
+desktop_wip/node_runtime/
+desktop_wip/build_run*.log
+desktop_wip/build_diag.log
+desktop_wip/rebuild.log
+desktop_wip/launcher_diag.log
+desktop_wip/launcher_err.log
+desktop_wip/exe_console.log
+desktop_wip/pwv_test.log
+desktop_wip/screen*.png
+
+# PyInstaller 产物
+build/
+dist/

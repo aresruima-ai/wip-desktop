@@ -1,0 +1,217 @@
+[
+  {
+    "name": "portal",
+    "url": "/portal.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 1,
+    "zeroCount": 7,
+    "kpi": {
+      "pKpiProd": "1,091",
+      "pKpiProdDelta": "▼ -67.4% 昨日3346",
+      "pKpiProdOffline": "下线 24 台",
+      "pKpiRate": "100.00%",
+      "pKpiOee": "39.5%",
+      "pKpiUpph": "--",
+      "pKpiPpm": "0"
+    }
+  },
+  {
+    "name": "cockpit",
+    "url": "/cockpit.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 6,
+    "zeroCount": 5,
+    "kpi": {
+      "fmKpi1": "39.5%",
+      "fmKpi2": "100.00%",
+      "fmKpi3": "0",
+      "fmKpi4": "正常"
+    }
+  },
+  {
+    "name": "wip",
+    "url": "/wip.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [
+      "#5d6a7c",
+      "#f59e0b",
+      "#0166B1",
+      "#10b981"
+    ],
+    "dashCount": 86,
+    "zeroCount": 19,
+    "kpi": {}
+  },
+  {
+    "name": "bad",
+    "url": "/bad.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 6,
+    "zeroCount": 11,
+    "kpi": {
+      "focusFpy": "100%",
+      "focusFpyHint": "达标",
+      "focusClosure": "--",
+      "focusClosureHint": "暂无数据",
+      "kpiRate": "100%",
+      "kpiClosure": "--"
+    }
+  },
+  {
+    "name": "oee",
+    "url": "/oee.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [
+      "#f59e0b"
+    ],
+    "dashCount": 5,
+    "zeroCount": 2,
+    "kpi": {
+      "kpiOeeVal": "39.5%",
+      "kpiAvailVal": "93.5%",
+      "kpiPerfVal": "42.3%",
+      "kpiQualityVal": "100.0%",
+      "kpiMtbfVal": "0",
+      "kpiMttrVal": "0"
+    }
+  },
+  {
+    "name": "kanban",
+    "url": "/kanban.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 1,
+    "zeroCount": 20,
+    "kpi": {
+      "kpiOutput": "1,091",
+      "kpiOutputSub": "下线 24 · 5 条产线"
+    }
+  },
+  {
+    "name": "uph",
+    "url": "/uph.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 12,
+    "zeroCount": 3,
+    "kpi": {
+      "uphToday": null,
+      "uphTarget": null
+    }
+  },
+  {
+    "name": "health",
+    "url": "/health.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 1,
+    "zeroCount": 8,
+    "kpi": {}
+  },
+  {
+    "name": "line-balance",
+    "url": "/line-balance.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 54,
+    "zeroCount": 23,
+    "kpi": {}
+  },
+  {
+    "name": "fixture-life",
+    "url": "/fixture-life.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 613,
+    "zeroCount": 47,
+    "kpi": {}
+  },
+  {
+    "name": "factory-3d",
+    "url": "/factory-3d.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [
+      "#ef4444",
+      "#f59e0b"
+    ],
+    "dashCount": 0,
+    "zeroCount": 0,
+    "kpi": {}
+  },
+  {
+    "name": "ai-center",
+    "url": "/ai-center.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 1,
+    "zeroCount": 6,
+    "kpi": {}
+  },
+  {
+    "name": "scroll-board",
+    "url": "/scroll-board.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 2,
+    "zeroCount": 9,
+    "kpi": {
+      "bProd": "1,091",
+      "bFpy": "100.00%",
+      "bOee": "39.6%",
+      "bUpph": "--",
+      "bFpySub": "达标·含误测",
+      "bOeeSub": "异常"
+    }
+  },
+  {
+    "name": "admin",
+    "url": "/admin.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 0,
+    "zeroCount": 0,
+    "kpi": {}
+  },
+  {
+    "name": "settings",
+    "url": "/settings.html",
+    "errs": [],
+    "nullMatches": [],
+    "hcColors": [],
+    "tokenColors": [],
+    "dashCount": 0,
+    "zeroCount": 0,
+    "kpi": {}
+  }
+]

@@ -1,0 +1,52 @@
+# ============================================================
+# AI看板运维管理器 配置
+# 路径相对本文件所在目录(dashboard_manager/)解析
+# ============================================================
+
+node:
+  # 看板后端启动命令与工作目录
+  command: ["node", "server.js"]
+  cwd: ".."                      # 项目根(本目录的上级)
+  env_file: "../.env"            # 注入子进程环境; null=不加载
+  restart:
+    backoff_sec: [5, 10, 20, 30, 30, 30]   # 退避序列, 用尽后保持末值
+    max_consecutive_crashes: 8             # 连续崩溃这么多次 -> 熔断
+    cooldown_sec: 300                       # 熔断冷却时长
+
+watchdog:
+  enabled: true
+  health_url: "http://127.0.0.1:8080/api/health"
+  interval_sec: 15               # 探活间隔
+  failure_threshold: 3           # 连续失败这么多次才判死并重启Node
+  timeout_sec: 8                 # 单次探活超时
+  grace_after_start_sec: 30      # Node刚启动后的探活宽限期
+  startup_window_sec: 180        # Node慢启动窗口: 此期间探活失败但Node存活时跳过重启(server.js MES登录慢常>2分钟)
+  cookie_loss_alert: true        # hasCookie=false 时告警(不重启, 重启无用)
+
+kiosk:
+  enabled: false                # 临时关: 本机演示避免全屏Edge遮挡, 工厂机改回 true
+  url: "http://localhost:8080/portal.html"
+  browser: "edge"                # edge | chrome
+  browser_path: null             # null=自动探测; 填绝对路径则用该路径
+  check_interval_sec: 30         # 检查投屏窗口是否还在的间隔
+  daily_reload_time: "03:17"     # 每天到点重开投屏防内存泄漏
+
+log:
+  dir: "logs"                    # 相对本目录; load_config 会解析为绝对
+  max_bytes: 5242880             # 单文件 5MB
+  backup_count: 7                # 保留 7 份
+
+alert:
+  enabled: false                 # true=启用 webhook 告警
+  webhook: null                  # 钉钉/企微机器人地址; null=仅本地日志
+  min_interval_sec: 600          # 同类告警去重冷却
+
+tray:
+  enabled: true                  # false=无托盘纯守护(信号退出)
+  title: "AI看板管理器"
+
+panel:
+  enabled: true                  # 控制面板网页(看状态+控制)
+  port: 8081                     # 端口(避开看板 8080)
+  key: null                      # 鉴权 key; null=不鉴权(仅内网); 建议设强口令
+  auto_open: true                # manager启动后自动打开浏览器到控制面板
