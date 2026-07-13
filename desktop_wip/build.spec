@@ -1,30 +1,35 @@
 # -*- coding: utf-8 -*-
-"""PyInstaller 打包配置:WIP 桌面端单文件 EXE。
+"""PyInstaller 打包配置:WIP 桌面端(跨平台)。
 
-将 launcher.py/backend.py/config.py + node_runtime 资源打包为 WipDesktop.exe。
-windowed 模式(无控制台),单文件,资源解包到 _MEIPASS 临时目录。
+Windows: 单文件 WipDesktop.exe(onefile,资源解包到 _MEIPASS)
+macOS:   WipDesktop.app bundle(onedir + COLLECT,windowed 自动出 .app)
+  注:Mac 上 onefile+windowed 只出单文件可执行(不包 .app),双击无窗口;
+      要双击运行必须 onedir,PyInstaller 在 Mac 对 windowed+onedir 自动生成 .app bundle。
 """
 import os
+import sys as _sys
 from PyInstaller.utils.hooks import collect_submodules
 
 # spec 文件所在目录(即 desktop_wip/)
 SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
 
-# 图标(laoliu.ico 在上级 MONGODB 目录,若存在则引用)
-ICON_PATH = os.path.normpath(os.path.join(SPEC_DIR, '..', '..', '..', 'laoliu.ico'))
-icon_arg = ICON_PATH if os.path.exists(ICON_PATH) else None
+_IS_MAC = _sys.platform == 'darwin'
 
-# pywebview 后端依赖(跨平台:Windows 用 WebView2/pythonnet,macOS 用 cocoa/PyObjC)
-# PyInstaller 会忽略当前平台不存在的模块,这里按平台列出以减少 warning
-import sys as _sys
+# 图标:Windows 用 .ico;Mac 用 .icns(.ico 在 Mac .app 不规范,故 Mac 跳过自定义图标)
+icon_arg = None
+if not _IS_MAC:
+    ICON_PATH = os.path.normpath(os.path.join(SPEC_DIR, '..', '..', '..', 'laoliu.ico'))
+    if os.path.exists(ICON_PATH):
+        icon_arg = ICON_PATH
+
+# pywebview 后端依赖(跨平台)
 hiddenimports = ['webview', 'webview.util', 'webview.event', 'backend', 'config']
 if _sys.platform == 'win32':
-    # Windows: WebView2(EdgeChrome)后端 + pythonnet
     hiddenimports += [
         'webview.platforms.edgechromium',
         'webview.platforms.winforms',
         'clr_loader', 'clr_loader.ffi',
-        'clr_loader.ffi.netfx',   # 实际存在的子模块(netfx/mono/hostfxr)
+        'clr_loader.ffi.netfx',
         'pythoncom', 'pywintypes', 'win32timezone',
     ]
     _collect_pkgs = ('webview', 'clr_loader')
@@ -33,7 +38,6 @@ else:
     hiddenimports += ['webview.platforms.cocoa']
     _collect_pkgs = ('webview',)
 
-# 动态收集子模块(避免遗漏)
 for pkg in _collect_pkgs:
     try:
         hiddenimports += collect_submodules(pkg)
@@ -63,23 +67,49 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='WipDesktop',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    runtime_tmpdir=None,
-    console=False,          # windowed 模式,无控制台(最终交付版)
-    disable_windowed_traceback=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    **({'icon': icon_arg} if icon_arg else {}),
-)
+if _IS_MAC:
+    # macOS:onedir + COLLECT → 自动出 WipDesktop.app bundle(可双击运行)
+    exe = EXE(
+        pyz,
+        a.scripts, [],
+        exclude_binaries=True,
+        name='WipDesktop',
+        debug=False,
+        strip=False,
+        upx=False,             # Mac 上 upx 无效
+        console=False,         # windowed → Mac 自动出 .app bundle
+        disable_windowed_traceback=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+    )
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        name='WipDesktop',
+    )
+else:
+    # Windows:onefile 单文件 WipDesktop.exe
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name='WipDesktop',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        runtime_tmpdir=None,
+        console=False,
+        disable_windowed_traceback=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        **({'icon': icon_arg} if icon_arg else {}),
+    )
+
