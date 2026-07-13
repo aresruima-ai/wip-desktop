@@ -1,6 +1,6 @@
 # WIP 桌面端 macOS 打包(GitHub Actions 云端 Mac runner)
 # 触发:手动(dispatch)或 push 到 main/master
-# 产物:WipDesktop.app(universal2,Intel+Apple 芯片双原生通吃)
+# 产物:WipDesktop.app(x86_64,Intel 原生 + Apple 经 Rosetta;用 arm64 runner 交叉打避开排队)
 # .env 通过 Secret DESKTOP_ENV 注入,不进仓库
 name: Build macOS App
 
@@ -21,11 +21,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 装 universal2 版 Python(双架构:Intel+Apple 原生)
+      - name: 装 x86_64 版 Python(交叉打 x86_64 .app,Intel+Apple 通吃)
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          architecture: 'x64'   # x64 installer 在 arm64 runner 上是 universal2 版,支持 universal2 打包
+          architecture: 'x64'   # arm64 runner 上装 x64 Python,交叉打 x86_64(避开 Intel runner 长排队)
 
       - name: 装 Python 依赖(pywebview + PyInstaller + psutil,universal2)
         run: |

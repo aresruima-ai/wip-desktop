@@ -80,7 +80,7 @@ if _IS_MAC:
         upx=False,             # Mac 上 upx 无效
         console=False,         # windowed
         disable_windowed_traceback=False,
-        target_arch='universal2',  # 一个 .app 同时含 arm64(Apple)+ x86_64(Intel),双原生通吃
+        target_arch='x86_64',  # 交叉打 x86_64:Intel 原生 + Apple 经 Rosetta(arm64 runner 装 x64 Python 交叉编译,避开 Intel runner 排队)
         codesign_identity=None,
         entitlements_file=None,
     )
