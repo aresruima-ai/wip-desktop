@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字孪生 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="chart-theme.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>/* 进阶版:Three.js CDN fallback — 加载失败时显示降级提示,避免白屏 */
+if(!window.THREE){document.addEventListener('DOMContentLoaded',function(){var w=document.getElementById('canvasWrap');if(w){w.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:14px;flex-direction:column;gap:8px"><div style="font-size:40px">🏭</div><div>3D 渲染库加载失败</div><div style="font-size:11px">请检查网络或改用 <a href="wip.html" style="color:var(--brand)">WIP 追踪</a> 查看产线状态</div></div>';}});}</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<style>
+.page-wrap { width:100% !important; height:calc(100vh - 48px); display:flex; flex-direction:column; overflow:hidden; }
+.factory-header { display:flex; justify-content:space-between; align-items:center; padding:10px 24px; border-bottom:1px solid var(--line); }
+.factory-title { font-size:15px; font-weight:600; color:var(--text-primary); }
+.factory-controls { display:flex; gap:6px; align-items:center; }
+.factory-controls button { background:var(--brand-dim); border:1px solid var(--brand-border); color:var(--brand); padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; transition:all 0.2s; }
+.factory-controls button:hover { background:rgba(var(--brand-rgb),0.12); }
+.factory-controls button.active { background:rgba(var(--brand-rgb),0.16); border-color:var(--brand); }
+.line-filter { display:flex; gap:4px; align-items:center; margin-left:12px; border-left:1px solid var(--line); padding-left:12px; }
+.line-filter button { background:var(--surface-2); border:1px solid var(--line); color:var(--text-secondary); padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer; transition:all 0.2s; }
+.line-filter button:hover { color:var(--text-primary); border-color:var(--text-muted); }
+.line-filter button.active { background:rgba(var(--brand-rgb),0.10); border-color:var(--brand-border); color:var(--brand); }
+.factory-status { display:flex; gap:12px; font-size:11px; color:var(--text-muted); align-items:center; }
+.factory-status .dot { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:4px; background:var(--success); box-shadow:0 0 4px var(--success); }
+.factory-body { flex:1; display:grid; grid-template-columns:1fr 260px; overflow:hidden; }
+.factory-canvas { position:relative; background:var(--surface-0); overflow:hidden; }
+#threeCanvas { width:100%; height:100%; display:block; }
+.factory-sidebar { background:var(--surface-1); border-left:1px solid var(--line); overflow-y:auto; padding:14px; }
+.sidebar-section { margin-bottom:16px; }
+.sidebar-title { font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.8px; }
+.sidebar-item { padding:8px 10px; background:var(--surface-2); border-radius:5px; margin-bottom:5px; font-size:11px; color:var(--text-secondary); line-height:1.6; }
+.sidebar-item strong { color:var(--text-primary); }
+.alert-item { border-left:2px solid var(--warning); padding-left:8px; cursor:pointer; transition:background 0.2s; }
+.alert-item:hover { background:var(--surface-2); }
+.alert-item.critical { border-left-color:var(--danger); }
+.mini-chart { margin-top:8px; height:40px; display:flex; align-items:flex-end; gap:2px; }
+.mini-chart .bar { background:var(--brand); border-radius:1px 1px 0 0; min-width:4px; flex:1; transition:height 0.3s; opacity:0.7; }
+.mini-chart .bar:last-child { opacity:1; }
+.device-label { background:var(--surface-1); border:1px solid var(--line); border-radius:3px; padding:2px 6px; font-size:9px; color:var(--text-secondary); pointer-events:none; white-space:nowrap; }
+.device-label .label-name { font-weight:500; color:var(--text-secondary); }
+.device-label .label-val { color:var(--brand); font-weight:600; }
+.device-label.warning .label-val { color:var(--warning); }
+.device-label.critical .label-val { color:var(--danger); }
+.line-label { background:transparent; border:none; padding:0; font-size:11px; color:var(--brand); font-weight:600; pointer-events:none; white-space:nowrap; }
+.legend { position:absolute; bottom:12px; left:12px; background:rgba(8,15,30,0.92); border:1px solid rgba(30,58,95,0.4); border-radius:5px; padding:8px 12px; font-size:9px; color:var(--text-muted); z-index:10; }
+.legend-item { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+.legend-item:last-child { margin-bottom:0; }
+.legend-color { width:10px; height:10px; border-radius:2px; }
+.tooltip-3d { position:absolute; display:none; background:rgba(8,15,30,0.95); border:1px solid var(--brand-border); border-radius:5px; padding:8px 10px; font-size:11px; color:var(--text-primary); pointer-events:none; z-index:100; min-width:150px; max-width:280px; line-height:1.55; backdrop-filter:blur(8px); word-break:break-word; }
+.tooltip-3d .tt-title { font-weight:600; font-size:11px; margin-bottom:4px; color:var(--brand); }
+.tooltip-3d .tt-line { color:var(--text-muted); font-size:10px; margin-bottom:4px; }
+
+/* ===== 3D Attention-Hook Tokens (inline, page-scoped) ===== */
+.factory-canvas {
+    --glow-station: 0 0 22px rgba(var(--brand-rgb),.55);
+    --glow-bottleneck: 0 0 24px rgba(var(--danger-rgb),.55);
+    --bridge-color: rgba(var(--info-rgb),.65);
+}
+
+/* Light bridge SVG overlay (2D↔3D 钩子 #31) */
+.bridge-layer {
+    position:absolute; inset:0; pointer-events:none; z-index:50;
+    overflow:visible;
+}
+.bridge-path {
+    fill:none; stroke:var(--bridge-color); stroke-width:1.6;
+    stroke-linecap:round;
+    filter:drop-shadow(0 0 6px rgba(var(--info-rgb),.55));
+    opacity:0; stroke-dasharray:6 10;
+    animation:bridge-dash 1.6s linear infinite;
+    transition:opacity .25s ease;
+}
+.bridge-path.visible { opacity:.9; }
+@keyframes bridge-dash { to { stroke-dashoffset:-32; } }
+
+/* Alert card glow when 3D reciprocally hovers */
+.alert-item.bridge-hot {
+    background:rgba(var(--info-rgb),.10);
+    box-shadow:inset 0 0 0 1px rgba(var(--info-rgb),.45), 0 0 14px rgba(var(--info-rgb),.25);
+}
+
+/* Scanline DOM overlay (degraded static fallback under reduced-motion) */
+.scan-overlay { position:absolute; inset:0; pointer-events:none; z-index:5; mix-blend-mode:screen; opacity:0; transition:opacity .3s; }
+
+/* 3D 主视图空态: 无 WIP 数据时叠加引导, 避免空荡网格地板(z-index 7 高于 vignette) */
+.factory-empty-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:7; background:radial-gradient(circle at center, rgba(13,17,23,.72), rgba(13,17,23,.25)); }
+.factory-empty-overlay .attn-empty { pointer-events:auto; background:var(--surface-1); border:1px solid var(--line); border-radius:var(--radius-lg); padding:28px 36px; box-shadow:var(--shadow-2); }
+.attn-empty-link { color:var(--brand); font-size:var(--fs-sm); text-decoration:none; border:1px solid var(--brand-border); padding:5px 14px; border-radius:var(--radius-sm); display:inline-block; }
+.attn-empty-link:hover { background:var(--brand-dim); }
+
+/* Vignette to darken periphery → make stations the only emitters (#25 心法) */
+.vignette {
+    position:absolute; inset:0; pointer-events:none; z-index:6;
+    background:radial-gradient(ellipse at center, transparent 38%, rgba(2,8,16,.55) 78%, rgba(2,8,16,.85) 100%);
+}
+@media (prefers-reduced-motion: reduce){
+    .bridge-path{
+        animation:none !important;
+        stroke-dashoffset:0 !important;
+    }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+<div class="factory-header">
+    <div class="factory-title">数字孪生 · 产线工序</div>
+    <div class="factory-controls">
+        <button id="btnReset">重置</button>
+        <button id="btnTop">俯视</button>
+        <button id="btnSide">侧视</button>
+        <button id="btnLabels" class="active">标签</button>
+        <div class="line-filter" id="lineFilter"></div>
+    </div>
+    <div class="factory-status">
+        <span><span class="dot"></span>实时</span>
+        <span id="updateTime">--</span>
+    </div>
+</div>
+<div class="factory-body">
+    <div class="factory-canvas focus-card" id="canvasWrap" data-focal="true" data-no-vt>
+        <canvas id="threeCanvas"></canvas>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:var(--success)"></div>≤10 WIP</div>
+            <div class="legend-item"><div class="legend-color" style="background:var(--brand)"></div>11-30 WIP</div>
+            <div class="legend-item"><div class="legend-color" style="background:var(--warning)"></div>31-80 WIP</div>
+            <div class="legend-item"><div class="legend-color" style="background:var(--danger)"></div>>80 WIP</div>
+        </div>
+        <div class="tooltip-3d" id="tooltip3d"></div>
+        <svg class="bridge-layer" id="bridgeLayer" xmlns="http://www.w3.org/2000/svg">
+            <path class="bridge-path" id="bridgePath" d="M0,0"></path>
+        </svg>
+        <div class="vignette"></div>
+    </div>
+    <div class="factory-sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">选中工位</div>
+            <div id="selectedInfo" class="sidebar-item">点击工位查看详情</div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">瓶颈预警</div>
+            <div id="alertsList"></div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">概览</div>
+            <div id="overviewStats" class="sidebar-item">加载中...</div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+(function(){
+const esc = window.escHtml || function(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
+const API=(location.port==='8080'||(location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'))?'':'http://'+location.hostname+':8080';
+
+const canvasWrap = document.getElementById('canvasWrap');
+const canvas = document.getElementById('threeCanvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(parseInt(CHART.bg.replace('#',''),16));
+const camera = new THREE.PerspectiveCamera(45, canvasWrap.clientWidth/canvasWrap.clientHeight, 0.1, 500);
+// Optimized default angle: 30deg elevation, looking slightly down
+camera.position.set(45, 18, 35);
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false, preserveDrawingBuffer:true});
+} catch(e) {
+  // WebGL 不可用(无头浏览器/旧显卡/驱动缺失): 降级提示, 退出 3D IIFE, 不抛未捕获异常白屏
+  document.getElementById('canvasWrap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:14px;flex-direction:column;gap:8px"><div style="font-size:40px">🏭</div><div>3D 渲染不可用</div><div style="font-size:11px">当前环境不支持 WebGL, 改用 <a href="wip.html" style="color:var(--brand)">WIP 追踪</a> 查看产线状态</div></div>';
+  return; // 退出整个 3D 初始化 IIFE, nav/数据脚本不受影响
+}
+renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const labelRenderer = new THREE.CSS2DRenderer();
+labelRenderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+canvasWrap.appendChild(labelRenderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI/2.05;
+controls.minDistance = 8;
+controls.maxDistance = 100;
+controls.target.set(0, 1, 0);
+
+// Lighting
+scene.add(new THREE.AmbientLight(0x4488cc, 0.8));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+keyLight.position.set(25, 35, 20);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.near = 1; keyLight.shadow.camera.far = 100;
+keyLight.shadow.camera.left = -50; keyLight.shadow.camera.right = 50;
+keyLight.shadow.camera.top = 50; keyLight.shadow.camera.bottom = -50;
+keyLight.shadow.bias = -0.001;
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0x4488bb, 0.3);
+fillLight.position.set(-20, 15, -10);
+scene.add(fillLight);
+// rimLight + floor deferred to after COLORS_3D / FLOOR_VERT / FLOOR_FRAG declarations
+// (fixes use-before-declaration TDZ that crashed page init in real browsers).
+
+// State
+let allObjects = [];
+let stationMeshes = [];
+let particleSystems = [];
+let labelsVisible = true;
+let linesConfig = [];
+let currentLineGroups = {};
+let activeLineFilter = 'all';
+let hoveredMesh = null;
+let selectedMesh = null;
+let oeeMap = {};
+
+var COLORS_3D = {
+    low: parseInt(CHART.colors.green.replace('#',''), 16),
+    mid: parseInt(CHART.colors.blue.replace('#',''), 16),
+    high: parseInt(CHART.colors.orange.replace('#',''), 16),
+    critical: parseInt(CHART.colors.red.replace('#',''), 16),
+    idle: parseInt(CHART.tooltipBg.replace('#',''), 16),
+    belt: 0x1a2a40,
+    beltGlow: parseInt(CHART.colors.blue.replace('#',''), 16)
+};
+const COLORS = COLORS_3D;
+
+// rimLight (deferred from lighting setup — needs COLORS_3D.beltGlow)
+const rimLight = new THREE.PointLight(COLORS_3D.beltGlow, 0.15, 80);
+rimLight.position.set(0, 20, -30);
+scene.add(rimLight);
+
+// ===== 3D Attention-Hook infrastructure (#25-32, Phase 3) =====
+// Detect reduced motion once — gates ALL shader animation per spec discipline.
+const REDUCED_MOTION = (window.ATTN && ATTN.REDUCED) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Color hexes (for shader uniforms) — 从 CSS token 读取(单一真值源, 主题切换后重载生效);
+// shader 需 [r,g,b] 数值故不能直接传 var(), 缓存在加载时解析。
+function hexToRGB(h){ const n = parseInt(h.replace('#',''),16); return [(n>>16)&255, (n>>8)&255, n&255]; }
+function _tokRead(name, fallback){ try { var v=getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v||fallback; } catch(e){ return fallback; } }
+const RGB = {
+    low:      hexToRGB(CHART.colors.green),
+    mid:      hexToRGB(CHART.colors.blue),
+    high:     hexToRGB(CHART.colors.orange),
+    critical: hexToRGB(CHART.colors.red),
+    idle:     hexToRGB(CHART.tooltipBg),
+    beltGlow: hexToRGB(CHART.colors.blue),
+    danger:   hexToRGB(CHART.colors.red),
+    cyan:     hexToRGB(_tokRead('--info', '#38bdf8')),
+    amber:    hexToRGB(CHART.colors.orange)
+};
+function wipRGB(count){
+    if(count<=0) return RGB.idle;
+    if(count<=10) return RGB.low;
+    if(count<=30) return RGB.mid;
+    if(count<=80) return RGB.high;
+    return RGB.critical;
+}
+
+// ===== Shared GLSL chunks for ShaderMaterial stations (#25) =====
+// Fresnel rim glow + sin(time) breathing + overdrive red-shift when count>80.
+// Lightweight: one varying, no per-fragment lighting loops, reused geometry.
+const STATION_VERT = `
+varying vec3 vNormalW;
+varying vec3 vViewDir;
+uniform float uBreath;
+uniform float uShake;
+void main(){
+    vNormalW = normalize(mat3(modelMatrix) * normal);
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vViewDir = normalize(cameraPosition - wp.xyz);
+    // Overdrive micro-shake on X/Z only (count>80), keeps footprint stable.
+    vec3 p = position;
+    p.x += sin(uBreath * 7.0 + position.z * 2.5) * uShake;
+    p.z += cos(uBreath * 6.3 + position.x * 2.5) * uShake;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.0);
+}`;
+const STATION_FRAG = `
+precision highp float;
+varying vec3 vNormalW;
+varying vec3 vViewDir;
+uniform vec3  uColor;
+uniform vec3  uOverdrive;   // red-shift mix when count>80
+uniform float uOverdriveAmt;// 0..1
+uniform float uBreath;       // time-based breathing phase
+uniform float uPulseRate;    // 1.0 normal / 2.6 overdrive (急促喘气)
+uniform float uRimPower;
+uniform float uOpacity;
+void main(){
+    float fres = pow(1.0 - max(dot(normalize(vNormalW), normalize(vViewDir)), 0.0), uRimPower);
+    float breath = 0.5 + 0.5 * sin(uBreath * uPulseRate);
+    vec3 base = mix(uColor, uOverdrive, uOverdriveAmt);
+    // Rim self-emission — the "唯一发光体" lock-on.
+    vec3 rim = base * (fres * (1.4 + breath * 0.9));
+    // Body stays dim so rim dominates → 势能差.
+    vec3 body = base * 0.18;
+    vec3 col = body + rim * (0.55 + breath * 0.45);
+    gl_FragColor = vec4(col, uOpacity);
+}`;
+
+// Reuse ONE ShaderMaterial template; clone per-station so uniforms are independent
+// but programs are shared by the renderer (GL program cache keyed on source).
+function makeStationShaderMaterial(colorRGB, count){
+    const overdrive = count > 80;
+    const mat = new THREE.ShaderMaterial({
+        uniforms: {
+            uColor:        { value: new THREE.Vector3(colorRGB[0]/255, colorRGB[1]/255, colorRGB[2]/255) },
+            uOverdrive:    { value: new THREE.Vector3(RGB.danger[0]/255, RGB.danger[1]/255, RGB.danger[2]/255) },
+            uOverdriveAmt: { value: overdrive ? 0.55 : 0.0 },
+            uBreath:       { value: 0 },
+            uPulseRate:    { value: overdrive ? 2.6 : 1.0 },
+            uShake:        { value: 0 },
+            uRimPower:     { value: 2.6 },
+            uOpacity:      { value: 1.0 }
+        },
+        vertexShader: STATION_VERT,
+        fragmentShader: STATION_FRAG,
+        transparent: false
+    });
+    return mat;
+}
+
+// ===== Volumetric light cone for bottleneck spotlight (#19 / #26) =====
+// AdditiveBlending + noise-driven edge, single shared cone mesh, retargeted on alert click.
+const CONE_VERT = `
+varying vec2 vUv;
+void main(){
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const CONE_FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform float uTime;
+uniform vec3  uColor;
+uniform float uIntensity;
+// hash noise — cheap, no texture fetch.
+float hash(float n){ return fract(sin(n) * 43758.5453); }
+void main(){
+    // vUv.y: 0 at apex(top) → 1 at base(bottom on floor). We want beam strong at top, soft at floor.
+    float along = vUv.y;
+    float radial = abs(vUv.x - 0.5) * 2.0; // 0 center → 1 edge
+    // Volumetric falloff: bright core, soft edge.
+    float core = pow(1.0 - radial, 2.2);
+    // Vertical fade: bright near source, dispersing downward.
+    float vert = mix(1.0, 0.35, along);
+    // Animated noise drift for "particulate" feel.
+    float n = hash(floor(vUv.y * 18.0 + uTime * 0.6)) * 0.25;
+    float a = core * vert * (0.55 + n) * uIntensity;
+    // Scanning bright band traveling down the beam.
+    float band = smoothstep(0.06, 0.0, abs(fract(uTime * 0.25) - along));
+    a += band * 0.18 * uIntensity;
+    gl_FragColor = vec4(uColor, a);
+}`;
+
+// ===== Holographic floor shader (#30): scanline grid + RGB split glitch =====
+const FLOOR_VERT = `
+varying vec2 vWorldXZ;
+varying vec2 vUv;
+void main(){
+    vUv = uv;
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vWorldXZ = wp.xz;
+    gl_Position = projectionMatrix * viewMatrix * wp;
+}`;
+const FLOOR_FRAG = `
+precision highp float;
+varying vec2 vWorldXZ;
+varying vec2 vUv;
+uniform float uTime;
+uniform float uGlitch;   // 0..1 glitch intensity (transient)
+uniform vec3  uGridA;
+uniform vec3  uGridB;
+uniform float uGridScale;
+uniform float uScanPeriod;
+void main(){
+    vec2 p = vWorldXZ * uGridScale;
+    // Grid lines
+    vec2 g = abs(fract(p) - 0.5);
+    float line = smoothstep(0.48, 0.5, max(g.x, g.y));
+    vec3 grid = mix(uGridA, uGridB, line);
+    // Slow horizontal scan sweep
+    float sweep = sin(vWorldXZ.x * 0.25 + uTime * (6.28318 / uScanPeriod));
+    sweep = pow(max(sweep, 0.0), 24.0);
+    grid += uGridB * sweep * 0.5;
+    // RGB split glitch band (transient)
+    if(uGlitch > 0.001){
+        float band = step(0.5, fract(vWorldXZ.y * 0.08 + uTime * 3.0));
+        float shift = (sin(uTime * 40.0) * 0.5) * uGlitch;
+        grid.r = mix(grid.r, grid.r + shift * 0.6, band);
+        grid.b = mix(grid.b, grid.b - shift * 0.6, band);
+    }
+    // Distance fade so grid recedes into darkness (focus stays on stations)
+    float d = length(vWorldXZ);
+    float fade = 1.0 - smoothstep(35.0, 75.0, d);
+    gl_FragColor = vec4(grid * fade, 0.85 * fade);
+}`;
+
+// Floor — holographic shader (#30). Deferred from scene setup to after FLOOR_VERT/FRAG declarations (fixes TDZ).
+const floorUniforms = {
+    uTime:       { value: 0 },
+    uGlitch:     { value: 0 },
+    uGridA:      { value: new THREE.Vector3(0.02, 0.04, 0.08) },
+    uGridB:      { value: new THREE.Vector3(0.04, 0.18, 0.32) },
+    uGridScale:  { value: 0.25 },
+    uScanPeriod: { value: 3.6 }
+};
+const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(150, 100),
+    new THREE.ShaderMaterial({
+        uniforms: floorUniforms,
+        vertexShader: FLOOR_VERT,
+        fragmentShader: FLOOR_FRAG,
+        transparent: true,
+        depthWrite: false
+    })
+);
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; floor.renderOrder = -1; scene.add(floor);
+
+function wipColor(count){
+    if(count<=0) return COLORS.idle;
+    if(count<=10) return COLORS.low;
+    if(count<=30) return COLORS.mid;
+    if(count<=80) return COLORS.high;
+    return COLORS.critical;
+}
+function wipColorCSS(count){
+    if(count<=0) return CHART.tooltipBg;
+    if(count<=10) return CHART.colors.green;
+    if(count<=30) return CHART.colors.blue;
+    if(count<=80) return CHART.colors.orange;
+    return CHART.colors.red;
+}
+function wipStatus(count){
+    if(count<=0) return '空闲';
+    if(count<=10) return '正常';
+    if(count<=30) return '运行中';
+    if(count<=80) return '注意';
+    return '堆积';
+}
+
+function groupByLine(byOp){
+    const lineGroups = {};
+    byOp.forEach(op=>{
+        const opCode = op.operation||'';
+        const opName = op.operation_name||'';
+        let lineKey = '其他';
+        if(opCode.includes('_L02_') || opName.includes('_L02_')) lineKey = 'L02';
+        else if(opCode.startsWith('LH') || opName.startsWith('LH-') || opName.startsWith('LH_')) lineKey = 'L01';
+        else if(opCode.startsWith('B') || opName.includes('包装')) lineKey = 'PKG';
+        else if(opCode.startsWith('MMTZ') || opCode.startsWith('ZDTB')) lineKey = 'L01';
+        if(!lineGroups[lineKey]) lineGroups[lineKey] = [];
+        lineGroups[lineKey].push(op);
+    });
+    Object.values(lineGroups).forEach(ops=>{
+        // 按 mes 路线归一化平均位置排序(跨产品稳定,解决 last_sort 漂移),无命中兜底 1.1 排后
+        ops.sort((a,b)=>(a._norm_pos ?? 1.1)-(b._norm_pos ?? 1.1) || (a.sort_no||999)-(b.sort_no||999));
+        ops.forEach((o,i)=>{ o.sort_no = i+1; });  // 组内连续序号(覆盖漂移的 last_sort)
+    });
+    return lineGroups;
+}
+
+function getLineName(key){ return {'L01':'整机1线','L02':'整机2线','PKG':'包装线','其他':'其他'}[key]||key; }
+
+// ====== FEATURE 1: Flow particles on conveyor belts ======
+function createFlowParticles(x1, x2, z){
+    const count = 6;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const len = x2 - x1;
+    for(let i=0; i<count; i++){
+        positions[i*3] = x1 + (i/count)*len;
+        positions[i*3+1] = 0.65;
+        positions[i*3+2] = z;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({color:COLORS_3D.beltGlow, size:0.15, transparent:true, opacity:0.8});
+    const points = new THREE.Points(geo, mat);
+    points.userData = {x1, x2, z, speed: 0.02 + Math.random()*0.01};
+    scene.add(points);
+    allObjects.push(points);
+    particleSystems.push(points);
+    return points;
+}
+
+// ====== FEATURE 3: WIP number on front face (canvas texture) ======
+function createNumberTexture(num){
+    const size = 128;
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0,0,size,size);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(num), size/2, size/2);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.needsUpdate = true;
+    return tex;
+}
+
+// Create station
+function createStation(opData, x, z, lineKey){
+    const count = opData.count||0;
+    const baseH = 1.8;
+    const extraH = Math.min(count/80, 1.8);
+    const height = baseH + extraH;
+    const color = wipColor(count);
+    const colorRGB = wipRGB(count);
+    const overdrive = count > 80;
+
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+
+    // Body — ShaderMaterial (#25): fresnel rim self-emission + sin(time) breathing.
+    // Body stays dim so the rim is the唯一发光体 that locks the eye.
+    const bodyGeo = new THREE.BoxGeometry(2.2, height, 1.6);
+    const bodyMat = makeStationShaderMaterial(colorRGB, count);
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = height/2 + 0.1;
+    body.castShadow = true; body.receiveShadow = true;
+    group.add(body);
+
+    // ===== #32 Phase 1: BackSide outline (hover/click triggered, not resident) =====
+    // Normals-outward BackSide shell scaled 1.06 → classic inverted-hull outline.
+    // Opacity 0 at rest, toggled to 0.9 in setHoverRim(). depthWrite:false so it
+    // never z-fights the body. Pure additive mesh — no stencil, no existing flow touched.
+    try {
+        const outlineGeo = bodyGeo.clone();
+        const outlineMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8, side: THREE.BackSide,
+            transparent: true, opacity: 0, depthWrite: false
+        });
+        const outlineMesh = new THREE.Mesh(outlineGeo, outlineMat);
+        outlineMesh.scale.setScalar(1.06);
+        outlineMesh.position.copy(body.position);
+        group.add(outlineMesh);
+        group.userData.outlineMesh = outlineMesh;
+    } catch(_e) { /* outline is enhancement-only; silent fallback */ }
+
+    // Front face number (FEATURE 3)
+    if(count > 0){
+        const numTex = createNumberTexture(count);
+        const numMat = new THREE.MeshBasicMaterial({map:numTex, transparent:true, opacity:0.9});
+        const numGeo = new THREE.PlaneGeometry(1.2, 1.2);
+        const numMesh = new THREE.Mesh(numGeo, numMat);
+        numMesh.position.set(0, height/2 + 0.1, 0.81);
+        group.add(numMesh);
+        group.userData.numMesh = numMesh;   // ref for in-place update path (#30s data refresh)
+    }
+
+    // Top cap
+    const cap = new THREE.Mesh(
+        new THREE.BoxGeometry(2.4, 0.08, 1.8),
+        new THREE.MeshStandardMaterial({color:0x0f1f35, roughness:0.2, metalness:0.8})
+    );
+    cap.position.y = height + 0.14; group.add(cap);
+
+    // Base
+    const base = new THREE.Mesh(
+        new THREE.BoxGeometry(2.6, 0.1, 2.0),
+        new THREE.MeshStandardMaterial({color:COLORS_3D.belt, roughness:0.5, metalness:0.3})
+    );
+    base.position.y = 0.05; base.receiveShadow = true; group.add(base);
+
+    // LED — bright emissive sphere, reinforces "唯一发光体" focal cue
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshBasicMaterial({color}));
+    led.position.set(1.0, height+0.2, 0); group.add(led);
+    group.userData.ledMesh = led;   // ref for in-place update path
+
+    // OEE border ring (FEATURE 8)
+    const lineOee = oeeMap[lineKey];
+    if(lineOee){
+        const oeeVal = lineOee.oee||0;
+        const ringColor = oeeVal>=85?COLORS_3D.low:oeeVal>=70?COLORS_3D.high:COLORS_3D.critical;
+        const ringGeo = new THREE.RingGeometry(1.4, 1.5, 32);
+        const ringMat = new THREE.MeshBasicMaterial({color:ringColor, transparent:true, opacity:0.4, side:THREE.DoubleSide});
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI/2;
+        ring.position.y = 0.02;
+        group.add(ring);
+    }
+
+    // Glow halo for high WIP (kept, drives shader-less visual rhythm)
+    if(count > 30){
+        const glow = new THREE.Mesh(
+            new THREE.PlaneGeometry(3, 2.5),
+            new THREE.MeshBasicMaterial({color, transparent:true, opacity:0.08, side:THREE.DoubleSide})
+        );
+        glow.rotation.x = -Math.PI/2; glow.position.y = 0.02;
+        group.add(glow);
+        group.userData.glowMesh = glow;
+    }
+
+    // ===== #29: Overdrive scanline (count>80) — red scan band rising from floor =====
+    // Thin emissive plane that animates its Y position from base to top in animate().
+    // Skipped under reduced-motion (rendered static at mid-height, no animation).
+    if(overdrive){
+        const scanGeo = new THREE.PlaneGeometry(2.3, 0.08);
+        const scanMat = new THREE.MeshBasicMaterial({
+            color: COLORS_3D.critical, transparent:true, opacity:0.0,
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite:false
+        });
+        const scan = new THREE.Mesh(scanGeo, scanMat);
+        scan.position.set(0, 0.1, 0);
+        scan.rotation.x = -Math.PI/2;
+        group.add(scan);
+        group.userData.scanMesh = scan;
+        group.userData.scanPhase = Math.random(); // desync between stations
+    }
+
+    // Label
+    const shortName = (opData.operation_name||opData.operation||'').replace(/^LH[-_]/,'').replace(/^LH_L0\d_/,'').replace(/^LH-/,'');
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'device-label'+(count>80?' critical':count>30?' warning':'');
+    labelDiv.innerHTML = `<span class="label-name">${esc(shortName.length>8?shortName.substring(0,8)+'…':shortName)}</span> <span class="label-val">${count}</span>`;
+    const label = new THREE.CSS2DObject(labelDiv);
+    label.position.set(0, height+0.7, 0);
+    group.add(label);
+
+    group.userData = Object.assign(group.userData, {
+        name: opData.operation_name||opData.operation, shortName, count,
+        operation: opData.operation, sort_no: opData.sort_no,
+        lineKey, lineName: getLineName(lineKey),
+        bodyMesh: body, bodyMat: bodyMat, label, height, x, z,
+        baseHeight: height, overdrive
+    });
+
+    scene.add(group);
+    allObjects.push(group);
+    stationMeshes.push(group);
+    return group;
+}
+
+// Belt + flow particles
+function createBelt(x1, x2, z){
+    const gap = 0.3;
+    const len = (x2-x1) - 2.4 - gap*2;
+    if(len<=0) return;
+    const cx = (x1+x2)/2;
+
+    const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(len, 0.06, 0.25),
+        new THREE.MeshStandardMaterial({color:COLORS.belt, roughness:0.4, metalness:0.6})
+    );
+    rail.position.set(cx, 0.5, z); scene.add(rail); allObjects.push(rail);
+
+    // Glow strip
+    const glow = new THREE.Mesh(
+        new THREE.BoxGeometry(len, 0.02, 0.08),
+        new THREE.MeshBasicMaterial({color:COLORS.beltGlow, transparent:true, opacity:0.25})
+    );
+    glow.position.set(cx, 0.58, z); scene.add(glow); allObjects.push(glow);
+
+    // Flow particles (FEATURE 1)
+    createFlowParticles(x1+1.3, x2-1.3, z);
+}
+
+// Line row
+function createLineRow(lineKey, z, stationCount){
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'line-label';
+    labelDiv.textContent = getLineName(lineKey);
+    const label = new THREE.CSS2DObject(labelDiv);
+    const startX = -(stationCount-1)*3.8/2;
+    label.position.set(startX - 4.5, 2.2, z);
+    scene.add(label); allObjects.push(label);
+
+    const laneW = stationCount * 3.8 + 6;
+    const lane = new THREE.Mesh(
+        new THREE.PlaneGeometry(laneW, 3.8),
+        new THREE.MeshBasicMaterial({color:0x0a1525, transparent:true, opacity:0.4})
+    );
+    lane.rotation.x = -Math.PI/2; lane.position.set(0, 0.006, z);
+    scene.add(lane); allObjects.push(lane);
+}
+
+function clearScene(){
+    allObjects.forEach(obj=>scene.remove(obj));
+    allObjects = []; stationMeshes = []; particleSystems = [];
+    hoveredMesh = null; selectedMesh = null;
+    // ===== #32 Phase 2: drop any pending X-ray restore records on full clear =====
+    try { xrayTouched = []; } catch(_e) {}
+    lastBuiltSignature = '';   // nothing built → force full rebuild on next data refresh
+}
+
+// ===== #30s data-refresh: structural signature for update-vs-rebuild decision =====
+// Two refreshes with the SAME signature (same filtered lines, same sorted operation
+// order) must NOT clearScene/rebuild geometry+material — only update count/color/label.
+let lastBuiltSignature = '';
+function computeLayoutSignature(lineGroups, filterKey){
+    const lineKeys = filterKey && filterKey!=='all'
+        ? Object.keys(lineGroups).filter(k=>k===filterKey)
+        : Object.keys(lineGroups);
+    // Sort line keys so ordering differences (object key order) don't force spurious rebuilds.
+    lineKeys.sort();
+    const parts = lineKeys.map(k => k + ':' + (lineGroups[k]||[])
+        .map(o => o.operation).join(','));
+    return (filterKey||'all') + '|' + parts.join(';');
+}
+
+function layoutAll(lineGroups, filterKey){
+    clearScene();
+    const lineKeys = filterKey && filterKey!=='all'
+        ? Object.keys(lineGroups).filter(k=>k===filterKey)
+        : Object.keys(lineGroups);
+
+    const lineSpacing = 7;
+    const stationSpacing = 3.8;
+    const startZ = -(lineKeys.length-1)*lineSpacing/2;
+
+    lineKeys.forEach((lineKey, rowIdx)=>{
+        const ops = lineGroups[lineKey];
+        const z = startZ + rowIdx*lineSpacing;
+        const startX = -(ops.length-1)*stationSpacing/2;
+        createLineRow(lineKey, z, ops.length);
+        ops.forEach((op, colIdx)=>{
+            const x = startX + colIdx*stationSpacing;
+            createStation(op, x, z, lineKey);
+            if(colIdx<ops.length-1) createBelt(x, startX+(colIdx+1)*stationSpacing, z);
+        });
+    });
+
+    // Auto-frame camera (FEATURE 9: ~30deg elevation)
+    const maxOps = Math.max(...lineKeys.map(k=>lineGroups[k].length), 1);
+    const w = maxOps * stationSpacing;
+    const d = lineKeys.length * lineSpacing;
+    const dist = Math.max(w, d, 20);
+    camera.position.set(dist*0.55, dist*0.4, dist*0.45);
+    controls.target.set(0, 1, 0);
+    controls.update();
+
+    lastBuiltSignature = computeLayoutSignature(lineGroups, filterKey);
+}
+
+// ===== #30s data-refresh: in-place update path (Task 2) =====
+// Called by renderFactoryData when the layout signature is UNCHANGED since last
+// layoutAll. Updates count → color/label/number/LED/overdrive uniforms WITHOUT
+// clearScene or rebuilding geometry/material. Geometry height stays at its original
+// built value (avoiding BoxGeometry rebuild); visual WIP severity is carried by the
+// shader color + number texture + LED, which is the focal signal anyway.
+function updateStationsData(lineGroups, filterKey){
+    const lineKeys = filterKey && filterKey!=='all'
+        ? Object.keys(lineGroups).filter(k=>k===filterKey)
+        : Object.keys(lineGroups);
+    const opMap = {};
+    lineKeys.forEach(k=>{
+        (lineGroups[k]||[]).forEach(op=>{ if(op && op.operation) opMap[op.operation] = op; });
+    });
+    stationMeshes.forEach(g=>{
+        const op = opMap[g.userData.operation];
+        if(!op) return;                       // station no longer present in this filter → leave as-is
+        const count = op.count||0;
+        const prevCount = g.userData.count;
+        if(count === prevCount) return;       // no change → skip DOM/texture churn
+        const colorRGB = wipRGB(count);
+        const colorHex = wipColor(count);
+        const overdrive = count > 80;
+        // Shader body color + overdrive (no material swap → GL program reused)
+        const mat = g.userData.bodyMat;
+        if(mat && mat.uniforms){
+            mat.uniforms.uColor.value.set(colorRGB[0]/255, colorRGB[1]/255, colorRGB[2]/255);
+            mat.uniforms.uOverdriveAmt.value = overdrive ? 0.55 : 0.0;
+            mat.uniforms.uPulseRate.value = overdrive ? 2.6 : 1.0;
+        }
+        // LED color
+        const led = g.userData.ledMesh;
+        if(led && led.material) led.material.color.setHex(colorHex);
+        // Front-face number texture (rebuild canvas texture only when count changes)
+        if(count > 0){
+            if(g.userData.numMesh){
+                const newTex = createNumberTexture(count);
+                if(g.userData.numMesh.material.map) g.userData.numMesh.material.map.dispose();
+                g.userData.numMesh.material.map = newTex;
+                g.userData.numMesh.material.needsUpdate = true;
+                g.userData.numMesh.visible = true;
+            } else {
+                // count 0→positive after initial build: add a number plane (rare).
+                const numTex = createNumberTexture(count);
+                const numMat = new THREE.MeshBasicMaterial({map:numTex, transparent:true, opacity:0.9});
+                const numMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2), numMat);
+                numMesh.position.set(0, g.userData.height/2 + 0.1, 0.81);
+                g.add(numMesh);
+                g.userData.numMesh = numMesh;
+            }
+        } else if(g.userData.numMesh){
+            g.userData.numMesh.visible = false;
+        }
+        // Label text + severity class
+        const label = g.userData.label;
+        if(label){
+            const div = label.element || label;
+            div.className = 'device-label'+(count>80?' critical':count>30?' warning':'');
+            const sn = g.userData.shortName;
+            div.innerHTML = `<span class="label-name">${esc(sn.length>8?sn.substring(0,8)+'…':sn)}</span> <span class="label-val">${count}</span>`;
+        }
+        // Keep userData in sync (height intentionally left at original build value).
+        g.userData.count = count;
+        g.userData.overdrive = overdrive;
+    });
+}
+
+// ====== FEATURE 2: Highlight entire line on select ======
+// ShaderMaterial has no .emissive — drive highlight via uRimPower + uOverdriveAmt uniforms
+// (rim becomes brighter/tighter on the focal line; others dim). 做减法降权.
+function highlightLine(lineKey){
+    stationMeshes.forEach(g=>{
+        const mat = g.userData.bodyMat; if(!mat) return;
+        if(g.userData.lineKey === lineKey){
+            mat.uniforms.uRimPower.value = 1.9;     // broader, brighter rim
+            mat.uniforms.uOpacity.value = 1.0;
+        } else {
+            mat.uniforms.uRimPower.value = 4.2;     // tighter, dimmer → 退后
+            mat.uniforms.uOpacity.value = 0.72;
+        }
+    });
+}
+
+function clearHighlight(){
+    stationMeshes.forEach(g=>{
+        const mat = g.userData.bodyMat; if(!mat) return;
+        mat.uniforms.uRimPower.value = 2.6;
+        mat.uniforms.uOpacity.value = 1.0;
+    });
+}
+
+// ====== FEATURE 4: Fly to station (bottleneck click) ======
+let flyTarget = null;
+let flyStart = null;
+let flyProgress = 0;
+function flyToStation(operation){
+    const target = stationMeshes.find(g=>g.userData.operation === operation);
+    if(!target) return;
+    flyStart = {pos:camera.position.clone(), tgt:controls.target.clone()};
+    const d = target.userData;
+    flyTarget = {
+        pos: new THREE.Vector3(d.x+8, 6, d.z+8),
+        tgt: new THREE.Vector3(d.x, d.height/2, d.z)
+    };
+    flyProgress = 0;
+    // Clear previous selection (rim power reset via clearHighlight path)
+    if(selectedMesh && selectedMesh.userData.bodyMat){
+        selectedMesh.userData.bodyMat.uniforms.uRimPower.value = 2.6;
+        selectedMesh.userData.bodyMat.uniforms.uOverdriveAmt.value =
+            selectedMesh.userData.overdrive ? 0.55 : 0.0;
+    }
+    selectedMesh = target;
+    highlightLine(d.lineKey);
+    // Pump the focal station: full overdrive red-rim + brightest rim
+    if(d.bodyMat){
+        d.bodyMat.uniforms.uRimPower.value = 1.4;
+        d.bodyMat.uniforms.uOverdriveAmt.value = Math.max(d.bodyMat.uniforms.uOverdriveAmt.value, 0.8);
+    }
+    showStationDetail(d);
+    // ===== #19/#26: Retarget volumetric light cone to the new bottleneck =====
+    setConeTarget(target);
+}
+
+// ====== FEATURE 5: 工站当前WIP(真数据,无历史趋势) ======
+function renderMiniChart(count){
+    // 无历史快照数据,仅展示当前WIP值,不伪造趋势
+    return `<div class="mini-chart" style="display:flex;align-items:center;gap:6px;padding:2px 0"><div class="bar" style="height:24px;width:8px;border-radius:2px;background:${wipColorCSS(count)}"></div><span style="font-size:var(--fs-2xs);color:var(--text-muted)">当前WIP: ${count}</span></div>`;
+}
+
+function showStationDetail(d){
+    document.getElementById('selectedInfo').innerHTML = `<strong>${esc(d.name)}</strong><br><span style="color:var(--text-muted)">${esc(d.lineName)} · #${d.sort_no}</span><br><br>WIP: <span style="color:${wipColorCSS(d.count)};font-weight:700;font-size:var(--fs-base)">${d.count}</span> · ${wipStatus(d.count)}<br>编码: ${d.operation}${renderMiniChart(d.count)}`;
+}
+
+// ====== Interaction ======
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const tooltip = document.getElementById('tooltip3d');
+
+function getHitMeshes(){ return stationMeshes.map(g=>g.userData.bodyMesh).filter(Boolean); }
+
+// FEATURE 10: Hover pre-highlight
+// ShaderMaterial highlight: temporarily boost rim brightness on hover.
+// ===== #32 Phase 1: also toggles the BackSide outline mesh opacity (0 ↔ 0.9). =====
+function setHoverRim(group, on){
+    if(!group || !group.userData.bodyMat) return;
+    if(group === selectedMesh) return; // selected keeps its own state
+    const mat = group.userData.bodyMat;
+    if(on){
+        group.userData._prevRim = mat.uniforms.uRimPower.value;
+        mat.uniforms.uRimPower.value = 1.7;
+        try {
+            if(group.userData.outlineMesh){
+                group.userData.outlineMesh.material.opacity = 0.9;
+            }
+        } catch(_e) { /* outline enhancement-only */ }
+    } else if(group.userData._prevRim !== undefined){
+        mat.uniforms.uRimPower.value = group.userData._prevRim;
+        group.userData._prevRim = undefined;
+        try {
+            if(group.userData.outlineMesh){
+                group.userData.outlineMesh.material.opacity = 0;
+            }
+        } catch(_e) { /* outline enhancement-only */ }
+    }
+}
+
+// ===== #32 Phase 2: X-ray see-through (optional enhancement) =====
+// On hover-hit, dim occluder stations between camera and the hovered target to
+// uOpacity 0.15 so the focal station "breaks through the wall". Skipped under
+// prefers-reduced-motion. All mutations are try/catch-guarded and restore on
+// clear — never blocks hotlinkAlertCard/markInteraction.
+const _xrayTmpA = new THREE.Vector3();
+const _xrayTmpB = new THREE.Vector3();
+let xrayTouched = [];   // [{group, prevOpacity}]
+
+function clearXray(){
+    if(!xrayTouched.length) return;
+    try {
+        xrayTouched.forEach(rec=>{
+            const mat = rec.group.userData.bodyMat;
+            if(mat && typeof rec.prevOpacity === 'number'){
+                mat.uniforms.uOpacity.value = rec.prevOpacity;
+            }
+            rec.group.userData._xrayActive = false;
+        });
+    } catch(_e) { /* silent — never break interaction */ }
+    xrayTouched = [];
+}
+
+// Returns occluder station groups sitting between camera and target along the
+// view ray, within a lateral tolerance. Excludes the target itself + selected.
+function occluderTest(cameraPos, targetWorldPos, excludeGroup){
+    const cleared = [];
+    _xrayTmpA.subVectors(targetWorldPos, cameraPos);          // ray dir
+    const rayLen = _xrayTmpA.length();
+    if(rayLen < 1e-4) return cleared;
+    _xrayTmpA.multiplyScalar(1 / rayLen);                     // unit dir
+    stationMeshes.forEach(g=>{
+        if(g === excludeGroup || g === selectedMesh) return;
+        const bm = g.userData.bodyMesh; if(!bm) return;
+        // Station sample point: world position of its body center.
+        bm.getWorldPosition(_xrayTmpB);
+        const toStation = _xrayTmpB.clone().sub(cameraPos);
+        const along = toStation.dot(_xrayTmpA);               // projected distance along ray
+        // Must be in front of camera AND closer than the target (true occluder).
+        if(along <= 0.5 || along >= rayLen - 0.5) return;
+        // Lateral distance from the view ray — tolerance ~ station half-width.
+        const lateral = toStation.clone().sub(_xrayTmpA.clone().multiplyScalar(along)).length();
+        if(lateral > 2.2) return;                              // outside the target's silhouette cone
+        cleared.push(g);
+    });
+    return cleared;
+}
+
+function applyXray(cameraPos, targetGroup){
+    clearXray();  // restore any prior pass first
+    if(REDUCED_MOTION) return;  // reduce-motion: keep outline only, skip透视
+    try {
+        const d = targetGroup.userData;
+        const targetWorld = new THREE.Vector3(d.x, d.height/2 + 0.1, d.z);
+        const occluders = occluderTest(cameraPos, targetWorld, targetGroup);
+        occluders.forEach(g=>{
+            const mat = g.userData.bodyMat; if(!mat) return;
+            const prev = mat.uniforms.uOpacity.value;
+            xrayTouched.push({group: g, prevOpacity: prev});
+            mat.uniforms.uOpacity.value = 0.15;
+            g.userData._xrayActive = true;
+        });
+    } catch(_e) { /* silent fallback — keep rim-only behaviour */ }
+}
+
+canvas.addEventListener('mousemove', (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+    mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(getHitMeshes());
+
+    // Clear previous hover
+    if(hoveredMesh && hoveredMesh !== selectedMesh){
+        setHoverRim(hoveredMesh, false);
+    }
+    // ===== #32 Phase 2: tear down prior X-ray pass before re-evaluating =====
+    clearXray();
+
+    if(hits.length){
+        const group = hits[0].object.parent;
+        const d = group.userData;
+        if(group !== selectedMesh){
+            hoveredMesh = group;
+            setHoverRim(group, true);
+        }
+        // ===== #32 Phase 2: X-ray see-through of occluders =====
+        applyXray(camera.position, group);
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX-rect.left+14)+'px';
+        tooltip.style.top = (e.clientY-rect.top-8)+'px';
+        tooltip.innerHTML = `<div class="tt-title">${esc(d.shortName||d.name)}</div><div class="tt-line">${esc(d.lineName)} · #${d.sort_no}</div>WIP: <strong style="color:${wipColorCSS(d.count)}">${d.count}</strong> (${wipStatus(d.count)})<br>工序: ${esc(d.operation)}`;
+        canvas.style.cursor = 'pointer';
+        // ===== #31: 3D→2D bridge — hot-link the matching alert card =====
+        hotlinkAlertCard(d.operation, true);
+        // Idle patrol resets on any interaction
+        markInteraction();
+    } else {
+        hoveredMesh = null;
+        tooltip.style.display = 'none';
+        canvas.style.cursor = 'default';
+        hotlinkAlertCard(null, false);
+        markInteraction();
+    }
+});
+
+canvas.addEventListener('click', (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+    mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(getHitMeshes());
+    if(hits.length){
+        const group = hits[0].object.parent;
+        const d = group.userData;
+        clearHighlight();
+        // Restore previously selected's overdrive baseline
+        if(selectedMesh && selectedMesh.userData.bodyMat){
+            selectedMesh.userData.bodyMat.uniforms.uRimPower.value = 2.6;
+            selectedMesh.userData.bodyMat.uniforms.uOverdriveAmt.value =
+                selectedMesh.userData.overdrive ? 0.55 : 0.0;
+        }
+        selectedMesh = group;
+        highlightLine(d.lineKey);
+        if(d.bodyMat){
+            d.bodyMat.uniforms.uRimPower.value = 1.4;
+            d.bodyMat.uniforms.uOverdriveAmt.value = Math.max(d.bodyMat.uniforms.uOverdriveAmt.value, 0.8);
+        }
+        showStationDetail(d);
+        setConeTarget(group);
+    }
+    markInteraction();
+});
+
+// ===== #19/#26: Volumetric light cone — bottleneck spotlight =====
+// One shared cone mesh, AdditiveBlending, noise shader. Retargeted on alert click.
+// Reuses a single ConeGeometry (perf: no per-frame geometry rebuild).
+const coneGeo = new THREE.ConeGeometry(2.6, 10, 24, 1, true);
+const coneUniforms = {
+    uTime:      { value: 0 },
+    uColor:     { value: new THREE.Vector3(RGB.cyan[0]/255, RGB.cyan[1]/255, RGB.cyan[2]/255) },
+    uIntensity: { value: 0 }
+};
+const coneMat = new THREE.ShaderMaterial({
+    uniforms: coneUniforms,
+    vertexShader: CONE_VERT,
+    fragmentShader: CONE_FRAG,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide
+});
+const lightCone = new THREE.Mesh(coneGeo, coneMat);
+lightCone.visible = false;
+scene.add(lightCone);
+
+// Cone state — target world position + smooth lerp in animate()
+let coneTargetPos = null;     // THREE.Vector3 (station top)
+let coneCurrentPos = new THREE.Vector3(0, 0, 0);
+let coneIntensityTarget = 0;
+
+function setConeTarget(stationGroup){
+    if(!stationGroup){ coneIntensityTarget = 0; return; }
+    const d = stationGroup.userData;
+    coneTargetPos = new THREE.Vector3(d.x, d.height + 5, d.z); // apex hovers above station
+    coneIntensityTarget = REDUCED_MOTION ? 0.35 : 0.9;
+    // Snap current pos on first enable so it doesn't fly across the scene
+    if(!lightCone.visible){
+        coneCurrentPos.copy(coneTargetPos);
+        coneUniforms.uIntensity.value = 0;
+    }
+    lightCone.visible = true;
+    // Tint cone by severity: critical→red, high→amber, else cyan
+    const c = d.count > 80 ? RGB.danger : d.count > 30 ? RGB.amber : RGB.cyan;
+    coneUniforms.uColor.value.set(c[0]/255, c[1]/255, c[2]/255);
+}
+
+// ===== #28: Idle patrol + mouse parallax =====
+// 8s of inactivity → camera orbits an ellipse at low speed. Mouse moves add a
+// tiny parallax offset. Any user interaction (orbit/click/move) resets the timer.
+let lastInteractionAt = performance.now();
+let patrolBasePos = null;     // camera position when patrol kicks in
+let patrolBaseTgt = null;     // controls.target when patrol kicks in
+let patrolActive = false;
+const PATROL_DELAY = 8000;
+const PATROL_RADIUS = 0.6;     // small orbit amplitude (relative)
+const PARALLAY_STRENGTH = REDUCED_MOTION ? 0 : 0.018;
+let parallaxX = 0, parallaxY = 0;
+
+function markInteraction(){
+    lastInteractionAt = performance.now();
+    if(patrolActive){
+        patrolActive = false;
+        // parallax offsets are additive on top of patrol-free position, cleared next frame
+    }
+}
+// OrbitControls interaction → treat as user activity.
+// NOTE: only listen to 'start' (fired on real user input). The 'change' event
+// also fires every damping frame which would prevent the idle patrol from ever
+// triggering, so we deliberately do NOT bind it here.
+controls.addEventListener('start', markInteraction);
+
+// ===== #31: 2D↔3D light bridge =====
+// SVG bezier from alert card (2D sidebar) to projected 3D station (canvas coords).
+const bridgeLayer = document.getElementById('bridgeLayer');
+const bridgePath  = document.getElementById('bridgePath');
+let bridgeSourceEl = null;     // alert-item DOM element
+let bridgeTargetGroup = null;  // station THREE.Group
+
+function hotlinkAlertCard(operation, on){
+    // 3D hover → 2D card glow (reciprocal)
+    document.querySelectorAll('.alert-item.bridge-hot').forEach(el=>el.classList.remove('bridge-hot'));
+    if(!on || !operation){
+        bridgeTargetGroup = null;
+        return;
+    }
+    bridgeTargetGroup = stationMeshes.find(g=>g.userData.operation === operation) || null;
+    const card = document.querySelector('.alert-item[data-op="'+operation+'"]');
+    if(card) card.classList.add('bridge-hot');
+}
+
+function showBridge(alertEl, stationGroup){
+    bridgeSourceEl = alertEl;
+    bridgeTargetGroup = stationGroup;
+}
+function hideBridge(){
+    bridgeSourceEl = null;
+    bridgeTargetGroup = null;
+    bridgePath.classList.remove('visible');
+}
+
+function updateBridgePath(){
+    if(!bridgeSourceEl || !bridgeTargetGroup){
+        bridgePath.classList.remove('visible');
+        return;
+    }
+    // Source point: anchor at canvas right edge, Y aligned with the alert card.
+    // (Card lives in the sidebar outside canvasWrap, so clamp source to the canvas
+    //  boundary — the light appears to emit from the seam between 2D and 3D.)
+    const wrapRect = canvasWrap.getBoundingClientRect();
+    const cardRect = bridgeSourceEl.getBoundingClientRect();
+    const sx = wrapRect.width - 2; // right edge of canvas
+    const sy = Math.max(10, Math.min(wrapRect.height - 10,
+        cardRect.top + cardRect.height/2 - wrapRect.top));
+    // Target point: station top projected to screen
+    const d = bridgeTargetGroup.userData;
+    const v = new THREE.Vector3(d.x, d.height + 1.2, d.z);
+    v.project(camera);
+    const tx = (v.x * 0.5 + 0.5) * wrapRect.width;
+    const ty = (-v.y * 0.5 + 0.5) * wrapRect.height;
+    // Cubic bezier — curve upward like a light arc
+    const c1x = sx + (tx - sx) * 0.35, c1y = sy - 40;
+    const c2x = sx + (tx - sx) * 0.65, c2y = ty - 40;
+    bridgePath.setAttribute('d', `M${sx},${sy} C${c1x},${c1y} ${c2x},${c2y} ${tx},${ty}`);
+    bridgePath.classList.add('visible');
+}
+
+// Animation
+let time = 0;
+let glitchUntil = 0;       // floor glitch transient window
+let glitchScheduled = 0;   // next scheduled glitch timestamp
+const GLITCH_INTERVAL = 25000; // 25s per spec
+const GLITCH_DURATION  = 300;  // 0.3s per spec
+const GLITCH_FIRST_DELAY = 5000; // first glitch delayed 5s (avoid bug-misjudgement)
+function animate(){
+    requestAnimationFrame(animate);
+    time += 0.015;
+    controls.update();
+
+    // ===== #25: Shader uniforms — breathing + overdrive shake + scanline =====
+    // Per-frame uniform updates only (no geometry rebuild) → perf-friendly.
+    const breathT = REDUCED_MOTION ? 0 : time;
+    stationMeshes.forEach(g=>{
+        const mat = g.userData.bodyMat;
+        if(mat){
+            mat.uniforms.uBreath.value = breathT;
+            // Overdrive micro-shake (#29) — only when count>80 and motion allowed
+            mat.uniforms.uShake.value = (g.userData.overdrive && !REDUCED_MOTION) ? 0.03 : 0;
+        }
+        // #29: rising red scanline on overdrive stations
+        if(g.userData.scanMesh && !REDUCED_MOTION){
+            const phase = ((time * 0.6) + g.userData.scanPhase) % 1.0;
+            const y = 0.1 + phase * (g.userData.height + 0.2);
+            g.userData.scanMesh.position.y = y;
+            // Brightest mid-rise, fades at endpoints
+            const env = Math.sin(phase * Math.PI);
+            g.userData.scanMesh.material.opacity = 0.55 * env;
+        } else if(g.userData.scanMesh && REDUCED_MOTION){
+            // Static fallback: parked at mid-height, low opacity
+            g.userData.scanMesh.position.y = g.userData.height * 0.5;
+            g.userData.scanMesh.material.opacity = 0.25;
+        }
+        // Legacy glow pulse (kept, additive to shader)
+        if(g.userData.glowMesh) g.userData.glowMesh.material.opacity = 0.05+Math.sin(time*2.5)*0.03;
+    });
+
+    // ===== #30: Holographic floor — time + scheduled glitch transient =====
+    floorUniforms.uTime.value = time;
+    const now = performance.now();
+    if(glitchScheduled === 0) glitchScheduled = now + GLITCH_FIRST_DELAY;
+    if(now > glitchScheduled && glitchUntil === 0){
+        glitchUntil = now + GLITCH_DURATION;
+        glitchScheduled = now + GLITCH_INTERVAL;
+    }
+    if(glitchUntil > 0){
+        if(now < glitchUntil){
+            floorUniforms.uGlitch.value = REDUCED_MOTION ? 0 : 1.0;
+        } else {
+            glitchUntil = 0;
+            floorUniforms.uGlitch.value = 0;
+        }
+    }
+
+    // ===== #19/#26: Volumetric cone retarget =====
+    if(lightCone.visible){
+        coneUniforms.uTime.value = time;
+        if(coneTargetPos){
+            coneCurrentPos.lerp(coneTargetPos, 0.06);
+        }
+        lightCone.position.copy(coneCurrentPos);
+        // Apex at top (cone points down): rotate so tip is up.
+        lightCone.rotation.x = Math.PI; // base faces floor
+        // Intensity ease
+        coneUniforms.uIntensity.value += (coneIntensityTarget - coneUniforms.uIntensity.value) * 0.08;
+        if(coneIntensityTarget === 0 && coneUniforms.uIntensity.value < 0.02){
+            lightCone.visible = false;
+        }
+    }
+
+    // Particle flow animation (FEATURE 1)
+    particleSystems.forEach(ps=>{
+        const pos = ps.geometry.attributes.position;
+        const {x1, x2, speed} = ps.userData;
+        for(let i=0;i<pos.count;i++){
+            let px = pos.getX(i) + speed;
+            if(px > x2) px = x1;
+            pos.setX(i, px);
+        }
+        pos.needsUpdate = true;
+    });
+
+    // Fly animation (FEATURE 4)
+    if(flyTarget && flyStart){
+        flyProgress += 0.02;
+        if(flyProgress >= 1){ flyProgress = 1; }
+        const t = 1 - Math.pow(1 - flyProgress, 3); // ease-out cubic
+        camera.position.lerpVectors(flyStart.pos, flyTarget.pos, t);
+        controls.target.lerpVectors(flyStart.tgt, flyTarget.tgt, t);
+        if(flyProgress >= 1){ flyTarget = null; flyStart = null; }
+        markInteraction(); // fly is auto; but treat the destination as fresh activity
+    }
+
+    // ===== #28: Idle patrol + mouse parallax =====
+    if(!REDUCED_MOTION && !flyTarget){
+        const idleMs = now - lastInteractionAt;
+        if(!patrolActive && idleMs > PATROL_DELAY){
+            patrolActive = true;
+            patrolBasePos = camera.position.clone();
+            patrolBaseTgt = controls.target.clone();
+        }
+        if(patrolActive){
+            // Gentle ellipse orbit around the base position
+            const t2 = (now - lastInteractionAt - PATROL_DELAY) * 0.00018;
+            const ox = Math.cos(t2) * PATROL_RADIUS * patrolBasePos.length();
+            const oz = Math.sin(t2) * PATROL_RADIUS * patrolBasePos.length();
+            camera.position.set(
+                patrolBasePos.x + ox,
+                patrolBasePos.y + Math.sin(t2 * 0.7) * 0.4,
+                patrolBasePos.z + oz
+            );
+            controls.target.copy(patrolBaseTgt);
+            // Mouse parallax — only during patrol (avoids fighting OrbitControls).
+            camera.position.x += parallaxX * PARALLAY_STRENGTH * 4;
+            camera.position.y += parallaxY * PARALLAY_STRENGTH * 4;
+        }
+    }
+
+    // ===== #31: Bridge path =====
+    updateBridgePath();
+
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+    const w = canvasWrap.clientWidth, h = canvasWrap.clientHeight;
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h); labelRenderer.setSize(w, h);
+});
+
+// View controls
+document.getElementById('btnReset').onclick = ()=>{
+    camera.position.set(45, 18, 35); controls.target.set(0,1,0); clearHighlight();
+    setConeTarget(null); hideBridge(); markInteraction();
+};
+document.getElementById('btnTop').onclick = ()=>{ camera.position.set(0, 65, 0.1); controls.target.set(0,0,0); markInteraction(); };
+document.getElementById('btnSide').onclick = ()=>{ camera.position.set(50, 4, 0); controls.target.set(0,2,0); markInteraction(); };
+document.getElementById('btnLabels').onclick = function(){
+    labelsVisible = !labelsVisible;
+    this.classList.toggle('active', labelsVisible);
+    stationMeshes.forEach(g=>{ if(g.userData.label) g.userData.label.visible = labelsVisible; });
+    markInteraction();
+};
+
+// ===== #28: Mouse parallax accumulator (separate from hover raycast) =====
+// Subtle parallax applied to controls.target via tiny offset, then reset baseline.
+canvasWrap.addEventListener('mousemove', (e)=>{
+    const rect = canvasWrap.getBoundingClientRect();
+    const nx = ((e.clientX-rect.left)/rect.width)*2-1;   // -1..1
+    const ny = -((e.clientY-rect.top)/rect.height)*2+1;  // -1..1
+    parallaxX = nx; parallaxY = ny;
+    markInteraction();
+});
+canvasWrap.addEventListener('mouseleave', ()=>{ parallaxX = 0; parallaxY = 0; });
+
+// ====== FEATURE 6: Line filter buttons ======
+function buildLineFilter(lineGroups){
+    const container = document.getElementById('lineFilter');
+    container.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.textContent = '全部';
+    allBtn.className = activeLineFilter==='all'?'active':'';
+    allBtn.onclick = ()=>{ activeLineFilter='all'; layoutAll(lineGroups,'all'); buildLineFilter(lineGroups); };
+    container.appendChild(allBtn);
+    Object.keys(lineGroups).forEach(key=>{
+        const btn = document.createElement('button');
+        btn.textContent = getLineName(key);
+        btn.className = activeLineFilter===key?'active':'';
+        btn.onclick = ()=>{ activeLineFilter=key; layoutAll(lineGroups, key); buildLineFilter(lineGroups); };
+        container.appendChild(btn);
+    });
+}
+
+// Data loading
+// localDate 收口到 common.js (window.localDate), 本页不再单独定义
+
+// renderFactoryData — pure, idempotent render of all 4 resolved payloads.
+// Safe to call repeatedly: every output is overwritten (DOM innerHTML=, scene
+// via layoutAll→clearScene or in-place updateStationsData). Used by both the
+// localStorage peek instant-open path and the fresh-fetch path.
+function renderFactoryData(wip, lines, dash, oee){
+    linesConfig = Array.isArray(lines)?lines:(lines.items||[]);
+    oeeMap = {};
+    if(oee && oee.success && oee.summary){
+        Object.entries(oee.summary).forEach(([k,v])=>{oeeMap[k]=v;});
+        // Map to line keys
+        const keyMap = {'L01':null,'L02':null,'PKG':null};
+        linesConfig.forEach(l=>{
+            const ln = l.line_name||'';
+            if(ln.includes('Line1')&&ln.startsWith('ASS')) keyMap['L01'] = oeeMap[l.line_name];
+            if(ln.includes('Line3')&&ln.startsWith('ASS')) keyMap['L02'] = oeeMap[l.line_name];
+            if(ln.startsWith('PKG')) keyMap['PKG'] = oeeMap[l.line_name];
+        });
+        oeeMap = keyMap;
+    }
+
+    const wipOps = (wip && wip.by_operation)||[];
+    currentLineGroups = groupByLine(wipOps);
+    // Task 2: 30s refresh must NOT clearScene/rebuild geometry+material when the
+    // structural layout (filtered lines + sorted op order) is unchanged. Update
+    // count/color/label/number in place; only rebuild on structural change.
+    const sig = computeLayoutSignature(currentLineGroups, activeLineFilter);
+    if(stationMeshes.length > 0 && sig === lastBuiltSignature){
+        updateStationsData(currentLineGroups, activeLineFilter);
+    } else {
+        layoutAll(currentLineGroups, activeLineFilter);
+    }
+    buildLineFilter(currentLineGroups);
+
+    const totalWip = (wip && (wip.wip_count||wipOps.reduce((s,o)=>s+(o.count||0),0)))||0;
+    const prodTotal = dash ? (dash.productionTotal||0) : 0;
+    const fpyVal = (dash && dash.fpy) ? (dash.fpy.value ?? '--') : '--';
+    document.getElementById('overviewStats').innerHTML = totalWip || prodTotal
+        ? `<strong>WIP:</strong> ${totalWip}<br><strong>产量:</strong> ${prodTotal}<br><strong>直通率:</strong> ${fpyVal}%<br><strong>工序:</strong> ${wipOps.length}个`
+        : '<span style="color:var(--warning)">今日暂无 MES/WIP 真实数据</span>';
+    document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('zh-CN',{hour12:false});
+
+    // FEATURE 4: Clickable alerts that fly to station
+    const alerts = wipOps.filter(o=>o.count>30).sort((a,b)=>b.count-a.count).slice(0,6);
+    document.getElementById('alertsList').innerHTML = alerts.length
+        ? alerts.map(a=>{
+            const name = (a.operation_name||a.operation).replace(/^LH[-_]/,'').replace(/^LH_L0\d_/,'').replace(/^LH-/,'');
+            return `<div class="sidebar-item alert-item${a.count>80?' critical':''}" data-op="${a.operation}">${esc(name)}: <strong style="color:${wipColorCSS(a.count)}">${a.count}</strong></div>`;
+        }).join('')
+        : '<div class="sidebar-item" style="color:var(--text-muted)">暂无 WIP 告警或无真实 WIP 数据</div>';
+
+    // Bind alert click -> fly to, and hover -> 2D↔3D light bridge (#31)
+    document.querySelectorAll('.alert-item[data-op]').forEach(el=>{
+        el.addEventListener('click', ()=>flyToStation(el.dataset.op));
+        el.addEventListener('mouseenter', ()=>{
+            const g = stationMeshes.find(s=>s.userData.operation === el.dataset.op);
+            if(g){
+                showBridge(el, g);
+                // Reciprocal: boost the 3D station's rim while bridge is up
+                setHoverRim(g, true);
+                hoveredMesh = g;
+            }
+        });
+        el.addEventListener('mouseleave', ()=>{
+            if(hoveredMesh && !bridgeTargetGroup){ /* leave as-is */ }
+            if(hoveredMesh){
+                setHoverRim(hoveredMesh, false);
+                hoveredMesh = null;
+            }
+            hideBridge();
+        });
+    });
+
+    // 3D 主视图空态: 无工站数据时叠加引导层, 避免空荡网格地板(数据到达自动隐藏)
+    var _ov = document.getElementById('factoryEmptyOverlay');
+    var _noData = currentLineGroups.length === 0 && stationMeshes.length === 0;
+    if (_noData) {
+        if (!_ov) {
+            _ov = document.createElement('div');
+            _ov.id = 'factoryEmptyOverlay';
+            _ov.className = 'factory-empty-overlay';
+            canvasWrap.appendChild(_ov);
+        }
+        _ov.innerHTML = ATTN.emptyHTML({
+            msg: '今日暂无产线 WIP 过站数据，3D 场景待 MES 同步后自动渲染设备与在制品',
+            action: '<a href="wip.html" class="attn-empty-link">查看 WIP 追踪 →</a>'
+        });
+        _ov.style.display = 'flex';
+    } else if (_ov) {
+        _ov.style.display = 'none';
+    }
+}
+
+async function loadFactory(){
+    try{
+        const today = localDate(new Date());
+        const urlWip  = API+'/api/wip?dateFrom='+today;
+        const urlLines= API+'/api/lines';
+        const urlDash = API+'/api/dashboard-all?dateFrom='+today;
+        const urlOee  = API+'/api/oee?dateFrom='+today;
+
+        // ===== Task 1: localStorage 秒开 =====
+        // Instant-open: draw last-known-good cached data immediately to kill the
+        // blank canvas, then let the fresh fetch overwrite below. peek is silent
+        // (returns null when no cache); the render is try/catch-guarded so any
+        // failure falls back to the normal fetch path without side effects.
+        var _ckWip   = window.apiFetch && apiFetch.peek(urlWip);
+        var _ckLines = window.apiFetch && apiFetch.peek(urlLines);
+        var _ckDash  = window.apiFetch && apiFetch.peek(urlDash);
+        var _ckOee   = window.apiFetch && apiFetch.peek(urlOee);
+        if(_ckWip && _ckLines && _ckDash && _ckOee){
+            try { renderFactoryData(_ckWip.val, _ckLines.val, _ckDash.val, _ckOee.val); } catch(_e){}
+        }
+
+        const [wip, lines, dash, oee] = await Promise.all([
+            apiFetch(urlWip),
+            apiFetch(urlLines),
+            apiFetch(urlDash),
+            apiFetch(urlOee)
+        ]);
+        renderFactoryData(wip, lines, dash, oee);
+    }catch(e){ console.error('加载数据失败:', e); }
+}
+
+loadFactory();
+window.withVisibilityGuard(loadFactory, 30000, { noImmediate: true }); // 3D大屏隐藏时暂停, 避免 GPU+网络空耗
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200, focalSelector: '.factory-canvas' });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIP 在制品追踪 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="wip-ui.js"></script>
+<script src="chart-theme.js"></script>
+<script src="libs/echarts.min.js"></script>
+<script src="libs/echarts-liquidfill.min.js"></script>
+<style>
+/* ============================================================
+   WIP 注意力钩子样式（attention-hooks-spec · 严格隔离 wip.html 内联）
+   - 动效三段：入场 280ms / 呼吸 2.8s / 触发 150ms
+   - Z 轴景深：focal/data/base 三层（阴影+明度阶差，不靠变大）
+   - 强调色稀缺：danger 全留、warning≤2、success 仅首屏首处
+   - 全部走 transform/opacity/box-shadow 合成层，零重排
+   ============================================================ */
+/* 动效 token 已由 common.css :root 统一注入，本页仅定义页面级专用样式 */
+
+/* === 焦点单点高光晕 Lone Spotlight (primary) === */
+/* focus-card 设 data-focal，径向高光+顶辉光+微抬升；兄弟节点(focus-side)压暗 */
+/* 进阶版:底色升 surface-focus(Z轴景深),保留品牌渐变高光 */
+.focus-shell[data-focal-active="1"] .focus-card{
+  position:relative;
+  background:linear-gradient(180deg,rgba(var(--brand-rgb),0.10) 0%,var(--surface-focus) 38%) !important;
+  box-shadow:var(--shadow-2), var(--light-depth-1), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  transform:translateY(-2px);
+}
+.focus-shell[data-focal-active="1"] .focus-card::after{
+  content:'';position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--brand) 35%,var(--brand) 65%,transparent);
+  box-shadow:var(--glow-brand);opacity:0.85;pointer-events:none;
+}
+.focus-shell[data-focal-active="1"] .focus-side{ filter:var(--focal-dim); transition:filter 360ms var(--ease-out); }
+
+/* === liquidfill 呼吸水球 KPI (primary) === */
+.focus-mini--liquid{ position:relative; padding:0; overflow:hidden; --mini-h:148px; }
+.focus-mini--liquid .liq-label{
+  position:absolute;top:10px;left:14px;z-index:2;
+  color:var(--text-muted);font-size:var(--fs-xs);font-weight:600;
+  letter-spacing:0.06em;text-transform:uppercase;
+}
+.focus-mini--liquid .liq-hint{
+  position:absolute;bottom:8px;left:0;right:0;z-index:2;text-align:center;
+  color:var(--text-muted);font-size:var(--fs-xs);
+}
+.focus-mini--liquid .liq-chart{ position:absolute; inset:0; }
+
+/* === 数字滚动引擎 LiveNum (primary) — 无样式，仅 JS 驱动 === */
+
+/* === WS 推送瞬时跳变高亮 flash-on-change (primary) === */
+@keyframes wipFlashUp{
+  0%{background:rgba(var(--success-rgb),0.28);box-shadow:var(--glow-success);}
+  100%{background:transparent;box-shadow:none;}
+}
+@keyframes wipFlashDown{
+  0%{background:rgba(var(--danger-rgb),0.28);box-shadow:var(--glow-danger);}
+  100%{background:transparent;box-shadow:none;}
+}
+@keyframes wipFlashFlat{
+  0%{background:rgba(var(--brand-rgb),0.22);box-shadow:var(--glow-brand);}
+  100%{background:transparent;box-shadow:none;}
+}
+.kpi-value.live-flash, .focus-mini .value.live-flash, .focus-chip strong.live-flash{
+  border-radius:4px; padding:0 2px; margin:0 -2px;
+  animation:wipFlashUp 900ms var(--ease-out) 1;
+  will-change:background,box-shadow;
+}
+.kpi-value.live-flash-down, .focus-mini .value.live-flash-down, .focus-chip strong.live-flash-down{
+  border-radius:4px; padding:0 2px; margin:0 -2px;
+  animation:wipFlashDown 900ms var(--ease-out) 1;
+  will-change:background,box-shadow;
+}
+.kpi-value.live-flash-flat, .focus-mini .value.live-flash-flat, .focus-chip strong.live-flash-flat{
+  border-radius:4px; padding:0 2px; margin:0 -2px;
+  animation:wipFlashFlat 900ms var(--ease-out) 1;
+  will-change:background,box-shadow;
+}
+
+/* === 状态切换光流 State Sweep (primary) === */
+.wip-sweep{
+  position:fixed;left:0;right:0;top:var(--nav-h,52px);height:3px;z-index:90;
+  pointer-events:none;opacity:0;
+  background:linear-gradient(90deg,transparent 0%,var(--brand) 45%,#7dd3fc 50%,var(--brand) 55%,transparent 100%);
+  box-shadow:0 0 18px rgba(var(--brand-rgb),0.55);
+}
+.wip-sweep.is-sweeping{ animation:wipSweep 520ms var(--ease-expo) 1; }
+@keyframes wipSweep{
+  0%  { transform:translateX(-100%); opacity:0; }
+  18% { opacity:1; }
+  82% { opacity:1; }
+  100%{ transform:translateX(100%); opacity:0; }
+}
+
+/* === 卡片错峰级联入场 Reveal Cascade (secondary) === */
+/* 进阶版:入场起手态改由 ATTN.revealCascade 注入 .attn-reveal(JS 注入,避免 CSS 写死 opacity:0 导致 JS 失败时永久不可见)。
+   保留 .wip-reveal 类名兼容(revealCascade selector 命中),但删除 opacity:0 起手态。 */
+.wip-reveal{ }
+.wip-reveal.is-revealed{ }
+
+/* === 光标跟随光晕 Cursor Spotlight (secondary) === */
+/* 用 ::after 避免与 common.css 的 .kpi-card::before 顶部微光条冲突 */
+.wip-spotlight{ position:relative; }
+.wip-spotlight::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(var(--halo-r,180px) circle at var(--mx,50%) var(--my,50%),
+    rgba(var(--brand-rgb),0.10), rgba(var(--brand-rgb),0.03) 40%, transparent 70%);
+  opacity:0;transition:opacity 280ms var(--ease-out);z-index:0;
+}
+.wip-spotlight:hover::after{ opacity:1; }
+.wip-spotlight > *{ position:relative; z-index:1; }
+.wip-spotlight .focus-content{ z-index:1; }
+
+/* === Z 轴景深：flow-card 焦点(瓶颈)层 / 数据层 / 衬底层 (secondary) === */
+.flow-card.level-3{ box-shadow:var(--light-depth-1) !important; }
+.flow-card.level-2{ box-shadow:var(--light-depth-2) !important; }
+.flow-card.level-1{ box-shadow:var(--light-depth-3) !important; }
+
+/* === prefers-reduced-motion 全程降级为静态色变 (进阶版:reduced 由 ATTN.REDUCED 单一真源守护,本地块仅兜底 flash 类) === */
+@media (prefers-reduced-motion: reduce){
+  .wip-sweep{ display:none !important; }
+  .kpi-value.live-flash,.kpi-value.live-flash-down,.kpi-value.live-flash-flat,
+  .focus-mini .value.live-flash,.focus-mini .value.live-flash-down,.focus-mini .value.live-flash-flat,
+  .focus-chip strong.live-flash,.focus-chip strong.live-flash-down,.focus-chip strong.live-flash-flat{
+    animation:none !important;
+  }
+  .focus-shell[data-focal-active="1"] .focus-card{ transform:none !important; }
+  .wip-spotlight::after{ display:none !important; }
+  .update-bar .live-dot,.kpi-card.alert{ animation:none !important; }
+}
+</style>
+
+<!-- === Layout === -->
+<style>
+.update-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding:4px 0; }
+.update-bar .left { display:flex; align-items:center; gap:12px; }
+.update-bar .time { font-size:var(--fs-base); color:var(--text-muted); font-family:var(--font-mono); }
+.update-bar .live-dot { width:10px; height:10px; border-radius:50%; background:var(--success); animation:livePulse 2s infinite; }
+.update-bar .refresh-btn { padding:6px 14px; border:1px solid var(--border); border-radius:var(--radius); background:none; color:var(--text-secondary); font-size:var(--fs-base); cursor:pointer; }
+.update-bar .refresh-btn:hover { border-color:var(--brand); color:var(--brand); }
+.wip-subnav { position:sticky; top:48px; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:10px; margin:-2px 0 10px; padding:8px 10px; border:1px solid rgba(30,58,95,0.45); border-radius:14px; background:rgba(2,6,23,0.74); backdrop-filter:blur(10px); }
+.wip-subnav .left { display:flex; gap:6px; flex-wrap:wrap; }
+.wip-subnav button { border:1px solid transparent; background:rgba(15,23,42,0.7); color:var(--text-muted); border-radius:999px; padding:6px 12px; font-size:var(--fs-sm); cursor:pointer; transition:all .15s; }
+.wip-subnav button:hover,.wip-subnav button.active { color:var(--brand); border-color:var(--brand-border); background:var(--brand-dim); }
+.wip-subnav .right { color:var(--text-muted); font-size:var(--fs-xs); white-space:nowrap; }
+
+
+/* === KPI Row === */
+.kpi-row { margin-bottom: var(--module-gap); }
+.kpi-card.alert { animation: alertFlash 1.5s infinite; }
+
+
+/* Sparkline */
+.sparkline-wrap { height:18px; display:flex; align-items:flex-end; justify-content:center; gap:1px; margin-top:6px; }
+.sparkline-bar { width:3px; border-radius:1px; background:var(--brand); opacity:0.5; transition:height 0.3s; min-height:2px; }
+.sparkline-bar.up { background:var(--danger); }
+.sparkline-bar.down { background:var(--success); }
+.trend-arrow { font-size:var(--fs-2xs); margin-left:4px; font-weight:700; }
+.trend-arrow.up { color:var(--danger); }
+.trend-arrow.down { color:var(--success); }
+
+/* === Rule Suggestion === */
+.ai-suggest { background:rgba(var(--purple-rgb),0.04); border:1px solid rgba(var(--purple-rgb),0.15); border-radius:var(--radius-lg); padding:12px 18px; margin-bottom:var(--module-gap); display:flex; align-items:flex-start; gap:12px; }
+.ai-suggest .icon { font-size:22px; flex-shrink:0; margin-top:2px; }
+.ai-suggest .content { flex:1; }
+.ai-suggest .title { font-size:var(--fs-base); font-weight:600; color:var(--purple); margin-bottom:6px; }
+.ai-suggest .detail { font-size:var(--fs-base); color:var(--text-secondary); line-height:1.7; }
+
+
+
+/* === 工艺路线卡片:数量为王 · 占比可视 · 机型辅助 === */
+.process-flow .flow-card { height:auto; min-height:150px; padding:11px 11px 10px; }
+.process-flow .flow-card .op-head { display:flex; align-items:center; gap:6px; position:relative; z-index:1; margin-bottom:2px; }
+.process-flow .flow-card .op-head .op-sort { position:static; top:auto; right:auto; opacity:0.85; flex-shrink:0; }
+.process-flow .flow-card .op-name { min-height:auto; padding-right:0; flex:1; line-height:1.3; }
+.process-flow .flow-card .op-new { font-style:normal; font-size:9px; color:var(--warning); border:1px solid var(--warning-border); border-radius:3px; padding:0 3px; margin-left:4px; }
+.process-flow .flow-card .op-count-wrap { display:flex; align-items:baseline; gap:3px; position:relative; z-index:1; margin:2px 0 7px; }
+.process-flow .flow-card .op-count { font-size:30px; }
+.process-flow .flow-card .op-unit { font-size:11px; color:var(--text-muted); font-weight:500; }
+.process-flow .flow-card .op-bar { height:4px; background:var(--surface-2); border-radius:2px; overflow:hidden; position:relative; z-index:1; }
+.process-flow .flow-card .op-bar-fill { height:100%; border-radius:2px; transition:width .45s var(--ease); }
+.process-flow .flow-card .op-bar-fill.c-red { background:var(--danger); }
+.process-flow .flow-card .op-bar-fill.c-orange { background:var(--warning); }
+.process-flow .flow-card .op-bar-fill.c-green { background:var(--success); }
+.process-flow .flow-card .op-bar-fill.c-default { background:var(--line); }
+.process-flow .flow-card .op-foot { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:7px; position:relative; z-index:1; }
+.process-flow .flow-card .op-model { font-size:10px; color:var(--text-muted); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.process-flow .flow-card .op-pct { font-size:10px; color:var(--text-secondary); font-family:var(--font-mono); font-weight:600; flex-shrink:0; }
+.process-flow .flow-card .op-status { margin-top:7px; }
+.process-flow .flow-card.done .done-name { margin-left:0; }
+
+@media(max-width:768px){.flow-node{width:100px}.flow-card .op-count{font-size:22px}}
+@media print{body{background:#fff!important;color:#000!important}.sci-glow,.update-bar,.drawer-mask,.drawer,nav{display:none!important}.wip-page{padding:0!important}.kpi-card{background:#f8f9fa!important;border:1px solid #ddd!important;color:#000!important}.kpi-label,.kpi-sub{color:#333!important}.kpi-value{color:#000!important}.chart-panel{border:1px solid #ddd!important;background:#fff!important}}
+
+
+</style>
+</head>
+<body>
+<!-- sci-glow removed in SIGMA v3.0 -->
+
+<!-- 状态切换光流 State Sweep — 注入式光条，切换时横扫 -->
+<div class="wip-sweep" id="wipSweepBar" aria-hidden="true"></div>
+
+<!-- Top Bar — 单层顶栏(状态|导航|操作) 无quickQuery/toolbar; wip 保留 switchPeriod 实时/报告双模式 -->
+<div class="top-bar">
+    <div class="tb-seg tb-seg-status">
+        <div class="live-dot" id="liveDot"></div>
+        <span class="time" id="updateTime">数据加载中...</span>
+        <span class="nav-trust-text" id="navDataTrust">WIP近7天活跃窗口 · 工序名MES · 路线推导</span>
+    </div>
+    <div class="tb-divider"></div>
+    <div class="tb-seg tb-seg-action">
+        <select class="period-select" id="periodSelect" onchange="switchPeriod(this)">
+          <option value="realtime">实时</option>
+          <option value="week">本周</option>
+          <option value="month">本月</option>
+          <option value="quarter">本季</option>
+          <option value="half">半年</option>
+          <option value="year">年度</option>
+          <option value="all">全部</option>
+          <option value="custom">自定义</option>
+        </select>
+        <span class="period-custom" id="wipCustomWrap" style="display:none"><input type="date" class="cust-from" id="wipCustFrom" onchange="applyCustomRange()"><span class="cust-sep">~</span><input type="date" class="cust-to" id="wipCustTo" onchange="applyCustomRange()"></span>
+        <button class="refresh-btn" id="exportReportBtn" onclick="exportReport()" style="display:none">📷 导出报告</button>
+        <button class="refresh-btn" onclick="refreshCurrent()">↻ 刷新</button>
+    </div>
+</div>
+<!-- 第二行: subnav 导航(无 quickQuery) -->
+<div class="subnav-row">
+    <div class="wip-subnav-inner" id="wipSubnav">
+        <button class="active" data-target="focusShell">现场关注</button>
+        <button data-target="flowPanel">工艺流</button>
+        <button data-target="chartGrid">趋势/分布</button>
+        <button data-target="orderSection">工单明细</button>
+    </div>
+</div>
+<div class="wip-page">
+
+<!-- Focus Command Panel -->
+<div class="focus-shell" id="focusShell" data-focal-active="1">
+  <div class="focus-card wip-spotlight" id="focusCardFocal">
+    <div class="focus-content">
+      <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">现场关注 · 全部产线</span></div>
+      <div class="focus-title" id="focusTitle">正在读取 WIP 现场状态...</div>
+      <div class="focus-action" id="focusAction">系统会优先指出当前最值得处理的工位、堆积原因和下一步动作。</div>
+      <div class="focus-meta" id="focusMeta">
+        <span class="focus-chip"><strong>--</strong>活跃WIP</span>
+        <span class="focus-chip"><strong>--</strong>瓶颈占比</span>
+        <span class="focus-chip"><strong>--</strong>工位数</span>
+      </div>
+      <div class="focus-detail" id="focusDetail">
+        <div class="focus-detail-block"><div class="label">最长滞留 SN</div><div class="value" id="focusLongestSn">--</div><div class="sub" id="focusLongestSub">点击瓶颈查看明细</div></div>
+        <div class="focus-detail-block"><div class="label">影响工单 Top3</div><div class="value" id="focusOrders">--</div><div class="sub">按当前瓶颈工位统计</div></div>
+      </div>
+      <div class="focus-actions">
+        <button onclick="openCurrentBottleneck()">查看瓶颈 SN</button>
+        <button onclick="scrollToPanel('orderSection')">查看工单明细</button>
+        <button onclick="showWipByLine()">按产线拆解</button>
+      </div>
+      <div class="focus-trust" id="focusTrust"><span>WIP：近7天活跃窗口</span><span>路线：推导/过站路径</span><span>工序名：MES</span></div>
+    </div>
+  </div>
+  <div class="focus-side">
+    <div class="focus-mini focus-mini--liquid" id="focusOrderCard">
+      <div class="liq-label">工单达成</div>
+      <div class="liq-chart" id="focusOrderLiq"></div>
+      <div class="liq-hint" id="focusOrderHint">近200工单</div>
+    </div>
+    <div class="focus-mini wip-spotlight" id="focusWaitCard"><div class="label">平均停留</div><div class="value" id="focusWait">--</div><div class="hint">近7天活跃窗口</div></div>
+  </div>
+</div>
+
+<div class="kpi-section-title"><span>辅助指标</span><span>点击卡片查看明细</span></div>
+<!-- KPI -->
+<div class="kpi-row wip">
+    <div class="kpi-card wip-reveal wip-spotlight" id="kpiWipCard" style="--kpi-color:var(--warning);cursor:pointer" onclick="showWipByLine()"><div class="kpi-label" id="kpiWipLabel">在制品数量</div><div class="kpi-value" id="kpiWip">--</div><div class="kpi-sub" id="kpiWipSub">--</div></div>
+    <div class="kpi-card wip-reveal wip-spotlight" style="--kpi-color:var(--success);cursor:pointer" onclick="showDoneByLine()"><div class="kpi-label" id="kpiDoneLabel">已完工数量</div><div class="kpi-value" id="kpiDone">--</div><div class="kpi-sub" id="kpiDoneSub">--</div></div>
+    <div class="kpi-card wip-reveal wip-spotlight" id="kpiBnCard" style="--kpi-color:var(--danger);cursor:pointer" onclick="showBottleneckDetail()"><div class="kpi-label" id="kpiBnLabel">瓶颈工位</div><div class="kpi-value" id="kpiBottleneck">--</div><div class="kpi-sub" id="kpiBottleneckSub">--</div></div>
+    <div class="kpi-card wip-reveal wip-spotlight" style="--kpi-color:var(--brand);cursor:pointer" onclick="showPlanRateDetail()"><div class="kpi-label" id="kpiPlanLabel">计划达成率</div><div class="kpi-value" id="kpiPlanRate">--</div><div class="kpi-sub" id="kpiPlanRateSub">--</div></div>
+    <div class="kpi-card wip-reveal wip-spotlight" style="--kpi-color:var(--purple);cursor:pointer" onclick="showWipCycleDetail()"><div class="kpi-label" id="kpiCycleLabel">在制周期</div><div class="kpi-value" id="kpiWipCycle">--</div><div class="kpi-sub" id="kpiWipCycleSub">--</div></div>
+    <div class="kpi-card wip-reveal wip-spotlight" style="--kpi-color:var(--info);cursor:pointer" onclick="showMfgCycleDetail()"><div class="kpi-label" id="kpiMfgLabel">制造周期</div><div class="kpi-value" id="kpiMfgCycle">--</div><div class="kpi-sub" id="kpiMfgCycleSub">--</div></div>
+</div>
+
+<!-- Rule Suggestion -->
+<div class="ai-suggest" id="aiSuggest" style="display:none">
+    <div class="icon">&#x1F4A1;</div>
+    <div class="content"><div class="title" id="aiSugTitle">瓶颈提醒</div><div class="detail" id="aiSugDetail">--</div></div>
+</div>
+
+<!-- Flow Panel -->
+<div class="flow-panel wip-reveal wip-spotlight" id="flowPanel">
+    <div class="flow-header">
+        <h3 id="flowTitle">工艺路线 · 近7天活跃WIP分布 <span class="route-preview-trigger" id="routePreviewTrigger">&#x1F689;<div class="route-preview" id="routePreview"></div></span></h3>
+        <div class="line-tabs" id="lineTabs"></div>
+    </div>
+    <div class="route-switch-bar" id="routeSwitchBar"></div>
+    <div class="process-flow" id="processFlow"></div>
+</div>
+
+<!-- Charts — 全宽堆叠 -->
+<div class="full-stack" id="chartGrid">
+    <div class="chart-panel wip-reveal wip-spotlight"><div class="chart-panel-title">&#x1F4CA; 工位堆积排名</div><div class="chart-box" id="chartBar"></div></div>
+    <div class="chart-panel wip-reveal wip-spotlight"><div class="chart-panel-title">&#x1F3AF; 工单达成率</div><div class="chart-box" id="chartOrder"></div></div>
+</div>
+
+<!-- Order Detail Table -->
+<div style="padding:0 0 24px" id="orderSection">
+<div class="chart-panel wip-reveal wip-spotlight">
+    <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>&#x1F4CB; 工单明细</span>
+        <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="orderSearch" placeholder="搜索工单/产品/产线..." oninput="debouncedRenderOrder()" style="padding:4px 10px;font-size:var(--fs-xs);border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-canvas);color:var(--text-secondary);width:160px;outline:none">
+            <div id="orderTabs" style="display:flex;gap:4px">
+            <span class="line-tab active" onclick="filterOrders(this,'all')">全部</span>
+            <span class="line-tab" onclick="filterOrders(this,'producing')">生产中</span>
+            <span class="line-tab" onclick="filterOrders(this,'done')">已完工</span>
+            </div>
+        </div>
+    </div>
+    <div class="order-command" id="orderCommandPanel"></div>
+    <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-lg);margin-top:8px">
+        <table class="sn-table" id="orderTable">
+            <thead><tr><th>工单号</th><th>批次号</th><th>产品型号</th><th>产线</th><th>计划</th><th>完成</th><th>达成率</th><th>当前工序</th><th>预计完工</th><th>状态</th></tr></thead>
+            <tbody id="orderTbody"></tbody>
+        </table>
+    </div>
+</div>
+</div>
+</div><!-- /wip-page -->
+
+<!-- Drawer -->
+<div class="drawer-mask" id="drawerMask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+    <div class="drawer-header"><h3 id="drawerTitle">--</h3><div style="display:flex;align-items:center;gap:8px"><button class="refresh-btn" id="drawerExport" onclick="exportDrawerCSV()" style="font-size:var(--fs-xs);padding:4px 10px">&#x2B07; 导出</button><button class="drawer-close" onclick="closeDrawer()">&times;</button></div></div>
+    <div class="drawer-body"><div class="drawer-stats" id="drawerStats"></div><div id="drawerContent"></div></div>
+</div>
+
+<script>
+/* ============================================================
+   WIP 注意力钩子引擎（attention-hooks-spec · 隔离 wip.html 内联）
+   primary: liquidfill 水球 / LiveNum 数字滚动 / State Sweep 切换光流
+   secondary: Lone Spotlight 焦点高光晕 / Reveal Cascade 级联入场 /
+              Cursor Spotlight 光标光晕 / flash-on-change 跳变高亮
+   全部 prefers-reduced-motion 守护；零重排(transform/opacity/box-shadow)
+   ============================================================ */
+(function(){
+  'use strict';
+  // 进阶版:reduced-motion 单一真源查 ATTN.REDUCED(删除本地 matchMedia 重复检测)
+  const REDUCED = (window.ATTN && ATTN.REDUCED) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const WIP = window.WipHooks = {};
+
+  // ---------- 数字滚动引擎 LiveNum (primary) ----------
+  // 统一由 ATTN.liveNum 接管 (v4.1) — 保留 WIP.liveNum 命名以兼容 WIP.liveNumFlash 调用
+  WIP.liveNum = function(el, val, opts){
+    if(!el) return;
+    opts = opts||{};
+    if(opts.format){
+      return ATTN.liveNum(el, val, { format: opts.format, dur: opts.dur || 850 });
+    }
+    return ATTN.liveNum(el, val, { decimals: 0, useComma: true, dur: opts.dur || 850 });
+  };
+  // liveNum format 回调:Number 化(ATTN.liveNum 初始/skip 时传字符串,动画帧传数字,不转会 toFixed 炸)
+  WIP.fmtHours = function(v){ v=Number(v); if(isNaN(v)) return '--'; return v>=24?(v/24).toFixed(1)+'天':v.toFixed(1)+'h'; };
+  WIP.fmtPct = function(v){ v=Number(v); if(isNaN(v)) return '--'; return v.toFixed(1)+'%'; };
+  // 兼容旧版 block 变量, 不再使用
+  // (easeOutExpo / parseNum / fmtNum 已删除)
+
+  // ---------- WS 推送瞬时跳变高亮 (进阶版:透传 ATTN.flash + 修复 parseNum 未定义潜伏 bug) ----------
+  // ATTN.flash 内部自解析数字(涨绿跌红),不再依赖 v4.1 已删除的 parseNum
+  const flashTimers = {};
+  WIP.flashNode = function(el, oldVal, newVal){
+    if(!el || REDUCED) return;
+    if(window.ATTN && ATTN.flash){ try { ATTN.flash(el, oldVal, newVal); } catch(e){} }
+    const o = parseFloat(String(oldVal).replace(/[^\d.-]/g,''));
+    const n = parseFloat(String(newVal).replace(/[^\d.-]/g,''));
+    if(isNaN(o) || isNaN(n) || o===n) return;
+    el.classList.remove('live-flash','live-flash-down','live-flash-flat');
+    clearTimeout(flashTimers[el.__flashKey]);
+    const dir = n>o ? 'up' : (n<o ? 'down' : 'flat');
+    el.classList.add(dir==='up'?'live-flash':dir==='down'?'live-flash-down':'live-flash-flat');
+    const key = 'fl_'+Math.random().toString(36).slice(2,7);
+    el.__flashKey = key;
+    flashTimers[key] = setTimeout(()=>{
+      el.classList.remove('live-flash','live-flash-down','live-flash-flat');
+    }, 920);
+  };
+
+  // 便捷：滚动+闪光组合（值变了才闪光）
+  WIP.liveNumFlash = function(el, val, opts){
+    if(!el) return;
+    const oldRaw = el.textContent;
+    WIP.liveNum(el, val, opts);
+    WIP.flashNode(el, oldRaw, val);
+  };
+
+  // ---------- 状态切换光流 State Sweep (primary) ----------
+  let sweepTimer = null;
+  WIP.sweep = function(){
+    if(REDUCED) return;
+    const bar = document.getElementById('wipSweepBar');
+    if(!bar) return;
+    bar.classList.remove('is-sweeping');
+    // 强制 reflow 以重启动画
+    void bar.offsetWidth;
+    bar.classList.add('is-sweeping');
+    clearTimeout(sweepTimer);
+    sweepTimer = setTimeout(()=>bar.classList.remove('is-sweeping'), 560);
+  };
+
+  // ---------- 卡片错峰级联入场 (进阶版:迁移 ATTN.revealCascade,删除本地 IO + .wip-reveal/.is-revealed 机制) ----------
+  WIP.initCascade = function(){
+    if(window.ATTN && ATTN.revealCascade){
+      try { ATTN.revealCascade('.wip-reveal', { step: 40, cap: 200 }); } catch(e){}
+    }
+  };
+
+  // ---------- 光标跟随光晕 Cursor Spotlight (secondary) ----------
+  WIP.initSpotlight = function(){
+    if(REDUCED) return;
+    const targets = document.querySelectorAll('.wip-spotlight');
+    targets.forEach(t=>{
+      if(t.__spotBound) return;
+      t.__spotBound = true;
+      t.addEventListener('mousemove', (e)=>{
+        const r = t.getBoundingClientRect();
+        t.style.setProperty('--mx', (e.clientX-r.left)+'px');
+        t.style.setProperty('--my', (e.clientY-r.top)+'px');
+      });
+    });
+  };
+
+  // ---------- liquidfill 呼吸水球 KPI (primary) ----------
+  let liqChart = null;
+  WIP.renderLiquid = function(rate){
+    const dom = document.getElementById('focusOrderLiq');
+    if(!dom || typeof echarts==='undefined' || !echarts.init) return;
+    if(!liqChart) liqChart = echarts.init(dom);
+    let v = rate;
+    if(v==null || isNaN(v)) v = 0;
+    v = Math.max(0, Math.min(100, v));
+    const color = v>=80 ? CHART.colors.green : v>=50 ? CHART.colors.orange : CHART.colors.red;
+    const glow = v>=80 ? 'rgba(16,185,129,0.45)' : v>=50 ? 'rgba(245,158,11,0.40)' : 'rgba(239,68,68,0.45)';
+    liqChart.setOption({
+      series:[{
+        type:'liquidFill',
+        data:[ v/100, { value:(v/100)*0.92, direction:'left', itemStyle:{opacity:0.45} }, { value:(v/100)*0.82, direction:'right', itemStyle:{opacity:0.28} } ],
+        radius:'74%',
+        center:['50%','52%'],
+        amplitude:6, waveLength:'72%',
+        phaseAuto:true,
+        period: function(value, idx){ return 2600 + idx*420; }, // 三段不混周期：2.6s/3.0s/3.4s
+        backgroundStyle:{ borderWidth:0, color:'transparent' },
+        outline:{ show:true, borderDistance:3, itemStyle:{
+          borderWidth:2, borderColor:color, shadowBlur:14, shadowColor:glow
+        } },
+        itemStyle:{ color:color },
+        label:{
+          formatter: function(){ return v.toFixed(1)+'%'; },
+          fontSize:26, fontWeight:800, fontFamily:'var(--font-mono)',
+          color:CHART.tooltipText, insideColor:CHART.bg,
+          position:['50%','50%'], align:'center', verticalAlign:'middle'
+        },
+        emphasis:{ itemStyle:{ opacity:0.85 } }
+      }]
+    });
+  };
+  WIP.resizeLiquid = function(){ if(liqChart) liqChart.resize(); };
+
+  // ---------- 焦点高光晕自动激活(进阶版:叠加 ATTN.enforceFocal 统一压暗机制,保留 data-focal-active 兼容本地 CSS) ----------
+  WIP.setFocusFocal = function(active){
+    const shell = document.getElementById('focusShell');
+    if(!shell) return;
+    if(active){
+      shell.setAttribute('data-focal-active','1');
+      var card = shell.querySelector('.focus-card');
+      if(card) card.setAttribute('data-focal','true');
+    } else {
+      shell.removeAttribute('data-focal-active');
+      var card2 = shell.querySelector('.focus-card');
+      if(card2) card2.removeAttribute('data-focal');
+    }
+    if(window.ATTN && ATTN.enforceFocal){ try{ ATTN.enforceFocal(shell); }catch(e){} }
+  };
+
+  // ---------- 刷新快照：捕获旧 KPI 文本，供 render 后比对闪光 ----------
+  WIP.snapshot = function(ids){
+    const snap = {};
+    (ids||[]).forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) snap[id] = el.textContent;
+    });
+    return snap;
+  };
+  // 滚动+闪光一批（用于 renderKPI 后）
+  WIP.applyLive = function(map){
+    // map: { id: {val, fmt?} }
+    Object.keys(map||{}).forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      const cfg = map[id];
+      WIP.liveNumFlash(el, cfg.val, { format: cfg.fmt });
+    });
+  };
+
+  // 页面加载后初始化级联与光晕
+  window.addEventListener('load', ()=>{
+    WIP.initCascade();
+    WIP.initSpotlight();
+  });
+  window.addEventListener('resize', ()=>{ WIP.resizeLiquid(); });
+})();
+</script>
+
+<script>
+let wipData=null,allWipData=null,routesData=null,ordersData=null,charts={},currentLine='',currentPeriod='realtime',snapshotData=null,lineWipCache={},focusDetailKey='',currentTopOp=null,currentRouteProduct='';
+const IS_DESKTOP=new URLSearchParams(location.search).get('desktop')==='1';
+const LN={
+  'ASS_Line1':'整机1线',
+  'ASS_Line2':'功放线',
+  'ASS_Line2-1':'功放2线',
+  'ASS_Line3':'整机3线',
+  'PKG_Line1':'包装1线',
+  'QJG_Line1':'前加工1线屏组件',
+  'QJG_Line2':'前加工3线屏组件',
+  'QJG_Line3':'前加工3线',
+  'QJG_Line4':'附件盒包装3线'
+};
+const localDate=dt=>dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+const today=()=>localDate(new Date());
+const weekAgo=()=>{const d=new Date();d.setDate(d.getDate()-6);return localDate(d);};
+
+function setLoadError(message){
+  document.getElementById('updateTime').textContent=message;
+  document.getElementById('kpiWip').textContent='--';
+  document.getElementById('kpiWipSub').textContent=IS_DESKTOP?'请检查本地服务、MongoDB 和网络连接':'请检查登录状态和网络连接';
+}
+
+function getCustomRangeStored(){ try{return JSON.parse(localStorage.getItem('_wipui_custom_range'));}catch(e){return null;} }
+function toggleCustomRange(show){ var w=document.getElementById('wipCustomWrap'); if(w)w.style.display=show?'':'none'; }
+function applyCustomRange(){
+  var f=document.getElementById('wipCustFrom'),t=document.getElementById('wipCustTo');
+  if(!f||!f.value||!t||!t.value)return;
+  var from=f.value,to=t.value;
+  if(from>to){var tmp=from;from=to;to=tmp;f.value=from;t.value=to;}
+  try{localStorage.setItem('_wipui_custom_range',JSON.stringify({dateFrom:from,dateTo:to}));}catch(e){}
+  switchPeriod(document.getElementById('periodSelect'),'custom');
+}
+function getPeriodRange(period){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth(),d=now.getDate();
+  const fmt=dt=>localDate(dt);
+  switch(period){
+    case 'week': {const dow=now.getDay()||7;const mon=new Date(now);mon.setDate(d-dow+1);return{from:fmt(mon),to:fmt(now),label:'本周',prev_from:fmt(new Date(mon.getTime()-7*86400000)),prev_to:fmt(new Date(mon.getTime()-86400000))};}
+    case 'month': {const mStr=(m+1+'').padStart(2,'0');const prevM=m===0?12:m;const prevY=m===0?y-1:y;return{from:y+'-'+mStr+'-01',to:fmt(now),label:'本月',prev_from:prevY+'-'+(prevM+'').padStart(2,'0')+'-01',prev_to:y+'-'+mStr+'-01'};}
+    case 'quarter': {const qs=Math.floor(m/3)*3;return{from:y+'-'+((qs+1)+'').padStart(2,'0')+'-01',to:fmt(now),label:'本季',prev_from:(qs>=3?y:y-1)+'-'+((qs>=3?qs-2:qs+10)+'').padStart(2,'0')+'-01',prev_to:y+'-'+((qs+1)+'').padStart(2,'0')+'-01'};}
+    case 'half': return{from:(m<6?y:y)+'-'+(m<6?'01':'07')+'-01',to:fmt(now),label:'半年',prev_from:(m<6?y-1:y)+'-'+(m<6?'07':'01')+'-01',prev_to:(m<6?y:y)+'-'+(m<6?'01':'07')+'-01'};
+    case 'year': return{from:y+'-01-01',to:fmt(now),label:'年度',prev_from:(y-1)+'-01-01',prev_to:(y-1)+'-12-31'};
+    case 'all': return{from:'2024-01-01',to:fmt(now),label:'累计',prev_from:null,prev_to:null};
+    case 'custom': {const c=getCustomRangeStored();if(!c)return null;const cf=new Date(c.dateFrom+'T00:00:00'),ct=new Date(c.dateTo+'T00:00:00');const days=Math.round((ct-cf)/86400000);return{from:c.dateFrom,to:c.dateTo,label:'自定义',prev_from:fmt(new Date(cf.getTime()-(days+1)*86400000)),prev_to:fmt(new Date(cf.getTime()-86400000))};}
+    default: return null;
+  }
+}
+
+function switchPeriod(el,period){
+  if(!period && el && el.value) period=el.value;
+  currentPeriod=period;
+  toggleCustomRange(period==='custom');
+  if(period==='custom' && !getCustomRangeStored()) return;
+  document.querySelectorAll('#periodTabs .line-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(window.WipHooks) WipHooks.sweep(); // 状态切换光流
+  if(period==='realtime'){
+    document.getElementById('liveDot').style.display='';
+    document.getElementById('focusShell').style.display='';
+    document.getElementById('flowPanel').style.display='';
+    document.getElementById('orderSection').style.display='';
+    document.getElementById('exportReportBtn').style.display='none';
+    document.getElementById('navDataTrust').textContent='WIP近7天活跃窗口 · 工序名MES · 路线推导';
+    setSubnavMode('realtime');
+    if(window.WipHooks){ WipHooks.setFocusFocal(true); setTimeout(()=>WipHooks.resizeLiquid(),60); }
+    fetchAll();
+  } else {
+    document.getElementById('liveDot').style.display='none';
+    document.getElementById('focusShell').style.display='none';
+    document.getElementById('flowPanel').style.display='none';
+    document.getElementById('orderSection').style.display='none';
+    document.getElementById('exportReportBtn').style.display='';
+    document.getElementById('navDataTrust').textContent='快照报告 · 少于3个快照不展示趋势 · 不自动回补';
+    setSubnavMode('report');
+    if(window.WipHooks) WipHooks.setFocusFocal(false);
+    fetchReportData(period);
+  }
+}
+
+function refreshCurrent(){
+  if(currentPeriod==='realtime') fetchAll();
+  else fetchReportData(currentPeriod);
+}
+
+function setSubnavMode(mode){
+  const buttons=document.querySelectorAll('#wipSubnav button');
+  if(buttons.length>=4){
+    buttons[0].style.display=mode==='report'?'none':'';
+    buttons[1].style.display=mode==='report'?'none':'';
+    buttons[2].style.display='';
+    buttons[3].style.display=mode==='report'?'none':'';
+  }
+  document.querySelectorAll('#wipSubnav button').forEach(b=>b.classList.remove('active'));
+  const active=mode==='report'?buttons[2]:buttons[0];
+  if(active)active.classList.add('active');
+}
+
+async function fetchReportData(period){
+  const range=getPeriodRange(period);
+  document.getElementById('updateTime').textContent='加载'+range.label+'数据...';
+  // localStorage 秒开: 拉新前先用上次缓存快照即时绘制报告, 消除白屏
+  // renderReport 幂等(覆盖DOM/重绘图表), 拉新后自动覆盖
+  (function _wipReportPeek(){
+    try{
+      const snapsUrl='/api/wip/snapshots?from='+range.from+'&to='+range.to;
+      const routesUrl='/api/process-routes';
+      const ckSnaps=window.apiFetch.peek(snapsUrl);
+      const ckRoutes=window.apiFetch.peek(routesUrl);
+      if(ckSnaps&&ckSnaps.val){
+        const snaps=ckSnaps.val;
+        if(ckRoutes&&ckRoutes.val) routesData=ckRoutes.val;
+        let prevSnaps=[];
+        if(range.prev_from){
+          const ckPrev=window.apiFetch.peek('/api/wip/snapshots?from='+range.prev_from+'&to='+range.prev_to);
+          if(ckPrev&&ckPrev.val) prevSnaps=ckPrev.val;
+        }
+        renderReport(snaps,prevSnaps,range);
+      }
+    }catch(e){ /* peek 失败静默 fallback, 不影响下方正常 fetch */ }
+  })();
+  try{
+    const [snaps,routes]=await Promise.all([
+      apiFetch('/api/wip/snapshots?from='+range.from+'&to='+range.to),
+      apiFetch('/api/process-routes')
+    ]);
+    snapshotData=snaps;
+    routesData=routes;
+    // 获取环比数据
+    let prevSnaps=[];
+    if(range.prev_from) prevSnaps=await apiFetch('/api/wip/snapshots?from='+range.prev_from+'&to='+range.prev_to);
+    const sparse=snaps.length<3;
+    document.getElementById('updateTime').textContent=range.label+'快照报告'+(sparse?'（数据不足/试算）':'')+' ('+range.from+' ~ '+range.to+')';
+    renderReport(snaps,prevSnaps,range);
+  }catch(e){
+    setLoadError('加载'+range.label+'数据失败');
+  }
+}
+
+function renderReport(snaps,prevSnaps,range){
+  if(!snaps.length){
+    document.getElementById('kpiWip').textContent='--';
+    document.getElementById('kpiWipSub').textContent='暂无快照数据，未自动回补';
+    document.getElementById('kpiDone').textContent='--';
+    document.getElementById('kpiDoneSub').textContent='快照报告数据不足';
+    document.getElementById('kpiBottleneck').textContent='--';
+    document.getElementById('kpiBottleneckSub').textContent='暂无快照';
+    document.getElementById('aiSuggest').style.display='none';
+    renderTrendCharts([],range,true);
+    return;
+  }
+  const sparse=snaps.length<3;
+  const avg=(arr,key)=>arr.length>0?+(arr.reduce((s,a)=>s+(a[key]||0),0)/arr.length).toFixed(1):0;
+  const sum=(arr,key)=>arr.reduce((s,a)=>s+(a[key]||0),0);
+  const last=snaps[snaps.length-1];
+
+  // KPI — 周期内均值/累计 + 环比
+  const avgWip=avg(snaps,'wip_count');
+  const totalDone=sum(snaps,'completed_count');
+  const avgPlanRate=avg(snaps,'plan_rate');
+  const avgWipWait=avg(snaps,'avg_wip_wait_hours');
+  const avgMfgCycle=avg(snaps,'mfg_cycle_hours');
+
+  const prevAvgWip=avg(prevSnaps,'wip_count');
+  const prevTotalDone=sum(prevSnaps,'completed_count');
+  const prevAvgPlanRate=avg(prevSnaps,'plan_rate');
+  const prevAvgWipWait=avg(prevSnaps,'avg_wip_wait_hours');
+  const prevAvgMfgCycle=avg(prevSnaps,'mfg_cycle_hours');
+
+  function trend(cur,prev){
+    if(sparse||prevSnaps.length<3||!prev||prev===0)return '';
+    const pct=((cur-prev)/prev*100).toFixed(1);
+    const arrow=pct>0?'↑':'↓';
+    const color=pct>0?'var(--danger)':'var(--success)';
+    return ' <span style="font-size:var(--fs-xs);color:'+color+'">'+arrow+Math.abs(pct)+'%</span>';
+  }
+  function trendDir(cur,prev){if(!prev||prev===0)return 0;return cur>prev?1:cur<prev?-1:0;}
+
+  // AI标题 — 汇报模式
+  const wipTrend=trendDir(avgWip,prevAvgWip);
+  document.getElementById('kpiWipLabel').textContent=sparse?'快照报告（数据不足/试算）':(wipTrend>0?'📈 在制品上升趋势':wipTrend<0?'📉 在制品下降，产能消化中':'在制品数量稳定');
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiWip'), String(avgWip));
+  else document.getElementById('kpiWip').textContent=avgWip;
+  document.getElementById('kpiWipSub').innerHTML=(sparse?'仅 '+snaps.length+' 个快照，趋势不展示':range.label+'日均在制'+trend(avgWip,prevAvgWip));
+
+  const doneTrend=trendDir(totalDone,prevTotalDone);
+  document.getElementById('kpiDoneLabel').textContent=sparse?'完工快照（试算）':(doneTrend>0?'✅ 完工量提升':'⚠️ 完工量下降，需关注');
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiDone'), String(totalDone));
+  else document.getElementById('kpiDone').textContent=totalDone.toLocaleString();
+  document.getElementById('kpiDoneSub').innerHTML=range.label+'累计完工'+trend(totalDone,prevTotalDone);
+
+  // 瓶颈 — 出现频次最高的
+  const bnCount={};
+  snaps.forEach(s=>{if(s.bottleneck){const n=s.bottleneck.operation_name||s.bottleneck.operation||'';if(n)bnCount[n]=(bnCount[n]||0)+1;}});
+  const topBn=Object.entries(bnCount).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('kpiBnLabel').textContent=sparse?'瓶颈频次（样本不足）':(topBn.length>1&&topBn[0][1]>snaps.length*0.7?'🔴 瓶颈长期固定，需根本改善':'瓶颈频次分析');
+  document.getElementById('kpiBottleneck').textContent=topBn.length>0?topBn[0][0]:'--';
+  document.getElementById('kpiBottleneckSub').textContent=topBn.length>0?range.label+'内 '+topBn[0][1]+' 天为瓶颈':'暂无数据';
+
+  const planTrend=trendDir(avgPlanRate,prevAvgPlanRate);
+  document.getElementById('kpiPlanLabel').textContent=avgPlanRate>=90?'✅ 达成率优秀':avgPlanRate>=70?(planTrend>=0?'达成率稳步推进':'⚠️ 达成率下滑'):'🔴 达成率严重不足';
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiPlanRate'), String(avgPlanRate), {format:WipHooks.fmtPct});
+  else document.getElementById('kpiPlanRate').textContent=avgPlanRate+'%';
+  document.getElementById('kpiPlanRateSub').innerHTML=range.label+'平均达成率'+trend(avgPlanRate,prevAvgPlanRate);
+
+  const waitDisp=avgWipWait>=24?(avgWipWait/24).toFixed(1)+'天':avgWipWait+'h';
+  document.getElementById('kpiCycleLabel').textContent=avgWipWait>48?'🔴 在制周期过长':avgWipWait>24?'⚠️ 在制周期偏长':'在制周期稳定';
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiWipCycle'), String(avgWipWait), {format:WipHooks.fmtHours});
+  else document.getElementById('kpiWipCycle').textContent=waitDisp;
+  document.getElementById('kpiWipCycleSub').innerHTML=range.label+'平均在制周期'+trend(avgWipWait,prevAvgWipWait);
+
+  const mfgDisp=avgMfgCycle>=24?(avgMfgCycle/24).toFixed(1)+'天':avgMfgCycle+'h';
+  document.getElementById('kpiMfgLabel').textContent=avgMfgCycle>48?'⚠️ 制造周期需优化':avgMfgCycle>0?'制造周期正常':'暂无数据';
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiMfgCycle'), String(avgMfgCycle), {format:WipHooks.fmtHours});
+  else document.getElementById('kpiMfgCycle').textContent=mfgDisp;
+  document.getElementById('kpiMfgCycleSub').innerHTML=range.label+'平均制造周期'+trend(avgMfgCycle,prevAvgMfgCycle);
+
+  // 隐藏实时模块
+  document.getElementById('aiSuggest').style.display='none';
+
+  // 图表区 — 趋势折线
+  renderTrendCharts(snaps,range,sparse);
+}
+
+function renderTrendCharts(snaps,range,sparse){
+  if(sparse){
+    const msg=snaps.length?'快照少于3个，趋势图暂不展示，避免误判':'暂无快照数据';
+    const c1=charts.bar||echarts.init(document.getElementById('chartBar'));
+    const c2=charts.order||echarts.init(document.getElementById('chartOrder'));
+    document.querySelector('#chartBar').parentElement.querySelector('.chart-panel-title').innerHTML='&#x1F4C8; 快照趋势（数据不足/试算）';
+    document.querySelector('#chartOrder').parentElement.querySelector('.chart-panel-title').innerHTML='&#x1F3AF; 达成率与周期（数据不足/试算）';
+    const emptyOpt={title:{text:msg,left:'center',top:'45%',textStyle:{color:CHART.legendText,fontSize:13,fontWeight:400}},xAxis:{show:false},yAxis:{show:false},series:[]};
+    c1.setOption(emptyOpt,true);c2.setOption(emptyOpt,true);charts.bar=c1;charts.order=c2;return;
+  }
+  const dates=snaps.map(s=>s.date.substring(5));
+  // 左图：WIP & 完工趋势
+  const c1=charts.bar||echarts.init(document.getElementById('chartBar'));
+  document.querySelector('#chartBar').parentElement.querySelector('.chart-panel-title').innerHTML='&#x1F4C8; WIP与完工趋势';
+  c1.setOption({tooltip:CHART.tooltip(),legend:{top:0,right:0,textStyle:{color:CHART.legendText,fontSize:10}},grid:{top:30,bottom:25,left:50,right:20},xAxis:{type:'category',data:dates,axisLabel:{color:CHART.axisLabel,fontSize:10,rotate:dates.length>15?45:0},axisLine:{lineStyle:{color:'rgba(30,58,95,0.5)'}}},yAxis:{type:'value',axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:'rgba(30,58,95,0.3)'}}},series:[
+    {name:'在制品',type:'line',data:snaps.map(s=>s.wip_count||0),smooth:true,lineStyle:{width:2,color:CHART.colors.orange},itemStyle:{color:CHART.colors.orange},label:{show:true,position:'top',color:CHART.colors.orange,fontSize:9},areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(245,158,11,0.15)'},{offset:1,color:'rgba(245,158,11,0)'}]}}},
+    {name:'完工',type:'line',data:snaps.map(s=>s.completed_count||0),smooth:true,lineStyle:{width:2,color:CHART.colors.green},itemStyle:{color:CHART.colors.green},label:{show:true,position:'top',color:CHART.colors.green,fontSize:9},areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(16,185,129,0.15)'},{offset:1,color:'rgba(16,185,129,0)'}]}}}
+  ]},true);
+  charts.bar=c1;
+
+  // 右图：达成率 & 制造周期趋势
+  const c2=charts.order||echarts.init(document.getElementById('chartOrder'));
+  document.querySelector('#chartOrder').parentElement.querySelector('.chart-panel-title').innerHTML='&#x1F3AF; 达成率与周期趋势';
+  c2.setOption({tooltip:CHART.tooltip(),legend:{top:0,right:0,textStyle:{color:CHART.legendText,fontSize:10}},grid:{top:30,bottom:25,left:50,right:50},xAxis:{type:'category',data:dates,axisLabel:{color:CHART.axisLabel,fontSize:10,rotate:dates.length>15?45:0},axisLine:{lineStyle:{color:'rgba(30,58,95,0.5)'}}},yAxis:[{type:'value',name:'%',axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:'rgba(30,58,95,0.3)'}}},{type:'value',name:'h',axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{show:false}}],series:[
+    {name:'达成率',type:'line',data:snaps.map(s=>s.plan_rate||0),smooth:true,lineStyle:{width:2,color:CHART.colors.blue},itemStyle:{color:CHART.colors.blue},label:{show:true,position:'top',color:CHART.colors.blue,fontSize:9,formatter:function(p){return p.value!=null?p.value+'%':'';}}},
+    {name:'制造周期',type:'line',yAxisIndex:1,data:snaps.map(s=>s.mfg_cycle_hours||0),smooth:true,lineStyle:{width:2,color:CHART.colors.purple},itemStyle:{color:CHART.colors.purple},label:{show:true,position:'top',color:CHART.colors.purple,fontSize:9,formatter:function(p){return p.value!=null?p.value+'h':'';}}}
+  ]},true);
+  charts.order=c2;
+}
+
+async function fetchAll(){
+  document.getElementById('updateTime').textContent='更新中...';
+  // localStorage 秒开: 拉新前先用上次缓存数据即时绘制, 消除白屏
+  // renderAll/renderOrderTable 均幂等(覆盖DOM/ECharts setOption(_,true)), 拉新后自动覆盖
+  (function _wipPeek(){
+    try{
+      const wipUrl='/api/wip?dateFrom='+weekAgo()+'&dateTo='+today();
+      const orderUrl='/api/work-order-progress?dateFrom='+weekAgo()+'&dateTo='+today()+'&limit=200';
+      const routesUrl='/api/process-routes';
+      const ckWip=window.apiFetch.peek(wipUrl);
+      const ckRoutes=window.apiFetch.peek(routesUrl);
+      const ckOrder=window.apiFetch.peek(orderUrl);
+      let drew=false;
+      if(ckWip&&ckWip.val){ allWipData=ckWip.val; lineWipCache={'':allWipData}; wipData=currentLine?wipData:allWipData; drew=true; }
+      if(ckRoutes&&ckRoutes.val){ routesData=ckRoutes.val; drew=true; }
+      if(drew){
+        if(!currentLine){ renderAll(); }
+        if(ckOrder&&ckOrder.val){ ordersData=ckOrder.val; renderOrderTable(orderFilter); }
+      }
+    }catch(e){ /* peek 失败静默 fallback, 不影响下方正常 fetch */ }
+  })();
+  try{
+    const orderPromise=apiFetch('/api/work-order-progress?dateFrom='+weekAgo()+'&dateTo='+today()+'&limit=200').then(r=>{ if(r && !r.success && r.status) throw new Error('工单 API '+r.status); return r; });
+    [allWipData,routesData]=await Promise.all([
+      apiFetch('/api/wip?dateFrom='+weekAgo()+'&dateTo='+today()),
+      apiFetch('/api/process-routes')
+    ]);
+    if(!allWipData) throw new Error('WIP API 失败');
+    if(!routesData) throw new Error('工艺路线 API 失败');
+    lineWipCache={'':allWipData};
+    wipData=currentLine?await fetchLineWip(currentLine):allWipData;
+    const scope=currentLine?' | '+(LN[currentLine]||currentLine):' | 全部产线';
+    document.getElementById('navDataTrust').textContent=(currentLine?(LN[currentLine]||currentLine):'全部产线')+' · WIP近7天活跃窗口 · 工序名MES';
+    document.getElementById('updateTime').textContent='WIP已更新，工单明细加载中...'+scope+(IS_DESKTOP?' | 桌面模式':'');
+    renderAll();
+    orderPromise.then(rows=>{
+      ordersData=rows;
+      // 仅重渲染依赖工单的部分(原重复渲染 focusPanel/KPI/flow/charts, 数据未变=浪费)
+      renderOrderTable(orderFilter);
+      document.getElementById('updateTime').textContent='更新于 '+new Date().toLocaleTimeString('zh-CN',{hour12:false})+' | 近7天活跃窗口'+scope+' | 自动刷新 3min'+(IS_DESKTOP?' | 桌面模式':'');
+    }).catch(e=>{
+      console.error('[WIP] 工单加载失败:',e);
+      ordersData=ordersData||[];
+      renderOrderTable(orderFilter);
+      document.getElementById('updateTime').textContent='WIP已更新，工单明细加载失败'+scope+(IS_DESKTOP?' | 桌面模式':'');
+    });
+  }catch(e){
+    console.error('[WIP] 加载失败:',e);
+    setLoadError('WIP 数据加载失败');
+  }
+}
+
+function renderAll(){renderFocusPanel();renderKPI();renderTabs();renderFlow();renderCharts();renderAISuggestion();renderOrderTable(orderFilter);checkBottleneckNotify();}
+
+function scrollToPanel(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  if(window.WipHooks) WipHooks.sweep(); // 状态切换光流
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('#wipSubnav button').forEach(b=>b.classList.remove('active'));
+  const btn=[...document.querySelectorAll('#wipSubnav button')].find(b=>b.getAttribute('data-target')===id);
+  if(btn)btn.classList.add('active');
+}
+// U5: 子导航统一 data-target 机制(与 kanban/bad/ai-center/health 一致), 本地绑定替代 inline onclick
+document.querySelectorAll('#wipSubnav button[data-target]').forEach(btn=>{
+  btn.addEventListener('click',()=>scrollToPanel(btn.getAttribute('data-target')));
+});
+
+async function fetchLineWip(line){
+  if(!line)return allWipData;
+  if(lineWipCache[line])return lineWipCache[line];
+  const d=await apiFetch('/api/wip?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+encodeURIComponent(line)); if(!d) throw new Error('WIP line API 失败');
+  lineWipCache[line]=d;
+  return d;
+}
+
+function renderFocusPanel(){
+  const w=wipData||{};
+  const ops=(w.by_operation||[]).slice().sort((a,b)=>b.count-a.count);
+  const top=ops[0]||null;
+  const totalWip=w.wip_count||0;
+  const scope=currentLine?(LN[currentLine]||currentLine):'全部产线';
+  const scopedOrders=getScopedOrders().filter(o=>o.qty>0);
+  const totalQty=scopedOrders.reduce((s,o)=>s+(o.qty||0),0);
+  const completedQty=WipUI.sumCompleted(scopedOrders);
+  const orderRate=totalQty>0?+(completedQty/totalQty*100).toFixed(1):null;
+  const waitH=w.avg_wip_wait_hours;
+  const waitText=waitH==null?'--':(waitH>=24?(waitH/24).toFixed(1)+'天':waitH+'h');
+  const topName=top?(top.operation_name||top.operation):'暂无瓶颈';
+  const topRatio=top&&totalWip>0?Math.round(top.count/totalWip*100):0;
+  const severity=top?top.count>200?'danger':top.count>100?'warn':'normal':'normal';
+  currentTopOp=top?{code:top.operation,name:topName,count:top.count,sort:top.sort_no}:null;
+
+  document.getElementById('focusScope').textContent='现场关注 · '+scope+' · 近7天活跃窗口';
+  document.getElementById('focusTitle').innerHTML=top
+    ? (severity==='danger'
+      ? '<span class="danger">'+topName+'</span> 堆积 '+top.count+' pcs，优先处理'
+      : topName+' 是当前第一关注工位')
+    : '当前范围无明显堆积或暂无过站数据';
+  document.getElementById('focusAction').textContent=top
+    ? (severity==='danger'
+      ? '建议先确认该工位人机状态、物料/治具是否异常，并从最长滞留 SN 开始排查。'
+      : top.count>80
+        ? '建议持续观察该工位节拍，必要时查看 SN 明细确认是否有异常滞留。'
+        : '当前堆积分布相对平稳，保持节拍并关注新增异常。')
+    : '暂无需要立即处理的瓶颈。';
+  document.getElementById('focusMeta').innerHTML=
+    '<span class="focus-chip"><strong>'+totalWip.toLocaleString()+'</strong>活跃WIP</span>'+
+    '<span class="focus-chip"><strong>'+topRatio+'%</strong>瓶颈占比</span>'+
+    '<span class="focus-chip"><strong>'+ops.length+'</strong>活跃工位</span>'+
+    (top?'<span class="focus-chip"><strong>'+top.operation+'</strong>工序号</span>':'');
+  // liquidfill 水球渲染（focusOrderRate 已改为水球容器，不再写 textContent）
+  if(window.WipHooks) WipHooks.renderLiquid(orderRate==null?0:orderRate);
+  document.getElementById('focusOrderHint').textContent='近200工单 '+completedQty.toLocaleString()+' / '+totalQty.toLocaleString();
+  // focusWait 数字滚动 + 跳变闪光
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('focusWait'), waitText);
+  else document.getElementById('focusWait').textContent=waitText;
+  document.getElementById('focusOrderCard').className='focus-mini focus-mini--liquid '+(orderRate!=null&&orderRate<80?'warn':'');
+  document.getElementById('focusWaitCard').className='focus-mini wip-spotlight '+(waitH>24?'danger':waitH>8?'warn':'');
+  if(window.WipHooks && document.getElementById('focusWaitCard') && !document.getElementById('focusWaitCard').__spotBound) WipHooks.initSpotlight();
+  document.getElementById('focusTrust').innerHTML='<span>WIP：近7天活跃窗口</span><span>路线：'+(w.has_routes?'推导/过站路径':'实际过站工位')+'</span><span>工序名：MES</span>';
+  if(top) loadFocusDetail(top.operation, topName, top.count);
+  else {
+    focusDetailKey='';
+    document.getElementById('focusLongestSn').textContent='--';
+    document.getElementById('focusLongestSub').textContent='暂无瓶颈';
+    document.getElementById('focusOrders').textContent='--';
+  }
+}
+
+function openCurrentBottleneck(){
+  if(!currentTopOp)return;
+  showDetail(currentTopOp.name,currentTopOp.count,currentTopOp.sort,currentTopOp.code);
+}
+
+function waitTextFromMinutes(min){
+  min=min||0;
+  const h=Math.floor(min/60), m=min%60;
+  return h>0?h+'h'+m+'m':m+'m';
+}
+
+async function loadFocusDetail(opCode, opName, opCount){
+  const key=(currentLine||'all')+'|'+opCode+'|'+opCount;
+  if(focusDetailKey===key)return;
+  focusDetailKey=key;
+  document.getElementById('focusLongestSn').textContent='读取中...';
+  document.getElementById('focusLongestSub').textContent=opName;
+  document.getElementById('focusOrders').textContent='读取中...';
+  try{
+    const url='/api/wip/detail?dateFrom='+weekAgo()+'&dateTo='+today()+'&operation='+encodeURIComponent(opCode)+(currentLine?'&lineName='+encodeURIComponent(currentLine):'');
+    const d=await apiFetch(url);
+    if(focusDetailKey!==key)return;
+    const sn=d.longest_item;
+    if(sn){
+      const shortCode=sn.barcode&&sn.barcode.length>24?sn.barcode.substring(0,10)+'...'+sn.barcode.substring(sn.barcode.length-8):sn.barcode;
+      document.getElementById('focusLongestSn').textContent=waitTextFromMinutes(sn.wait_minutes)+' · '+(shortCode||'--');
+      document.getElementById('focusLongestSub').textContent=(sn.task_order_no||'未关联工单')+' · '+(sn.product_model||'--');
+    }else{
+      document.getElementById('focusLongestSn').textContent='--';
+      document.getElementById('focusLongestSub').textContent='暂无 SN 明细';
+    }
+    const orders=(d.order_summary||[]).filter(o=>o.task_order_no&&o.task_order_no!=='未关联工单').slice(0,3);
+    document.getElementById('focusOrders').innerHTML=orders.length?orders.map(o=>'<span style="display:inline-block;margin-right:8px">'+o.task_order_no+' <b style="font-family:var(--font-mono);color:var(--warning)">'+o.count+'</b></span>').join(''):'--';
+  }catch(e){
+    if(focusDetailKey!==key)return;
+    document.getElementById('focusLongestSn').textContent='明细读取失败';
+    document.getElementById('focusOrders').textContent='--';
+  }
+}
+
+function buildOperationMix(){
+  const mix={};
+  (ordersData||[]).forEach(o=>{
+    if(currentLine&&o.line_code!==currentLine)return;
+    const opName=o.current_operation||'';
+    if(!opName||opName==='--')return;
+    if(!mix[opName])mix[opName]={orders:new Set(),models:new Set()};
+    if(o.task_no)mix[opName].orders.add(o.task_no);
+    if(o.product_model)mix[opName].models.add(o.product_model);
+  });
+  return mix;
+}
+
+function renderKPI(){
+  const w=wipData||{};
+  const ops=w.by_operation||[];
+  const totalWip=w.wip_count||0;
+  const completedCount=w.completed_count||0;
+  const totalSns=w.total_sns||0;
+  const rate=totalSns>0?(completedCount/totalSns*100).toFixed(1):0;
+
+  // === 规则标题生成 ===
+  // 在制品
+  const scopeLabel=currentLine?(LN[currentLine]||currentLine):'全部产线';
+  let wipLabel=currentLine?'近7天活跃WIP（'+scopeLabel+'）':'近7天活跃WIP';
+  if(totalWip>1000) wipLabel='⚠️ 近7天活跃WIP偏高';
+  else if(totalWip>500) wipLabel='近7天活跃WIP正常偏多';
+  else if(totalWip>0) wipLabel='近7天活跃WIP健康';
+  document.getElementById('kpiWipLabel').textContent=wipLabel;
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiWip'), String(totalWip));
+  else document.getElementById('kpiWip').textContent=totalWip.toLocaleString();
+  document.getElementById('kpiWipSub').textContent=scopeLabel+' · 近7天追踪 '+totalSns+' 个产品';
+
+  // 已完工
+  let doneLabel='已完工数量';
+  if(rate>=80) doneLabel='✅ 完工率优秀，产出顺畅';
+  else if(rate>=50) doneLabel='完工进度正常推进中';
+  else if(completedCount>0) doneLabel='⚠️ 完工率偏低，需关注';
+  else doneLabel='暂无完工记录';
+  document.getElementById('kpiDoneLabel').textContent=doneLabel;
+  if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiDone'), String(completedCount));
+  else document.getElementById('kpiDone').textContent=completedCount.toLocaleString();
+  document.getElementById('kpiDoneSub').textContent=scopeLabel+' · 完工率 '+rate+'%（近7天活跃窗口）';
+
+  // 瓶颈
+  let bnLabel='瓶颈工位';
+  if(ops.length>0){
+    const top=ops.reduce((a,b)=>a.count>b.count?a:b);
+    const second=ops.length>1?ops.filter(o=>o!==top).reduce((a,b)=>a.count>b.count?a:b):null;
+    document.getElementById('kpiBottleneck').textContent=top.operation_name||top.operation;
+    if(top.count>200) bnLabel='🔴 严重堵塞，立即处理';
+    else if(top.count>100) bnLabel='⚠️ 堆积过多，建议增援';
+    else if(second&&top.count>second.count*2) bnLabel='产能不均衡，瓶颈明显';
+    else bnLabel='各工位负载相对均衡';
+    document.getElementById('kpiBottleneckSub').textContent='堆积 '+top.count+' pcs，占WIP '+(totalWip>0?Math.round(top.count/totalWip*100):0)+'%';
+    document.getElementById('kpiBnCard').classList.toggle('alert',top.count>100);
+  } else {
+    document.getElementById('kpiBottleneck').textContent='--';
+    document.getElementById('kpiBottleneckSub').textContent='暂无堆积';
+    document.getElementById('kpiBnCard').classList.remove('alert');
+  }
+  document.getElementById('kpiBnLabel').textContent=bnLabel;
+
+  // 计划达成率
+  const ords=getScopedOrders().filter(o=>o.qty>0);
+  const totalQty=ords.reduce((s,o)=>s+(o.qty||0),0);
+  const completedQty=WipUI.sumCompleted(ords);
+  const planRate=WipUI.calcOrderRate(ords, totalQty);
+  let planLabel='计划达成率';
+  if(planRate!=='--'){
+    if(planRate>=95) planLabel='✅ 计划完成出色';
+    else if(planRate>=80) planLabel='达成进度良好';
+    else if(planRate>=50) planLabel='⚠️ 达成率偏低，加快节奏';
+    else planLabel='🔴 严重滞后，需紧急干预';
+  }
+  document.getElementById('kpiPlanLabel').textContent=planLabel;
+  if(window.WipHooks && planRate!=='--') WipHooks.liveNumFlash(document.getElementById('kpiPlanRate'), planRate, {format:WipHooks.fmtPct});
+  else document.getElementById('kpiPlanRate').textContent=planRate!=='--'?planRate+'%':'--';
+  document.getElementById('kpiPlanRateSub').textContent='近200工单 已完成 '+completedQty.toLocaleString()+' / 计划 '+totalQty.toLocaleString();
+
+  // 在制周期
+  const throughput=(completedCount||1)/7;
+  const wipCycle=throughput>0?(totalWip/throughput).toFixed(1):'--';
+  const actualH=w.avg_wip_wait_hours;
+  const actualDisp=actualH!=null?(actualH>=24?(actualH/24).toFixed(1)+'天':actualH+'h'):'--';
+  const estDisp=wipCycle!=='--'?wipCycle+'天':'--';
+  let cycleLabel='在制周期';
+  if(actualH!=null){
+    if(actualH>48) cycleLabel='🔴 停留过久，流转不畅';
+    else if(actualH>24) cycleLabel='⚠️ 停留偏长，注意流转';
+    else if(actualH>8) cycleLabel='在制周期正常';
+    else cycleLabel='✅ 流转很快';
+  }
+  document.getElementById('kpiCycleLabel').textContent=cycleLabel;
+  if(window.WipHooks && actualH!=null) WipHooks.liveNumFlash(document.getElementById('kpiWipCycle'), String(actualH), {format:WipHooks.fmtHours});
+  else document.getElementById('kpiWipCycle').textContent=actualDisp;
+  document.getElementById('kpiWipCycleSub').textContent='平均停留 '+actualDisp+' · 理论周转 '+estDisp;
+
+  // 制造周期
+  let mfgLabel='制造周期';
+  if(w.mfg_cycle_hours!=null){
+    const h=w.mfg_cycle_hours;
+    if(h>48) mfgLabel='⚠️ 加工耗时偏长';
+    else if(h>24) mfgLabel='制造周期正常';
+    else if(h>0) mfgLabel='✅ 加工效率良好';
+    if(window.WipHooks) WipHooks.liveNumFlash(document.getElementById('kpiMfgCycle'), String(h), {format:WipHooks.fmtHours});
+    else document.getElementById('kpiMfgCycle').textContent=h>=24?(h/24).toFixed(1)+'天':h.toFixed(1)+'h';
+    document.getElementById('kpiMfgCycleSub').textContent='近7天完工产品的平均加工耗时';
+  } else {
+    mfgLabel='制造周期 · 暂无数据';
+    document.getElementById('kpiMfgCycle').textContent='--';
+    document.getElementById('kpiMfgCycleSub').textContent='近7天无完工产品,无法计算制造周期';
+  }
+  document.getElementById('kpiMfgLabel').textContent=mfgLabel;
+}
+
+function renderAISuggestion(){
+  const ops=(wipData?.by_operation||[]).sort((a,b)=>b.count-a.count);
+  if(!ops.length){document.getElementById('aiSuggest').style.display='none';return;}
+  const top=ops[0];
+  const second=ops.length>1?ops[1]:null;
+  let title='',detail='';
+  if(top.count>150){
+    title='⚠️ '+(top.operation_name||top.operation)+' 严重堆积 ('+top.count+'pcs)';
+    detail='【原因分析】';
+    if(second&&second.count<top.count*0.5) detail+=' 下游工序'+(second.operation_name||second.operation)+'仅'+second.count+'pcs，产能失衡；';
+    detail+=' 该工位堆积占当前范围WIP的'+(wipData.wip_count>0?Math.round(top.count/wipData.wip_count*100):0)+'%；';
+    detail+='\n【规则动作】 1) 立即确认设备运行状态　2) 增派人手支援该工位　3) 联系PE确认是否存在工艺异常';
+  } else if(top.count>80){
+    title='📊 '+(top.operation_name||top.operation)+' 堆积偏高 ('+top.count+'pcs)';
+    detail='【分析】产出节拍可能低于上游投入速度；【建议】持续观察，若2小时内未下降需介入处理';
+  } else {
+    title='✅ 产线WIP分布均衡';
+    detail='各工位堆积量在合理范围内，生产流畅。最大堆积点：'+(top.operation_name||top.operation)+' ('+top.count+'pcs)';
+  }
+  document.getElementById('aiSugTitle').textContent='瓶颈提醒：'+title;
+  document.getElementById('aiSugDetail').textContent=detail;
+  document.getElementById('aiSuggest').style.display='flex';
+}
+
+function renderTabs(){
+  const lines=[...new Set((routesData||[]).map(r=>r.line_name))];
+  if(currentLine&&!lines.includes(currentLine))currentLine='';
+  let h='<div class="line-tab '+(!currentLine?'active':'')+'" onclick="switchLine(this,\'\')">全部</div>';
+  lines.forEach(l=>{h+='<div class="line-tab '+(currentLine===l?'active':'')+'" onclick="switchLine(this,\''+l+'\')">'+(LN[l]||l)+'</div>';});
+  document.getElementById('lineTabs').innerHTML=h;
+}
+async function switchLine(el,line){
+  currentLine=line;
+  currentRouteProduct=''; // 切线重置产品选择,重新选在制最多产品
+  document.querySelectorAll('#lineTabs .line-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(window.WipHooks) WipHooks.sweep(); // 状态切换光流
+  document.getElementById('updateTime').textContent='切换产线数据...';
+  try{
+    wipData=currentLine?await fetchLineWip(currentLine):allWipData;
+    focusDetailKey='';
+    renderFocusPanel();renderKPI();renderFlow();renderCharts();renderAISuggestion();renderOrderTable(orderFilter);checkBottleneckNotify();
+    document.getElementById('updateTime').textContent='更新于 '+new Date().toLocaleTimeString('zh-CN',{hour12:false})+' | 近7天活跃窗口 | '+(currentLine?(LN[currentLine]||currentLine):'全部产线')+' | 自动刷新 3min'+(IS_DESKTOP?' | 桌面模式':'');
+  }catch(e){
+    console.error('[WIP] 切换产线失败:',e);
+    setLoadError('切换产线 WIP 数据失败');
+  }
+}
+
+function renderFlow(){
+  const container=document.getElementById('processFlow');
+  const existingWarning=document.getElementById('routeWarning');
+  if(existingWarning)existingWarning.remove();
+  const routes=(routesData||[]).filter(r=>!currentLine||r.line_name===currentLine);
+  const wipMap={};(wipData?.by_operation||[]).forEach(o=>{wipMap[o.operation]=o;});
+  // 同线多产品路线不合并(跨产品 sortNo 不可比,合并必乱):优先 MES 权威路线(source:mes),
+  // 按"该产品路线在制总量"选默认产品单条渲染,附产品切换器
+  const mesRoutes=routes.filter(r=>r.source==='mes');
+  const candidateRoutes=mesRoutes.length?mesRoutes:routes;
+  const routeWip=r=>(r.operations||[]).reduce((s,o)=>s+((wipMap[o.name]&&wipMap[o.name].count)||0),0);
+  let activeRoute=null;
+  if(candidateRoutes.length){
+    if(currentRouteProduct) activeRoute=candidateRoutes.find(r=>r.product_model===currentRouteProduct)||null;
+    if(!activeRoute) activeRoute=candidateRoutes.reduce((a,b)=>routeWip(b)>routeWip(a)?b:a);
+  }
+  // 产品切换器:仅选定单线 + 该线有多条 MES 路线时显示(全部产线跨线,选产品无意义)
+  // 独立成条放 processFlow 上方,自己横向滚动,不撑标题
+  const switchBar=document.getElementById('routeSwitchBar');
+  if(currentLine && mesRoutes.length>1){
+    switchBar.innerHTML='<span class="rsb-label">产品路线</span>'+mesRoutes.map(r=>{
+      const cur=activeRoute&&r.product_model===activeRoute.product_model;
+      const w=routeWip(r);
+      const p=(r.product_model||'?').replace(/'/g,'');
+      return '<span class="route-product-chip'+(cur?' active':'')+'" onclick="switchRouteProduct(\''+p+'\')" title="'+p+' · 在制 '+w+'">'+p+'</span>';
+    }).join('');
+    switchBar.style.display='';
+  }else{
+    switchBar.innerHTML='';
+    switchBar.style.display='none';
+  }
+  const opCount=activeRoute?(activeRoute.operations||[]).length:(wipData?.by_operation||[]).length;
+  document.getElementById('flowTitle').innerHTML='工艺路线 · '+(currentLine?(LN[currentLine]||currentLine):'全部产线')+(activeRoute?(' · '+activeRoute.product_model):'')+' · 近7天活跃WIP分布 <span class="route-preview-trigger" id="routePreviewTrigger">&#x1F689;<div class="route-preview" id="routePreview"></div></span>'+(opCount?('<span class="flow-op-count">'+opCount+'道工序</span>'):'');
+  const allOps={};
+  if(activeRoute){
+    // 单产品权威路线:sortNo 已干净升序,只画该产品工序(WIP 标注其上)
+    (activeRoute.operations||[]).forEach(op=>{
+      const w=wipMap[op.name];
+      allOps[op.name]={name:op.name,display:op.display_name||op.name,sort:op.sort_no??999,wip:(w&&w.count)||0,routeKnown:true};
+    });
+  }else{
+    // 无 MES 路线:退回实际过站工位(derived 兜底或无路线)
+    (wipData?.by_operation||[]).forEach(op=>{
+      allOps[op.operation]={name:op.operation,display:op.operation_name||op.operation,sort:op.sort_no||999,wip:op.count||0,routeKnown:false};
+    });
+  }
+  const sorted=Object.values(allOps).sort((a,b)=>a.sort-b.sort);
+  if(!sorted.length){container.innerHTML='<div style="color:var(--text-muted);font-size:var(--fs-sm);padding:30px">暂无该线体 WIP 数据。若这是新线体，请先完成 MES 同步。</div>';return;}
+  const maxW=Math.max(...sorted.map(o=>o.wip),1);
+  const sortedTotal=sorted.reduce((s,o)=>s+o.wip,0)||1;
+  const curModel=activeRoute?(activeRoute.product_model||''):'';
+  const esc=s=>String(s).replace(/'/g,'\\\'');
+  // 卡片:序号+工序名 / 数量(大)+件 / 占比条(相对瓶颈) / 机型+占比(底栏)
+  const arrow='<div class="flow-arrow"><div class="particle"></div><div class="particle"></div><div class="particle"></div><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M10 5l3 3-3 3"/></svg></div>';
+  let html='';
+  sorted.forEach((op,i)=>{
+    const level=op.wip>=maxW*0.75?3:op.wip>=maxW*0.4?2:op.wip>0?1:0;
+    const cc=level===3?'c-red':level===2?'c-orange':op.wip>0?'c-green':'c-default';
+    const pct=op.wip>0?Math.round(op.wip/sortedTotal*100):0;
+    const barW=op.wip>0?Math.max(Math.round(op.wip/maxW*100),4):0;
+    html+='<div class="flow-node" onclick="showDetail(\''+esc(op.display)+'\','+op.wip+','+op.sort+',\''+esc(op.name)+'\')">';
+    html+='<div class="flow-card level-'+level+'">';
+    html+='<div class="op-head"><span class="op-sort">#'+op.sort+'</span><span class="op-name">'+op.display+(op.routeKnown===false?'<i class="op-new">未配置</i>':'')+'</span></div>';
+    html+='<div class="op-count-wrap"><span class="op-count '+cc+'">'+op.wip+'</span><span class="op-unit">件</span></div>';
+    html+='<div class="op-bar"><div class="op-bar-fill '+cc+'" style="width:'+barW+'%"></div></div>';
+    html+='<div class="op-foot"><span class="op-model" title="'+curModel+'">'+(curModel||'—')+'</span><span class="op-pct">占'+pct+'%</span></div>';
+    html+='</div></div>';
+    if(i<sorted.length-1)html+=arrow;
+  });
+  html+=arrow+'<div class="flow-node"><div class="flow-card done"><div class="op-head"><span class="op-name done-name">完工出站</span></div><div class="op-count-wrap"><span class="op-count c-green">'+(wipData?.completed_count||0)+'</span><span class="op-unit">件</span></div><div class="op-status">近7天完工</div></div></div>';
+  container.innerHTML=html;
+  if(!mesRoutes.length){
+    const wrap=document.createElement('div');
+    wrap.id='routeWarning';
+    wrap.innerHTML='<div class="route-warning">未获取到 MES 权威工艺路线(TaskOrder/GetStageList)，当前按实际过站工位临时展示。主数据同步恢复后会自动切换为标准路线和工序名称。</div>';
+    container.parentNode.insertBefore(wrap,container);
+  }
+
+  // Render route preview tooltip
+  const maxWip=Math.max(...sorted.map(o=>o.wip),1);
+  const bottleneck=sorted.reduce((a,b)=>a.wip>b.wip?a:b,{wip:0});
+  let ph='';
+  sorted.forEach((op,i)=>{
+    const isBn=op.wip===bottleneck.wip&&op.wip>0;
+    const dotClass=isBn?'active':op.wip>0?'has-wip':'';
+    const countColor=isBn?'color:var(--danger)':op.wip>0?'color:var(--warning)':'';
+    ph+='<div class="route-node"><div class="route-dot '+dotClass+'"></div><span class="route-name">'+op.display+'</span><span class="route-count" style="'+countColor+'">'+op.wip+'</span></div>';
+    if(i<sorted.length-1) ph+='<div class="route-line"></div>';
+  });
+  ph+='<div class="route-line"></div>';
+  ph+='<div class="route-node"><div class="route-dot done"></div><span class="route-name">完工出站</span><span class="route-count" style="color:var(--success)">'+(wipData?.completed_count||0)+'</span></div>';
+  document.getElementById('routePreview').innerHTML=ph;
+}
+function switchRouteProduct(p){ currentRouteProduct=p; renderFlow(); }
+
+function renderCharts(){
+  document.querySelector('#chartBar').parentElement.querySelector('.chart-panel-title').innerHTML='&#x1F4CA; 工位堆积排名';
+  document.querySelector('#chartOrder').parentElement.querySelector('.chart-panel-title').innerHTML='&#x1F3AF; 工单达成率（近200工单）';
+  const c1=charts.bar||echarts.init(document.getElementById('chartBar'));
+  const ops=(wipData?.by_operation||[]).sort((a,b)=>b.count-a.count).slice(0,8);
+  const chartOps=ops.slice().reverse();
+  c1.setOption({tooltip:CHART.tooltip(),grid:{top:10,bottom:25,left:110,right:40},xAxis:{type:'value',axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:'rgba(30,58,95,0.3)'}}},yAxis:{type:'category',data:chartOps.map(o=>(o.operation_name||o.operation).substring(0,10)),axisLabel:{color:CHART.legendText,fontSize:10},axisLine:{show:false},axisTick:{show:false}},series:[{type:'bar',data:chartOps.map(o=>({value:o.count,itemStyle:{color:o.count>150?CHART.colors.red:o.count>80?CHART.colors.orange:CHART.colors.blue,borderRadius:[0,4,4,0]}})),barWidth:'55%',label:{show:true,position:'right',color:CHART.tooltipText,fontSize:11,fontWeight:600}}]},true);
+  c1.off('click');
+  c1._drillOps=chartOps; if(window.DrillLink)DrillLink.bindChart(c1,{chartId:'chartBar',dimension:'operation',source:'wip-sn',title:'工站在制SN明细',pickDim:function(p,c){var op=c._drillOps?c._drillOps[p.dataIndex]:null;return op?op.operation:p.name;}});
+  charts.bar=c1;
+
+  const c2=charts.order||echarts.init(document.getElementById('chartOrder'));
+  const ords=getScopedOrders().filter(o=>o.qty>0);
+  const totalQty=ords.reduce((s,o)=>s+(o.qty||0),0);
+  const completedQty=WipUI.sumCompleted(ords);
+  const remainQty=totalQty-completedQty;
+  c2.setOption({tooltip:Object.assign(CHART.tooltip(),{trigger:'item',formatter:'{b}: {c} pcs ({d}%)'}),legend:{bottom:0,textStyle:{color:CHART.legendText,fontSize:10}},series:[{type:'pie',radius:['45%','72%'],center:['50%','45%'],data:[{value:completedQty,name:'已完工',itemStyle:{color:CHART.colors.green}},{value:remainQty,name:'剩余',itemStyle:{color:CHART.colors.blue}}],label:{show:true,formatter:'{b}\n{c} pcs',color:CHART.legendText,fontSize:10},itemStyle:{borderColor:CHART.bg,borderWidth:2},emphasis:{scaleSize:4}}]},true);
+  c2.off('click');
+  c2.on('click',()=>showPlanRateDetail());
+  charts.order=c2;
+}
+
+function showDetail(name,count,sort,opCode){
+  document.getElementById('drawerExport').style.display='';
+  document.getElementById('drawerTitle').textContent=name;
+  document.getElementById('drawerStats').innerHTML='<div class="drawer-stat"><div class="val">'+count+'</div><div class="lbl">在制数量</div></div><div class="drawer-stat"><div class="val">#'+sort+'</div><div class="lbl">工序位置</div></div><div class="drawer-stat"><div class="val">--</div><div class="lbl">平均等待</div></div>';
+  document.getElementById('drawerContent').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:var(--fs-sm)">加载SN明细...</div>';
+  document.getElementById('drawerMask').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+
+  apiFetch('/api/wip/detail?dateFrom='+weekAgo()+'&dateTo='+today()+'&operation='+opCode+(currentLine?'&lineName='+currentLine:'')).then(d=>{ if(!d) return;
+    drawerItems=d.items||[];
+    // Stats
+    const avgH=Math.floor((d.avg_wait_min||0)/60), avgM=(d.avg_wait_min||0)%60;
+    const maxH=Math.floor((d.max_wait_min||0)/60), maxM=(d.max_wait_min||0)%60;
+    const lineName=d.items&&d.items.length>0?d.items[0].line_name:'--';
+    const productName=d.items&&d.items.length>0?d.items[0].product_model:'--';
+    document.getElementById('drawerTitle').textContent=name+' — '+lineName;
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+d.total+'</div><div class="lbl">在制数量</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(avgH>0?avgH+'h'+avgM+'m':avgM+'m')+'</div><div class="lbl">平均滞留</div></div>'+
+      '<div class="drawer-stat"><div class="val" style="color:var(--danger)">'+(maxH>0?maxH+'h'+maxM+'m':maxM+'m')+'</div><div class="lbl">最长滞留</div></div>';
+
+    // SN Table
+    let html='';
+    if(d.items&&d.items.length>0){
+      const hasMultiProduct=(new Set((d.items||[]).map(s=>s.product_model))).size>1;
+      const prodSummary=(d.product_summary||[]).slice(0,4);
+      const orderSummary=(d.order_summary||[]).filter(o=>o.task_order_no&&o.task_order_no!=='未关联工单').slice(0,4);
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">';
+      html+='<div class="focus-detail-block"><div class="label">型号分布</div><div class="value">'+(prodSummary.length?prodSummary.map(p=>p.product_model+' '+p.count).join(' / '):'--')+'</div></div>';
+      html+='<div class="focus-detail-block"><div class="label">工单分布</div><div class="value">'+(orderSummary.length?orderSummary.map(o=>o.task_order_no+' '+o.count).join(' / '):'--')+'</div></div>';
+      html+='</div>';
+      html+='<div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-lg)">';
+      html+='<table class="sn-table"><thead><tr><th style="width:6%">#</th><th style="width:24%">条码</th><th style="width:15%">产品</th><th style="width:18%">工单</th><th style="width:10%">产线</th><th style="width:8%">工序</th><th style="width:20%">最后过站</th><th style="width:12%">滞留</th></tr></thead><tbody>';
+      (d.items||[]).forEach((sn,idx)=>{
+        const wc=sn.wait_minutes>240?'urgent':sn.wait_minutes>120?'critical':sn.wait_minutes>60?'warn':'normal';
+        const timeStr=sn.last_time?new Date(sn.last_time).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'--';
+        const shortCode=sn.barcode.length>24?sn.barcode.substring(0,10)+'...'+sn.barcode.substring(sn.barcode.length-10):sn.barcode;
+        html+='<tr><td style="color:var(--text-muted);font-size:var(--fs-xs)">'+(idx+1)+'</td>';
+        html+='<td class="barcode" title="'+sn.barcode+'">'+shortCode+'</td>';
+        html+='<td style="color:var(--text-muted);font-size:var(--fs-xs)" title="'+(sn.product_model||'')+'">'+(sn.product_model||'--')+'</td>';
+        html+='<td style="color:var(--text-muted);font-size:var(--fs-xs);font-family:var(--font-mono)" title="'+(sn.task_order_no||'')+'">'+((sn.task_order_no||'--').substring(0,18))+'</td>';
+        html+='<td style="color:var(--text-muted);font-size:var(--fs-xs)" title="'+(sn.line_code||'')+'">'+(sn.line_name||sn.line_code||'--')+'</td>';
+        html+='<td style="color:var(--text-muted);font-size:var(--fs-xs);font-family:var(--font-mono)" title="'+(sn.work_operation_id||'')+'">#'+(sn.sort_no||'--')+'</td>';
+        html+='<td style="color:var(--text-muted);font-size:var(--fs-xs);font-family:var(--font-mono)">'+timeStr+'</td>';
+        html+='<td><span class="wait-tag '+wc+'">'+sn.wait_display+'</span></td></tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+    if(d.total>50) html+='<div style="text-align:center;font-size:var(--fs-2xs);color:var(--text-muted);padding:8px">显示前50条，共'+d.total+'条</div>';
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+function closeDrawer(){document.getElementById('drawerMask').classList.remove('show');document.getElementById('drawer').classList.remove('show');}
+
+function exportReport(){
+  // 使用浏览器打印功能导出PDF
+  const title=document.getElementById('updateTime').textContent;
+  const origTitle=document.title;
+  document.title='WIP报告_'+title;
+  window.print();
+  document.title=origTitle;
+}
+let drawerItems=[];
+function exportDrawerCSV(){
+  if(!drawerItems.length)return;
+  const title=document.getElementById('drawerTitle').textContent;
+  let csv='﻿条码,产品型号,产线,最后过站时间,滞留(分钟)\n';
+  drawerItems.forEach(sn=>{csv+=sn.barcode+','+sn.product_model+','+(sn.line_name||'')+','+sn.last_time+','+sn.wait_minutes+'\n';});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='WIP_'+title.split(' ')[0]+'_'+today()+'.csv';a.click();
+}
+function showCycleDetail(){
+  document.getElementById('drawerTitle').textContent='在制周期 — 按产线';
+  document.getElementById('drawerStats').innerHTML='';
+  document.getElementById('drawerContent').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:var(--fs-sm)">加载产线周期数据...</div>';
+  document.getElementById('drawerMask').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+  // 获取所有产线的周期
+  const lines=[...new Set((routesData||[]).map(r=>r.line_name))];
+  const LN_MAP={'ASS_Line1':'整机1线','ASS_Line2-1':'功放2线','ASS_Line3':'整机3线','QJG_Line1':'前加工1线','QJG_Line3':'前加工3线'};
+  Promise.all(lines.map(l=>apiFetch('/api/wip/cycle-detail?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+l).then(d=>({line:l,display:LN_MAP[l]||l,...d})))).then(results=>{
+    results.sort((a,b)=>b.total_cycle_hours-a.total_cycle_hours);
+    const maxH=Math.max(...results.map(r=>r.total_cycle_hours),1);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+results.length+'</div><div class="lbl">产线数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(results.length>0?results[0].total_cycle_hours+'h':'--')+'</div><div class="lbl">最长周期</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(results.length>0?results[0].display:'--')+'</div><div class="lbl">最慢产线</div></div>';
+    let html='<div style="padding:4px 0;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:8px">点击产线查看工序明细</div>';
+    results.forEach(r=>{
+      const pct=Math.round(r.total_cycle_hours/maxH*100);
+      const color=r.total_cycle_hours>=maxH*0.75?'var(--danger)':r.total_cycle_hours>=maxH*0.4?'var(--warning)':'var(--brand)';
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(30,58,95,0.3);cursor:pointer;border-radius:var(--radius);transition:background 0.15s" onmouseenter="this.style.background=\'rgba(1,102,177,0.05)\'" onmouseleave="this.style.background=\'none\'" onclick="showLineCycleDetail(\''+r.line+'\')">';
+      html+='<span style="font-size:var(--fs-base);color:var(--text-primary);width:80px;font-weight:500">'+r.display+'</span>';
+      html+='<div style="flex:1;height:10px;background:rgba(255,255,255,0.04);border-radius:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:5px"></div></div>';
+      html+='<span style="font-size:var(--fs-base);font-family:var(--font-mono);font-weight:600;color:var(--text-primary);min-width:60px;text-align:right">'+r.total_cycle_hours+'h</span>';
+      html+='<span style="font-size:var(--fs-xs);color:var(--text-muted)">'+r.by_operation.length+'工序</span>';
+      html+='<span style="color:var(--brand);font-size:var(--fs-base)">›</span>';
+      html+='</div>';
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+function showLineCycleDetail(lineName){
+  const LN_MAP={'ASS_Line1':'整机1线','ASS_Line2-1':'功放2线','ASS_Line3':'整机3线','QJG_Line1':'前加工1线','QJG_Line3':'前加工3线'};
+  document.getElementById('drawerTitle').textContent='在制周期 — '+(LN_MAP[lineName]||lineName);
+  document.getElementById('drawerStats').innerHTML='';
+  document.getElementById('drawerContent').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:var(--fs-sm)">加载工序明细...</div>';
+  apiFetch('/api/wip/cycle-detail?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+lineName).then(d=>{
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+d.total_cycle_hours+'h</div><div class="lbl">总周期</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(d.by_operation||[]).length+'</div><div class="lbl">工序数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(d.by_operation&&d.by_operation.length>0?d.by_operation.reduce((a,b)=>a.avg_hours>b.avg_hours?a:b).operation_name:'--')+'</div><div class="lbl">最耗时工序</div></div>';
+    let html='<div style="margin-bottom:10px"><span style="cursor:pointer;font-size:var(--fs-sm);color:var(--brand)" onclick="showCycleDetail()">← 返回产线列表</span></div>';
+    html+='<div style="font-size:var(--fs-2xs);color:var(--text-muted);margin-bottom:8px">数值=相邻工序平均停留时间(含排队等待),非纯处理节拍</div>';
+    const maxH=Math.max(...(d.by_operation||[]).map(o=>o.avg_hours),1);
+    (d.by_operation||[]).forEach(op=>{
+      const pct=Math.round(op.avg_hours/maxH*100);
+      const color=op.avg_hours>=maxH*0.75?'var(--danger)':op.avg_hours>=maxH*0.4?'var(--warning)':'var(--brand)';
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,58,95,0.3)">';
+      html+='<span style="font-size:var(--fs-xs);color:var(--text-muted);width:20px;text-align:center">#'+op.sort_no+'</span>';
+      html+='<span style="font-size:var(--fs-sm);color:var(--text-secondary);width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+op.operation_name+'">'+op.operation_name+'</span>';
+      html+='<div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:4px"></div></div>';
+      html+='<span style="font-size:var(--fs-sm);font-family:var(--font-mono);font-weight:600;color:var(--text-primary);min-width:50px;text-align:right">'+op.avg_hours+'h</span>';
+      html+='<span style="font-size:var(--fs-2xs);color:var(--text-muted);min-width:40px">n='+op.sample_count+'</span>';
+      html+='</div>';
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+
+const LN_ALL=LN;
+function openDrawerWith(title){
+  drawerItems=[];
+  document.getElementById('drawerExport').style.display='none';
+  document.getElementById('drawerTitle').textContent=title;
+  document.getElementById('drawerStats').innerHTML='';
+  document.getElementById('drawerContent').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:var(--fs-sm)">加载数据...</div>';
+  document.getElementById('drawerMask').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+}
+function barRow(label,value,maxVal,opts){
+  opts=opts||{};
+  const pct=maxVal>0?Math.round(value/maxVal*100):0;
+  const color=opts.color||(value>=maxVal*0.75?'var(--danger)':value>=maxVal*0.4?'var(--warning)':'var(--brand)');
+  const click=opts.onclick?' onclick="'+opts.onclick+'" style="cursor:pointer" onmouseenter="this.style.background=\'rgba(1,102,177,0.05)\'" onmouseleave="this.style.background=\'none\'"':'';
+  let h='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(30,58,95,0.3);border-radius:var(--radius);transition:background 0.15s"'+click+'>';
+  h+='<span style="font-size:var(--fs-base);color:var(--text-primary);width:'+(opts.labelWidth||'100px')+';font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+label+'</span>';
+  h+='<div style="flex:1;height:10px;background:rgba(255,255,255,0.04);border-radius:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:5px"></div></div>';
+  h+='<span style="font-size:var(--fs-base);font-family:var(--font-mono);font-weight:600;color:var(--text-primary);min-width:60px;text-align:right">'+(opts.suffix?value+opts.suffix:value)+'</span>';
+  if(opts.extra) h+='<span style="font-size:var(--fs-xs);color:var(--text-muted)">'+opts.extra+'</span>';
+  if(opts.onclick) h+='<span style="color:var(--brand);font-size:var(--fs-base)">›</span>';
+  h+='</div>';
+  return h;
+}
+
+// ===== 在制品 按产线 → 按工序 =====
+function showWipByLine(){
+  openDrawerWith('在制品 — 按产线');
+  const lines=[...new Set((routesData||[]).map(r=>r.line_name))];
+  const lineWip={};
+  lines.forEach(l=>{lineWip[l]={wip:0,done:0};});
+  // 用WIP数据中的by_operation结合route分配到产线
+  // 更简单：直接从多个lineName请求
+  Promise.all(lines.map(l=>apiFetch('/api/wip?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+l).then(d=>({line:l,display:LN_ALL[l]||l,wip:d.wip_count||0,done:d.completed_count||0,ops:d.by_operation||[]})))).then(results=>{
+    results.sort((a,b)=>b.wip-a.wip);
+    const maxW=Math.max(...results.map(r=>r.wip),1);
+    const totalWip=results.reduce((s,r)=>s+r.wip,0);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+totalWip+'</div><div class="lbl">总WIP</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+results.length+'</div><div class="lbl">产线数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(results.length>0?results[0].display:'--')+'</div><div class="lbl">最多堆积</div></div>';
+    let html='<div style="padding:4px 0;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:8px">点击产线查看工序分布</div>';
+    results.forEach(r=>{
+      html+=barRow(r.display,r.wip,maxW,{suffix:' pcs',extra:r.ops.length+'工序',onclick:"showWipByLineOps('"+r.line+"')"});
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+function showWipByLineOps(lineName){
+  openDrawerWith('在制品 — '+(LN_ALL[lineName]||lineName));
+  apiFetch('/api/wip?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+lineName).then(d=>{
+    const ops=(d.by_operation||[]).sort((a,b)=>b.count-a.count);
+    const maxC=Math.max(...ops.map(o=>o.count),1);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+(d.wip_count||0)+'</div><div class="lbl">WIP总量</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(d.completed_count||0)+'</div><div class="lbl">已完工</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+ops.length+'</div><div class="lbl">工序数</div></div>';
+    let html='<div style="margin-bottom:10px"><span style="cursor:pointer;font-size:var(--fs-sm);color:var(--brand)" onclick="showWipByLine()">← 返回产线列表</span></div>';
+    ops.forEach(op=>{
+      html+=barRow(op.operation_name||op.operation,op.count,maxC,{suffix:' pcs',onclick:"showDetail('"+(op.operation_name||op.operation)+"',"+op.count+","+op.sort_no+",'"+op.operation+"')"});
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+
+// ===== 已完工 按产线 → 按产品 =====
+function showDoneByLine(){
+  openDrawerWith('已完工 — 按产线');
+  const lines=[...new Set((routesData||[]).map(r=>r.line_name))];
+  Promise.all(lines.map(l=>apiFetch('/api/wip?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+l).then(d=>({line:l,display:LN_ALL[l]||l,done:d.completed_count||0,total:d.total_sns||0})))).then(results=>{
+    results.sort((a,b)=>b.done-a.done);
+    const maxD=Math.max(...results.map(r=>r.done),1);
+    const totalDone=results.reduce((s,r)=>s+r.done,0);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+totalDone+'</div><div class="lbl">总完工</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+results.length+'</div><div class="lbl">产线数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(results.length>0?results[0].display:'--')+'</div><div class="lbl">产出最多</div></div>';
+    let html='<div style="padding:4px 0;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:8px">点击产线查看产品分布</div>';
+    results.forEach(r=>{
+      const rate=r.total>0?(r.done/r.total*100).toFixed(1)+'%':'--';
+      html+=barRow(r.display,r.done,maxD,{suffix:' pcs',color:'var(--success)',extra:'完工率'+rate,onclick:"showDoneByProduct('"+r.line+"')"});
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+function showDoneByProduct(lineName){
+  openDrawerWith('已完工 — '+(LN_ALL[lineName]||lineName));
+  // 按产品统计完工数
+  const products=(routesData||[]).filter(r=>r.line_name===lineName).map(r=>r.product_model);
+  document.getElementById('drawerStats').innerHTML='';
+  apiFetch('/api/wip?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+lineName).then(d=>{
+    // 产品信息来自路线配置
+    const prodList=products.map(p=>({model:p}));
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+(d.completed_count||0)+'</div><div class="lbl">完工总数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(d.wip_count||0)+'</div><div class="lbl">在制数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+products.length+'</div><div class="lbl">产品种类</div></div>';
+    let html='<div style="margin-bottom:10px"><span style="cursor:pointer;font-size:var(--fs-sm);color:var(--brand)" onclick="showDoneByLine()">← 返回产线列表</span></div>';
+    html+='<div style="padding:8px 0;border-bottom:1px solid rgba(30,58,95,0.3)">';
+    products.forEach(p=>{
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:8px">';
+      html+='<span style="font-size:var(--fs-base);color:var(--text-primary)">'+p+'</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='<div style="margin-top:12px;font-size:var(--fs-xs);color:var(--text-muted)">完工 '+(d.completed_count||0)+' pcs / 在制 '+(d.wip_count||0)+' pcs / 总追踪 '+(d.total_sns||0)+' pcs</div>';
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+
+// ===== 瓶颈工位 排名 → SN明细 =====
+function showBottleneckDetail(){
+  openDrawerWith('瓶颈分析 — 工位堆积排名');
+  const ops=(wipData?.by_operation||[]).sort((a,b)=>b.count-a.count);
+  const maxC=Math.max(...ops.map(o=>o.count),1);
+  const totalWip=wipData?.wip_count||0;
+  document.getElementById('drawerStats').innerHTML=
+    '<div class="drawer-stat"><div class="val">'+totalWip+'</div><div class="lbl">总WIP</div></div>'+
+    '<div class="drawer-stat"><div class="val">'+ops.length+'</div><div class="lbl">工位数</div></div>'+
+    '<div class="drawer-stat"><div class="val">'+(ops.length>0?(ops[0].operation_name||ops[0].operation):'--')+'</div><div class="lbl">第一瓶颈</div></div>';
+  let html='<div style="padding:4px 0;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:8px">点击工位查看SN明细</div>';
+  ops.forEach((op,i)=>{
+    const pctOfTotal=totalWip>0?Math.round(op.count/totalWip*100)+'%':'--';
+    html+=barRow((op.operation_name||op.operation),op.count,maxC,{suffix:' pcs',extra:'占'+pctOfTotal,onclick:"showDetail('"+(op.operation_name||op.operation)+"',"+op.count+","+op.sort_no+",'"+op.operation+"')"});
+  });
+  document.getElementById('drawerContent').innerHTML=html;
+}
+
+// ===== 计划达成率 按工单 → 工序进度 =====
+function showPlanRateDetail(){
+  openDrawerWith('计划达成率 — 按工单');
+  const ords=getScopedOrders().filter(o=>o.qty>0).sort((a,b)=>a.progress-b.progress);
+  const totalQty=ords.reduce((s,o)=>s+(o.qty||0),0);
+  const completedQty=WipUI.sumCompleted(ords);
+  const planRate=WipUI.calcOrderRate(ords, totalQty);
+  document.getElementById('drawerStats').innerHTML=
+    '<div class="drawer-stat"><div class="val">'+planRate+'%</div><div class="lbl">总达成率</div></div>'+
+    '<div class="drawer-stat"><div class="val">'+ords.length+'</div><div class="lbl">工单数</div></div>'+
+    '<div class="drawer-stat"><div class="val">'+completedQty.toLocaleString()+'</div><div class="lbl">已完成pcs</div></div>';
+  let html='';
+  ords.forEach(o=>{
+    const done=o.completed||o.completedQty||0;
+    const progColor=o.progress>=100?'var(--success)':o.progress>=50?'var(--brand)':o.progress>0?'var(--warning)':'var(--text-muted)';
+    const line=LN_ALL[o.line_code]||o.line_code||'--';
+    html+='<div style="padding:10px 8px;border-bottom:1px solid rgba(30,58,95,0.3)">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+    html+='<span style="font-size:var(--fs-sm);color:var(--text-primary);font-family:var(--font-mono)">'+o.task_no+'</span>';
+    html+='<span style="font-size:var(--fs-sm);font-weight:600;color:'+progColor+'">'+o.progress+'%</span>';
+    html+='</div>';
+    html+='<div style="display:flex;gap:12px;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:6px">';
+    html+='<span>'+o.product_model+'</span><span>'+line+'</span><span>'+done+'/'+o.qty+' pcs</span>';
+    if(o.current_operation&&o.current_operation!=='--') html+='<span style="color:var(--brand)">当前: '+o.current_operation+'</span>';
+    html+='</div>';
+    html+='<div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+o.progress+'%;background:'+progColor+';border-radius:3px"></div></div>';
+    html+='</div>';
+  });
+  document.getElementById('drawerContent').innerHTML=html;
+}
+
+// ===== 制造周期 按产线 → 按工序 =====
+function showMfgCycleDetail(){
+  openDrawerWith('制造周期 — 按产线');
+  const lines=[...new Set((routesData||[]).map(r=>r.line_name))];
+  Promise.all(lines.map(l=>apiFetch('/api/wip/cycle-detail?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+l).then(d=>({line:l,display:LN_ALL[l]||l,...d})))).then(results=>{
+    results.sort((a,b)=>b.total_cycle_hours-a.total_cycle_hours);
+    const maxH=Math.max(...results.map(r=>r.total_cycle_hours),1);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+results.length+'</div><div class="lbl">产线数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(results.length>0?results[0].total_cycle_hours+'h':'--')+'</div><div class="lbl">最长周期</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(results.length>0?results[0].display:'--')+'</div><div class="lbl">最慢产线</div></div>';
+    let html='<div style="padding:4px 0;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:8px">点击产线查看工序明细</div>';
+    results.forEach(r=>{
+      html+=barRow(r.display,r.total_cycle_hours,maxH,{suffix:'h',extra:r.by_operation.length+'工序',onclick:"showMfgLineDetail('"+r.line+"')"});
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+function showMfgLineDetail(lineName){
+  openDrawerWith('制造周期 — '+(LN_ALL[lineName]||lineName));
+  apiFetch('/api/wip/cycle-detail?dateFrom='+weekAgo()+'&dateTo='+today()+'&lineName='+lineName).then(d=>{
+    const ops=d.by_operation||[];
+    const maxH=Math.max(...ops.map(o=>o.avg_hours),1);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+d.total_cycle_hours+'h</div><div class="lbl">总周期</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+ops.length+'</div><div class="lbl">工序数</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(ops.length>0?ops.reduce((a,b)=>a.avg_hours>b.avg_hours?a:b).operation_name:'--')+'</div><div class="lbl">最耗时工序</div></div>';
+    let html='<div style="margin-bottom:10px"><span style="cursor:pointer;font-size:var(--fs-sm);color:var(--brand)" onclick="showMfgCycleDetail()">← 返回产线列表</span></div>';
+    html+='<div style="font-size:var(--fs-2xs);color:var(--text-muted);margin-bottom:8px">数值=相邻工序平均停留时间(含排队等待),非纯处理节拍</div>';
+    ops.forEach(op=>{
+      html+=barRow(op.operation_name,op.avg_hours,maxH,{suffix:'h',extra:'n='+op.sample_count});
+    });
+    document.getElementById('drawerContent').innerHTML=html;
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+
+// ===== 12-KPI Phase1: OTD + 改进在制周期(任务单WIP口径) =====
+function showWipCycleDetail(){
+  openDrawerWith('在制周期 — 任务单WIP口径(按线体)');
+  apiFetch('/api/delivery/detail?kpi=wip&dateFrom='+today()+'&dateTo='+today()).then(d=>{
+    if(!d||!d.success){document.getElementById('drawerContent').innerHTML='<div style="color:var(--text-muted);padding:20px;text-align:center">暂无数据</div>';return;}
+    const items=d.items||[];
+    const maxH=Math.max(...items.map(i=>i.wip_cycle_hours||0),1);
+    document.getElementById('drawerStats').innerHTML=
+      '<div class="drawer-stat"><div class="val">'+(d.hours==null?'--':d.hours+'h')+'</div><div class="lbl">整体在制周期</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+(d.count||0)+'</div><div class="lbl">在制任务单</div></div>'+
+      '<div class="drawer-stat"><div class="val">'+items.length+'</div><div class="lbl">线体数</div></div>';
+    let html='<div style="padding:4px 0;font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:8px">数据源: CMES mreport/TaskOrderWip · wip_qty&gt;0 的任务单 (now-planStartTime)</div>';
+    items.forEach(r=>{
+      html+=barRow(r.line||r.line_id||'未知', r.wip_cycle_hours||0, maxH, {suffix:'h', extra:(r.wip_qty||0)+' pcs · '+r.wip_count+'单'});
+    });
+    document.getElementById('drawerContent').innerHTML=html||'<div style="color:var(--text-muted);padding:20px;text-align:center">暂无在制任务单</div>';
+  }).catch(()=>{document.getElementById('drawerContent').innerHTML='<div style="color:var(--danger);padding:20px;text-align:center">加载失败</div>';});
+}
+
+let orderFilter='all';
+// 全局搜索防抖: 避免每键重建200行<tr>
+let _orderSearchTimer=null;
+function debouncedRenderOrder(){
+  if(_orderSearchTimer)clearTimeout(_orderSearchTimer);
+  _orderSearchTimer=setTimeout(function(){ _orderSearchTimer=null; renderOrderTable(orderFilter); },150);
+}
+function filterOrders(el,filter){orderFilter=filter;document.querySelectorAll('#orderTabs .line-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');if(window.WipHooks)WipHooks.sweep();renderOrderTable(filter);}
+function getScopedOrders(){
+  const rows=ordersData||[];
+  return currentLine?rows.filter(o=>o.line_code===currentLine):rows;
+}
+
+function getOrderState(o){
+  const done=o.completed||o.completedQty||0;
+  const qty=o.qty||0;
+  if(qty>0&&done>=qty)return {text:'已完工',cls:'done'};
+  if(o.progress>0&&o.progress<80)return {text:'进度偏低',cls:'warn'};
+  if(o.progress>0)return {text:'生产中',cls:'run'};
+  if(o.status===0||o.status===1)return {text:'待启动',cls:'wait'};
+  if(o.status===32)return {text:'已关闭',cls:'done'};
+  if(o.status===3)return {text:'清尾中',cls:'warn'};
+  if(o.status===2)return {text:'生产中',cls:'run'};
+  return {text:'待确认',cls:'wait'};
+}
+
+function renderOrderCommandPanel(rows){
+  const panel=document.getElementById('orderCommandPanel');
+  if(!panel)return;
+  const scoped=rows||getScopedOrders();
+  const active=scoped.filter(o=>o.qty>0&&((o.completed||o.completedQty||0)<o.qty));
+  const noStart=scoped.filter(o=>(o.qty||0)>0&&(o.progress||0)===0);
+  const low=active.filter(o=>(o.progress||0)>0&&(o.progress||0)<80);
+  const topGap=active.slice().sort((a,b)=>((b.qty||0)-(b.completed||b.completedQty||0))-((a.qty||0)-(a.completed||a.completedQty||0))).slice(0,1)[0];
+  const topText=topGap?topGap.task_no+' 缺 '+((topGap.qty||0)-(topGap.completed||topGap.completedQty||0))+' pcs':'--';
+  panel.innerHTML=
+    '<div class="order-risk-card '+(active.length?'warn':'')+'"><div class="label">未完工工单</div><div class="value">'+active.length+'</div><div class="hint">'+(currentLine?(LN[currentLine]||currentLine):'当前范围')+'</div></div>'+
+    '<div class="order-risk-card '+(low.length?'danger':'')+'"><div class="label">进度偏低</div><div class="value">'+low.length+'</div><div class="hint">0% ~ 80%</div></div>'+
+    '<div class="order-risk-card '+(noStart.length?'warn':'')+'"><div class="label">未投产</div><div class="value">'+noStart.length+'</div><div class="hint">需确认投产节奏</div></div>'+
+    '<div class="order-risk-card"><div class="label">最大缺口</div><div class="value" style="font-size:var(--fs-base);line-height:1.35">'+topText+'</div><div class="hint">按计划-完成排序</div></div>';
+}
+
+function renderOrderTable(filter){
+  const tbody=document.getElementById('orderTbody');
+  if(!ordersData||!ordersData.length){renderOrderCommandPanel([]);tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:20px">暂无工单数据</td></tr>';return;}
+
+  let orders=getScopedOrders().slice();
+  renderOrderCommandPanel(orders);
+  if(filter==='producing')orders=orders.filter(o=>o.progress>0&&o.progress<100);
+  else if(filter==='done')orders=orders.filter(o=>o.progress>=100);
+
+  const searchEl=document.getElementById('orderSearch');
+  const keyword=searchEl?searchEl.value.trim().toLowerCase():'';
+  if(keyword){
+    orders=orders.filter(o=>(o.task_no||'').toLowerCase().includes(keyword)||(o.product_model||'').toLowerCase().includes(keyword)||(o.mo_lot_no||'').toLowerCase().includes(keyword)||(LN[o.line_code]||o.line_code||'').toLowerCase().includes(keyword));
+  }
+
+  // 按达成率排序：未完成的在前
+  orders.sort((a,b)=>a.progress-b.progress);
+
+  let html='';
+  orders.forEach(o=>{
+    const state=getOrderState(o);
+    const progColor=o.progress>=100?CHART.colors.green:o.progress>=50?CHART.colors.blue:o.progress>0?CHART.colors.orange:CHART.axisLabel;
+    const line=LN[o.line_code]||o.line_code||'--';
+    const currentOp=o.current_operation||'--';
+    const gap=Math.max(0,(o.qty||0)-(o.completed||o.completedQty||0));
+
+    let etaText='--';
+    let etaStyle='color:var(--text-muted)';
+    if(o.progress>=100){etaText='已完工';etaStyle='color:var(--success)';}
+
+    html+='<tr class="'+(state.cls==='warn'?'order-row-risk':'')+'" style="cursor:pointer" data-task="'+(o.task_no||'')+'">';
+    html+='<td style="font-family:var(--font-mono);color:var(--text-secondary);font-size:var(--fs-sm)">'+(o.task_no||'')+'</td>';
+    html+='<td style="color:var(--text-muted);font-size:var(--fs-sm)">'+(o.mo_lot_no||'').substring(0,22)+'</td>';
+    html+='<td style="color:var(--text-secondary);font-size:var(--fs-sm)">'+(o.product_model||'')+'</td>';
+    html+='<td style="color:var(--text-muted);font-size:var(--fs-sm)">'+line+'</td>';
+    html+='<td style="font-family:var(--font-mono);text-align:right;font-size:var(--fs-base)">'+(o.qty||0)+'</td>';
+    html+='<td style="font-family:var(--font-mono);text-align:right;font-size:var(--fs-base)">'+(o.completed||o.completedQty||0)+(gap>0?'<span style="display:block;color:var(--text-muted);font-size:var(--fs-2xs)">缺 '+gap+'</span>':'')+'</td>';
+    html+='<td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+o.progress+'%;background:'+progColor+';border-radius:3px"></div></div><span style="font-size:var(--fs-sm);color:'+progColor+';font-weight:600;min-width:40px;text-align:right">'+(o.progress===0?'<span style="font-size:var(--fs-2xs);padding:2px 6px;border-radius:3px;background:rgba(71,85,105,0.3);color:var(--text-muted)">未投产</span>':o.progress+'%')+'</span></div></td>';
+    html+='<td style="color:var(--text-muted);font-size:var(--fs-sm)">'+currentOp+'</td>';
+    html+='<td style="font-size:var(--fs-sm);font-weight:600;'+etaStyle+'">'+etaText+'</td>';
+    html+='<td><span class="order-state '+state.cls+'">'+state.text+'</span></td>';
+    html+='</tr>';
+  });
+  tbody.innerHTML=html||'<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:20px">当前筛选无工单数据</td></tr>';
+  if(!tbody.__drillBound){ tbody.__drillBound=true; tbody.addEventListener('click',function(e){ var tr=e.target.closest('tr[data-task]'); if(!tr||!window.DrillLink)return; DrillLink.openL3('work-orders',tr.dataset.task,null,{dimension:'order'}); }); }
+}
+
+window.addEventListener('load',()=>{
+  if(IS_DESKTOP) document.title='WIP 在制品追踪 - 桌面版';
+  fetchAll();
+  // 请求通知权限
+  if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
+});
+window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c&&c.resize()));
+window.withVisibilityGuard(()=>{if(currentPeriod==='realtime')fetchAll();},180000,{noImmediate:true});
+
+// 瓶颈通知
+let lastNotifyTime=0;
+function checkBottleneckNotify(){
+  const ops=(wipData?.by_operation||[]);
+  const top=ops.length>0?ops.reduce((a,b)=>a.count>b.count?a:b):null;
+  if(!top||top.count<150)return;
+  if(Date.now()-lastNotifyTime<600000)return; // 10分钟内不重复
+  lastNotifyTime=Date.now();
+  if('Notification' in window && Notification.permission==='granted'){
+    new Notification('WIP瓶颈预警',{body:(top.operation_name||top.operation)+' 堆积 '+top.count+' pcs，需要关注！',icon:'images/favicon.svg',tag:'wip-alert'});
+  }
+}
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+</body>
+</html>

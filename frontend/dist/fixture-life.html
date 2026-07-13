@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>治具与线材寿命 - AI数字化平台</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <script src="nav.js"></script>
+<script src="common.js"></script>
+    <script src="filter-bar.js"></script>
+    <script src="libs/echarts.min.js"></script>
+    <script src="libs/echarts-liquidfill.min.js"></script>
+    <script src="chart-theme.js"></script>
+    <script src="wip-ui.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0166B1">
+    <style>
+        .kpi-row.wip { grid-template-columns: repeat(4, 1fr); }
+        .kpi-balance-liquid { width:64px; height:64px; margin:0 auto 4px; }
+        .kpi-sub { font-size:var(--fs-xs); color:var(--text-muted); text-align:center; margin-top:2px; }
+
+        /* 明细表 */
+        .summary-table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+        .summary-table th { background:var(--surface-2); color:var(--text-secondary); padding:10px 12px; text-align:center; border-bottom:1px solid var(--line); font-weight:500; }
+        .summary-table td { padding:9px 12px; text-align:center; border-bottom:1px solid var(--line-weak); color:var(--text-secondary); }
+        .summary-table tr:hover td { background:var(--brand-glow); }
+        .summary-table .cell-green { color:var(--success); font-weight:600; }
+        .summary-table .cell-yellow { color:var(--warning); font-weight:600; }
+        .summary-table .cell-red { color:var(--danger); font-weight:600; }
+        .tag { display:inline-block; padding:2px 8px; border-radius:8px; font-size:var(--fs-xs); font-weight:500; }
+        .tag-ok { background:var(--success-dim); color:var(--success); }
+        .tag-warn { background:var(--warning-dim); color:var(--warning); }
+        .tag-danger { background:var(--danger-dim); color:var(--danger); }
+
+        /* 图表面板 — 对齐 common.css 标准 */
+        .dashboard-grid { display:grid; grid-template-columns: 1fr 1fr; gap:var(--module-gap); }
+        .dashboard-grid .full { grid-column: 1 / -1; }
+        .ct-title { font-size:var(--fs-md); color:var(--text-primary); font-weight:600; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+        .ct-sub { font-size:var(--fs-xs); color:var(--text-muted); font-weight:400; }
+
+        /* Tab */
+        .tab-bar { display:flex; gap:6px; margin-bottom:10px; }
+        .tab-bar button { background:var(--surface-2); color:var(--text-secondary); border:1px solid var(--line); padding:6px 16px; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-sm); }
+        .tab-bar button.active { background:var(--brand-glow); color:var(--brand); border-color:var(--brand-border); }
+
+        /* 校准中标识 */
+        .calibrate-note { display:inline-block; padding:2px 8px; border-radius:6px; font-size:var(--fs-xs); background:var(--warning-dim); color:var(--warning); border:1px solid var(--warning-border); }
+
+        /* Loading */
+        .loading-mask { position:fixed; inset:0; background:rgba(10,16,37,0.6); z-index:9999; display:none; align-items:center; justify-content:center; }
+        .loading-mask.show { display:flex; }
+        .loading-spinner { width:40px; height:40px; border:3px solid var(--brand-border); border-top-color:var(--brand); border-radius:50%; animation:spin 0.8s linear infinite; }
+
+        /* ===== 注意力钩子 (attention-hooks-spec) ===== */
+        /* 焦点单点高光晕: 客户页恒 normal 态(不挂 warn/alert 红光, 寿命管控体系视角) */
+        .focus-shell[data-focal="true"] .focus-card { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 16px rgba(var(--brand-rgb),.30); position: relative; }
+        /* 卡片错峰级联入场 (起手态由 ATTN.revealCascade 注入 .attn-reveal) */
+        .fl-reveal { transition:opacity var(--dur-enter,.28s) var(--ease-expo,ease-out), transform var(--dur-enter,.28s) var(--ease-expo,ease-out); will-change:opacity,transform; }
+        .fl-reveal.fl-in { opacity:1; transform:none; }
+        /* prefers-reduced-motion 全程守护 */
+        @media (prefers-reduced-motion: reduce) {
+            .loading-spinner { animation: none !important; }
+            .fl-reveal { opacity:1 !important; transform:none !important; }
+        }
+
+        /* ===== L2 下钻弹窗(暗色 token, 零硬编码色) ===== */
+        .fl-modal-mask { position:fixed; inset:0; background:rgba(10,16,37,0.66); z-index:10000; display:none; align-items:center; justify-content:center; }
+        .fl-modal-mask.show { display:flex; }
+        .fl-modal { width:min(92vw, 760px); max-height:84vh; background:var(--surface-1); border:1px solid var(--line); border-radius:var(--radius-md); display:flex; flex-direction:column; overflow:hidden; }
+        .fl-modal-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line-weak); font-size:var(--fs-md); color:var(--text-primary); font-weight:600; }
+        .fl-modal-close { background:transparent; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1; padding:2px 6px; border-radius:var(--radius-sm); }
+        .fl-modal-close:hover { color:var(--danger); }
+        .fl-modal-body { padding:14px 18px; overflow-y:auto; }
+        .fl-modal-body .summary-table th { position:sticky; top:0; z-index:1; }
+        .fl-modal-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+        .fl-modal-stat { background:var(--surface-2); border:1px solid var(--line-weak); border-radius:var(--radius-sm); padding:8px 10px; text-align:center; }
+        .fl-modal-stat .v { font-size:var(--fs-lg); font-weight:600; color:var(--text-primary); }
+        .fl-modal-stat .l { font-size:var(--fs-xs); color:var(--text-muted); margin-top:2px; }
+
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div class="loading-mask" id="loadingMask"><div class="loading-spinner"></div></div>
+
+    <!-- L2 下钻弹窗(治具/线材组明细) -->
+    <div class="fl-modal-mask" id="flDrawerMask">
+      <div class="fl-modal" id="flDrawer" role="dialog" aria-modal="true" aria-labelledby="flDrawerTitle">
+        <div class="fl-modal-header">
+          <span id="flDrawerTitle">明细</span>
+          <button class="fl-modal-close" type="button" aria-label="关闭" onclick="flCloseDrawer()">×</button>
+        </div>
+        <div class="fl-modal-body" id="flDrawerBody"></div>
+      </div>
+    </div>
+
+
+    <!-- Filter Row (筛选栏 + 刷新 同行; 寿命累计值无周期) -->
+    <!-- Top Bar — 单层顶栏(状态|筛选+快捷|导航|操作) 5栏合一(无周期,寿命累计) -->
+    <div class="top-bar">
+        <div class="tb-seg tb-seg-status">
+            <div class="live-dot" id="liveDot"></div>
+            <span class="time" id="updateTime">加载中...</span>
+            <span class="nav-trust-text">用量:EDO次数·真值 · 台账:EDO同步 · 未纳入:未启用采集 <span class="calibrate-note">EDO真值·可对账</span></span>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-seg tb-seg-filter">
+            <div id="filterContainer"></div>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-seg tb-seg-action">
+            <div id="toolbar"></div>
+        </div>
+    </div>
+    <!-- 第二行: subnav 导航 + quickQuery 快捷 -->
+    <div class="subnav-row">
+        <div class="wip-subnav-inner" id="pageSubnav">
+            <button class="active" data-target="focusShell">现场关注</button>
+            <button data-target="kpiRow">核心指标</button>
+            <button data-target="chartSection">寿命阶段</button>
+            <button data-target="tableSection">台账明细</button>
+        </div>
+        <div class="qq-row" id="quickQuery"></div>
+    </div>
+
+<div class="wip-page">
+
+  <!-- Focus Command Panel -->
+  <div class="focus-shell" id="focusShell">
+    <div class="focus-card">
+      <div class="focus-content">
+        <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">现场关注 · 治具与线材寿命</span></div>
+        <div class="focus-title" id="focusTitle">正在读取寿命管控状态...</div>
+        <div class="focus-action" id="focusAction">寿命管控体系运行中。资产全登记,关键件纳入次数管控,接近寿命的已识别并建议更换。</div>
+        <div class="focus-meta" id="focusMeta"></div>
+        <div class="focus-detail" id="focusDetail"></div>
+        <div class="focus-actions" id="focusActions">
+          <button onclick="scrollToPanel('tableSection')">查看台账明细</button>
+          <button onclick="scrollToPanel('chartSection')">查看不良关联</button>
+          <button onclick="refreshCurrent()">刷新数据</button>
+        </div>
+        <div class="focus-trust" id="focusTrust"></div>
+      </div>
+    </div>
+    <div class="focus-side">
+      <div class="focus-mini" id="focusSide1"><div class="label">治具在管</div><div class="value">--</div><div class="hint">已纳入次数管控</div></div>
+      <div class="focus-mini" id="focusSide2"><div class="label">线材在管</div><div class="value">--</div><div class="hint">EDO同步·集体过站真值</div></div>
+    </div>
+  </div>
+
+  <div class="kpi-section-title"><span>核心指标</span><span>寿命为累计值,自启用日起反推</span></div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row wip" id="kpiRow">
+    <div class="kpi-card" style="--kpi-color:var(--brand);">
+        <div class="kpi-label">整体健康度 <span class="kpi-tip" data-tip="寿命管控体系运行综合健康分">?</span></div>
+        <div class="kpi-balance-liquid" id="healthLiquid"></div>
+        <div class="kpi-value" id="kpiHealthVal">--</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--brand);">
+        <div class="kpi-label">在管资产总数 <span class="kpi-tip" data-tip="治具+线材台账总数(全登记)">?</span></div>
+        <div class="kpi-value" id="kpiAssetVal">--</div>
+        <div class="kpi-sub" id="kpiAssetSub">--</div>
+    </div>
+    <div class="kpi-card" data-link="fixture_life" style="--kpi-color:var(--brand);">
+        <div class="kpi-label">纳入次数管控数 <span class="kpi-tip" data-tip="usage_source=EDO/工序,纳入次数寿命管控的资产数">?</span></div>
+        <div class="kpi-value" id="kpiTrackedVal">--</div>
+        <div class="kpi-sub" id="kpiTrackedSub">--</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--success);">
+        <div class="kpi-label">本期新投入使用 <span class="kpi-tip" data-tip="近30天启用(install_date)的治具+线材数">?</span></div>
+        <div class="kpi-value" id="kpiNewVal">--</div>
+        <div class="kpi-sub" id="kpiNewSub">--</div>
+    </div>
+  </div>
+
+  <div class="kpi-section-title" style="margin-top:18px;"><span>寿命阶段与消耗分析</span><span>用量:EDO真值·可对账</span></div>
+  <div class="dashboard-grid" id="chartSection">
+    <div class="chart-panel">
+      <div class="ct-title">寿命阶段分布<span class="ct-sub">在管资产按寿命进度分桶</span></div>
+      <div id="stagePie" style="min-height:320px;"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="ct-title">治具寿命进度 TOP15<span class="ct-sub">已用/设计次数</span></div>
+      <div id="fixtureBar" style="min-height:320px;"></div>
+    </div>
+    <div class="chart-panel full">
+      <div class="ct-title">各机型线材组累计寿命消耗 TOP15<span class="ct-sub">按机型·集体过站真值/设计总次数</span></div>
+      <div id="cableBar" style="min-height:340px;"></div>
+    </div>
+  </div>
+
+  <div class="kpi-section-title" style="margin-top:18px;"><span>台账明细</span><span id="tableHint">用量:EDO次数·真值 · 未纳入次数管控的标"未纳入"</span></div>
+  <div class="chart-panel" id="tableSection">
+    <div class="tab-bar">
+      <button class="active" id="tabFixture" onclick="switchTab('fixture')">治具台账</button>
+      <button id="tabCable" onclick="switchTab('cable')">线材台账</button>
+    </div>
+    <div id="fixtureTableWrap">
+      <table class="summary-table" id="fixtureTable">
+        <thead><tr><th>编号</th><th>名称/类型</th><th>线体</th><th>工序/机型</th><th>启用日</th><th>已用/设计</th><th>治具进度</th><th>PING针进度</th><th>寿命阶段</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="table-pagination" id="fixturePager"></div>
+    </div>
+    <div id="cableTableWrap" style="display:none;">
+      <table class="summary-table" id="cableTable">
+        <thead><tr><th>编号</th><th>名称/机型</th><th>类型</th><th>线体</th><th>启用日</th><th>已用/设计</th><th>EDO剩余</th><th>进度</th><th>寿命阶段</th><th>负责人</th><th>储位</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="table-pagination" id="cablePager"></div>
+    </div>
+  </div>
+
+  <!-- 报废明细列表(闭环展示) -->
+  <div class="chart-panel" id="scrapSection" style="margin-top:var(--module-gap);">
+    <div class="ct-title">报废闭环明细 <span class="ct-sub">已报废处置记录(治具·线材)</span></div>
+    <table class="summary-table" id="scrapTable">
+      <thead><tr><th>类别</th><th>编号</th><th>名称</th><th>机型/线体</th><th>报废日</th><th>原因</th><th>处理方式</th><th>操作人</th><th>替换件</th></tr></thead>
+      <tbody><tr><td colspan="9" style="color:var(--text-muted);padding:20px">加载中...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   治具与线材寿命管控 — 过站反推
+   治具次数 = 绑定工序在[启用日,停用日]的过站数
+   线材 = 按机型集合反推(集体过站=真值), 单根=集体÷机型电缆数(均摊估算)
+   台账由 EDO 同步导入(ai_aging_cable), 机型→线体经 production 模糊匹配
+   ============================================================ */
+// 语义色统一引用 CHART.colors(与 TOKEN 同源,单一真值源);dim 为图表骨架色 CHART 未导出,保留本地
+const COL = { green:CHART.colors.good, warn:CHART.colors.warn, red:CHART.colors.bad, blue:CHART.colors.blue, dim:'rgba(71,85,105,0.35)' };
+let currentData = { overview:{}, fixtures:[], cables:[], corr:[], scrap:{} };
+let filter = {};
+let currentTab = 'fixture';
+let _lineMap = {};
+let healthChart, fixtureBarChart, cableBarChart, stagePieChart;
+
+/* ===== 注意力钩子 (attention-hooks-spec) ===== */
+// 进阶版:reduced-motion 单一真源查 ATTN.REDUCED(删除本地 matchMedia 重复检测)
+const FL_REDUCED = (window.ATTN && ATTN.REDUCED) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// 数字滚动 — 统一由 ATTN.liveNum 接管 (v4.1)
+function flLiveNum(el, val, suffix) {
+    if (!el) return;
+    return ATTN.liveNum(el, val, { suffix: suffix || '', decimals: 0, dur: 720 });
+}
+// 焦点态:客户页恒 normal(不挂红/琥珀告警光,寿命管控体系视角)
+function flFocusState(ov){
+    var shell = document.getElementById('focusShell');
+    if (!shell) return;
+    shell.classList.remove('state-normal','state-warn','state-alert');
+    shell.setAttribute('data-focal','true');
+    shell.classList.add('state-normal');  // 恒正常态(绿静止高光),不展示告警
+    // 统一机制:透传 ATTN.enforceFocal(压暗非焦点兄弟)
+    if (window.ATTN && ATTN.enforceFocal) { try { ATTN.enforceFocal(shell); } catch(e){} }
+}
+// 卡片错峰级联入场
+function flInitReveal(){
+    // 进阶版:迁移 ATTN.revealCascade(删除本地 IO + .fl-reveal 起手态机制)
+    if (window.ATTN && ATTN.revealCascade) {
+        try { ATTN.revealCascade('.kpi-card, .chart-panel, #focusShell', { step: 40, cap: 200 }); } catch(e){}
+    }
+}
+
+// escHtml 收口到 common.js (window.escHtml), 本页不再单独定义
+function fmt(v, dec=1){ return v==null ? '--' : Number(v).toFixed(dec); }
+// 客户页寿命阶段(无红色告警):未纳入(灰)/新(<20%绿)/中期(20-warnRatio 绿)/接近寿命·建议更换(>=warnRatio 琥珀)/已超寿命·建议更换(>=1.0 深琥珀)
+// near 阈值对齐后端 level warning(progress>=warn_ratio), 单一真源, 杜绝同页 near(70) vs alert_count(69) 打架
+function lifeStage(x){
+    // 样机/金样: 不适用次数寿命(优先判定, type/name 含金样/样机)
+    const t = x.type || '', n = x.name || '';
+    if (t.indexOf('金样')>=0 || t.indexOf('样机')>=0 || n.indexOf('金样')>=0 || n.indexOf('样机')>=0) return 'sample';
+    // 假定新(无EDO真值, 按未用处理) — 独立桶, 区别EDO真值
+    if (x.usage_source === 'assumed') return 'new_assumed';
+    const tracked = x.usage_source === 'edo' || x.usage_source === 'op';
+    if (tracked) {
+        const p = x.progress || 0;
+        const warnRatio = (x.warn_ratio != null ? x.warn_ratio : 0.9);
+        if (p >= 1.0) return 'over';           // 已超寿命·建议更换
+        if (p >= warnRatio) return 'near';     // 接近寿命·建议更换
+        if (p < 0.2) return 'new';
+        return 'mid';
+    }
+    // 有机型映射 → 机型组寿命管理(集体过站真值), 不算"未纳入"
+    if (x.match_product_model) return 'group';
+    return 'untracked';   // 真·未纳入(无机型映射, 无数据)
+}
+function stageCol(stage){
+    if (stage==='sample') return COL.dim;
+    if (stage==='group') return COL.blue;
+    if (stage==='new_assumed') return 'rgba(100,116,139,0.55)';  // 假定新: 灰绿(区别EDO真值绿)
+    return (stage==='near'||stage==='over') ? COL.warn : (stage==='untracked' ? COL.dim : COL.green);
+}
+// 线材组集体过站柱着色: 用 group 自身 level(db.queryAgingCableGroups 产出) 而非 lifeStage(group)
+function cableGroupCol(g){
+    if (!g) return COL.dim;
+    if (g.level === 'danger') return COL.warn;
+    if (g.level === 'warning') return COL.warn;
+    if (g.collective_used > 0) return COL.green;
+    return COL.dim;
+}
+function stageTag(stage){
+    if (stage==='sample') return '<span class="tag" style="background:var(--surface-2);color:var(--text-muted)">样机·不适用</span>';
+    if (stage==='group') return '<span class="tag" style="background:var(--brand-glow);color:var(--brand)">机型组管理</span>';
+    if (stage==='untracked') return '<span class="tag" style="background:var(--surface-2);color:var(--text-muted)">未纳入</span>';
+    if (stage==='new_assumed') return '<span class="tag" style="background:var(--surface-2);color:var(--text-secondary)">新(假定)</span>';
+    if (stage==='new') return '<span class="tag tag-ok">新</span>';
+    if (stage==='mid') return '<span class="tag tag-ok">中期</span>';
+    if (stage==='over') return '<span class="tag tag-warn" style="background:rgba(245,158,11,0.22)">已超寿命·建议更换</span>';
+    return '<span class="tag tag-warn">接近寿命·建议更换</span>';
+}
+function lineDisplay(name){ return _lineMap[name] || name || '--'; }
+function refreshLineMap(){ const sel=document.getElementById('lineFilter'); _lineMap={}; if(sel) Array.from(sel.options).forEach(o=>{ if(o.value && o.textContent) _lineMap[o.value]=o.textContent; }); }
+
+/* ========== FilterBar (仅线体) ========== */
+const _filter = new FilterBar('#filterContainer', {
+    fields: ['line'],
+    fieldOptions: { line: { placeholder: '全部线体' } },
+    apiBase: '',
+    storageKey: '_fl_filters',
+    rememberSelection: true,
+    onQuery: () => loadData()
+});
+
+/* ========== QuickQuery ========== */
+WipUI.QuickQuery.init('#quickQuery', [
+    { key:'all', label:'全部', icon:'⌧', apply: function(){ filter={}; return true; } },
+    { key:'near', label:'接近寿命', icon:'🟠', apply: function(){ filter={onlyNearLife:true}; return true; } },
+    { key:'tracked', label:'已纳入', icon:'✅', apply: function(){ filter={onlyTracked:true}; return true; } }
+], {
+    activeKey: 'all',
+    onAfter: function(){ _fxPage=1; _cbPage=1; renderTables(); renderFocus(); }
+});
+
+/* ========== Toolbar ========== */
+WipUI.Toolbar.init('#toolbar', {
+    buttons: ['refresh', 'exportCSV', 'fullscreen'],
+    onRefresh: function(){ loadData(); },
+    onExportCSV: function(){ exportCSV(); }
+});
+
+// refreshBtn 已由 toolbar 的 refresh 按钮(onRefresh)接管, 不再单独绑
+document.querySelectorAll('#pageSubnav button[data-target]').forEach(b=>b.addEventListener('click',()=>scrollToPanel(b.getAttribute('data-target'))));
+
+/* ========== Load ========== */
+async function loadData() {
+    refreshLineMap();
+    const lineEl = document.getElementById('lineFilter');
+    const lineName = lineEl ? lineEl.value : '';
+    const qs = new URLSearchParams();
+    if (lineName) qs.set('lineName', lineName);
+    const mask = document.getElementById('loadingMask');
+    mask.classList.add('show');
+    try {
+        const [ov, fx, cb, cg, co, sp] = await Promise.all([
+            apiFetch('/api/fixtures/overview?'+qs),
+            apiFetch('/api/fixtures?'+qs),
+            apiFetch('/api/aging-cables?'+qs),
+            apiFetch('/api/aging-cable-groups?'+qs),
+            apiFetch('/api/fixtures/bad-correlation?'+qs),
+            apiFetch('/api/fixtures/scrap-stats?'+qs).catch(() => ({}))
+        ]);
+        currentData = { overview: ov.data||{}, fixtures: fx.data||[], cables: cb.data||[], groups: cg.data||{}, corr: co.data||{}, scrap: (sp && sp.data) || {} };
+        renderAll();
+        const now = new Date();
+        const ts = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+        document.getElementById('updateTime').textContent = (lineName ? lineDisplay(lineName) : '全部线体') + ' · 更新于 ' + ts;
+    } catch(e) {
+        console.error('加载治具寿命数据失败', e);
+        document.getElementById('updateTime').textContent = '加载失败';
+    } finally {
+        mask.classList.remove('show');
+    }
+}
+
+function renderAll(){ renderFocus(); renderKPI(); renderFixtureBar(); renderCableBar(); renderStagePie(); renderTables(); renderScrapDetail(); }
+
+/* ========== Focus ========== */
+function renderFocus(){
+    const ov = currentData.overview || {};
+    const f = ov.fixture||{}, c = ov.cable||{};
+    // 客户页不挂红光告警(fl-focal 已退役);恒 normal 态
+    document.getElementById('focusShell').classList.remove('fl-focal');
+    flFocusState(ov);
+    document.getElementById('focusScope').textContent = '现场关注 · 治具与线材寿命管控';
+    const titleEl = document.getElementById('focusTitle');
+    titleEl.textContent = (ov.health_score==null) ? '治具与线材寿命管控 · 体系运行中' : '治具与线材寿命管控 · 体系运行中';
+    titleEl.style.color = 'var(--success)';
+    document.getElementById('focusAction').textContent = '寿命管控体系运行中。资产全登记,关键件纳入次数管控,接近寿命的已识别并建议更换。';
+    document.getElementById('focusMeta').innerHTML = WipUI.Focus.metaChips([
+        { val: fmt(ov.health_score,0)+'%', label: '健康度' },
+        { val: ov.tracked_total||0, label: '纳入管控' },
+        { val: (f.total||0)+(c.total||0), label: '在管总数' },
+        { val: (currentData.scrap && currentData.scrap.this_month_scrapped) ? currentData.scrap.this_month_scrapped : '暂无', label: (currentData.scrap && currentData.scrap.this_month_scrapped) ? '本月已报废' : '报废闭环' }
+    ]);
+    document.getElementById('focusTrust').innerHTML = WipUI.Focus.trustLabel(['用量:EDO真值·可对账','台账:EDO同步','寿命阶段管理','报废闭环登记']);
+    document.getElementById('focusSide1').querySelector('.value').innerHTML = (f.total||0)+' 在管 · 纳入'+(f.tracked||0);
+    document.getElementById('focusSide2').querySelector('.value').innerHTML = (c.total||0)+' 在管 · 纳入'+(c.tracked||0);
+}
+
+/* ========== KPI ========== */
+function renderKPI(){
+    const ov = currentData.overview || {};
+    const f = ov.fixture||{}, c = ov.cable||{};
+    if (!healthChart) healthChart = echarts.init(document.getElementById('healthLiquid'));
+    const _noData = ov.health_score==null;
+    const score = _noData ? 0 : Math.max(0, Math.min(1, ov.health_score/100));
+    const hcolor = _noData ? 'var(--text-muted)' : ((ov.health_score||0)>=80?COL.green:(ov.health_score||0)>=60?COL.warn:COL.red);
+    healthChart.setOption({
+        series: [{ type:'liquidFill', data:[score, Math.max(0,score-0.08)], radius:'92%',
+            color:[hcolor],
+            label:{ formatter: _noData?'暂无':fmt(ov.health_score,0)+'%', fontSize:15, color:CHART.tooltipText },
+            backgroundStyle:{ color:'transparent' },
+            outline:{ itemStyle:{ borderColor:'rgba(71,85,105,0.5)', borderWidth:1 }, show:true } }]
+    });
+    document.getElementById('kpiHealthVal').textContent = _noData ? '--' : fmt(ov.health_score,0)+'%';
+    // KPI2: 在管资产总数(治具+线材,正面)
+    const assetTotal = (f.total||0) + (c.total||0);
+    flLiveNum(document.getElementById('kpiAssetVal'), assetTotal);
+    document.getElementById('kpiAssetSub').textContent = '治具 '+(f.total||0)+' · 线材 '+(c.total||0);
+    // KPI3: 纳入次数管控数(拆 EDO真值 + 假定新, 口径清晰)
+    const trackedTotal = ov.tracked_total||0;
+    const edoTrue = ov.edo_true||0;
+    const assumed = ov.assumed||0;
+    flLiveNum(document.getElementById('kpiTrackedVal'), trackedTotal);
+    document.getElementById('kpiTrackedSub').innerHTML = 'EDO真值 <strong style="color:var(--success)">'+edoTrue+'</strong> · 假定新 <strong style="color:var(--text-muted)">'+assumed+'</strong>';
+    // KPI4: 本期新投入使用(近30天 install_date, 真实计数)
+    // 兼容 'YYYY-MM-DD'(ISO,本地时区解析) 与 Date 对象; 加 t<=now 上限排除 2099 占位符等未来日期
+    const nowMs = Date.now();
+    const cutoff = nowMs - 30*24*3600*1000;
+    const newCount = (currentData.fixtures||[]).concat(currentData.cables||[]).filter(function(x){
+        if (!x.install_date) return false;
+        const t = new Date(x.install_date).getTime();
+        return !isNaN(t) && t >= cutoff && t <= nowMs;
+    }).length;
+    flLiveNum(document.getElementById('kpiNewVal'), newCount);
+    document.getElementById('kpiNewSub').textContent = '近30天启用';
+}
+
+/* ========== 治具寿命进度 TOP ========== */
+function renderFixtureBar(){
+    if (!fixtureBarChart) fixtureBarChart = echarts.init(document.getElementById('fixtureBar'));
+    const list = (currentData.fixtures||[]).slice().sort((a,b)=>b.progress-a.progress).slice(0,15);
+    const names = list.map(x=>(x.code||'')+' '+(x.name||''));
+    fixtureBarChart.setOption({
+        tooltip:Object.assign(CHART.tooltip(),{ trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>{ const i=ps[0].dataIndex; const x=list[i]; return x.code+' '+escHtml(x.name||'')+'<br/>已用 '+(x.used_count||0)+' / 设计 '+(x.design_life||0)+'<br/>进度 '+(x.progress*100).toFixed(0)+'%'; } }),
+        legend:{ data:['已用','设计'], textStyle:{color:CHART.legendText}, top:0, right:0 },
+        grid:{ left:10, right:30, top:28, bottom:5, containLabel:true },
+        xAxis:{ type:'value', axisLine:{lineStyle:{color:CHART.axisLine}}, axisLabel:{color:CHART.axisLabel}, splitLine:{lineStyle:{color:CHART.splitLine}} },
+        yAxis:{ type:'category', data:names, axisLine:{lineStyle:{color:CHART.axisLine}}, axisLabel:{color:CHART.axisLabel, fontSize:11}, inverse:true },
+        series:[
+            { name:'已用', type:'bar', data:list.map(x=>({value:x.used_count||0, itemStyle:{color:stageCol(lifeStage(x))}})), barWidth:9, label:{show:true, position:'right', color:CHART.legendText, fontSize:10} },
+            { name:'设计', type:'bar', data:list.map(x=>x.design_life||0), barWidth:9, itemStyle:{color:COL.dim} }
+        ]
+    });
+    // L2 下钻: 点击治具柱 → 弹窗显示该治具详情(台账+用量)
+    fixtureBarChart.off('click');
+    fixtureBarChart.on('click', function(params){ var x=list[params.dataIndex]; if(x) flOpenFixtureDrawer(x.code); });
+}
+
+/* ========== 线材组集合寿命 TOP (按机型·集体过站真值) ========== */
+function renderCableBar(){
+    if (!cableBarChart) cableBarChart = echarts.init(document.getElementById('cableBar'));
+    const list = (currentData.groups||[]).slice(0,15);
+    const names = list.map(x=>(x.product_model||'未分类')+' · '+(x.cable_count||0)+'根');
+    cableBarChart.setOption({
+        tooltip:Object.assign(CHART.tooltip(),{ trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>{ const i=ps[0].dataIndex; const x=list[i]; return escHtml(x.product_model||'未分类')+' · 线体 '+(x.line_name||'-')+'<br/>线材 '+(x.cable_count||0)+' 根<br/>集体过站 '+(x.collective_used||0)+' / 设计总 '+(x.design_total||0)+'<br/>集合进度 '+(x.progress*100).toFixed(1)+'% · 单根均摊≈'+(x.per_cable||0); } }),
+        grid:{ left:10, right:30, top:14, bottom:5, containLabel:true },
+        xAxis:{ type:'value', axisLine:{lineStyle:{color:CHART.axisLine}}, axisLabel:{color:CHART.axisLabel}, splitLine:{lineStyle:{color:CHART.splitLine}} },
+        yAxis:{ type:'category', data:names, axisLine:{lineStyle:{color:CHART.axisLine}}, axisLabel:{color:CHART.axisLabel, fontSize:11}, inverse:true },
+        series:[
+            { name:'集体过站', type:'bar', data:list.map(x=>({value:x.collective_used||0, itemStyle:{color:cableGroupCol(x)}})), barWidth:11, label:{show:true, position:'right', color:CHART.legendText, fontSize:10} },
+            { name:'设计总次数', type:'bar', data:list.map(x=>x.design_total||0), barWidth:11, itemStyle:{color:COL.dim} }
+        ]
+    });
+    // L2 下钻: 点击机型组柱 → 弹窗列该组全部线材(按 product_model 匹配 currentData.cables)
+    cableBarChart.off('click');
+    cableBarChart.on('click', function(params){ var x=list[params.dataIndex]; if(x) flOpenCableGroupDrawer(x.internal || x.product_model, x.line_name); });
+}
+
+/* ========== 寿命阶段分布(饼图, 替代原散点关联) ========== */
+function renderStagePie(){
+    if (!stagePieChart) stagePieChart = echarts.init(document.getElementById('stagePie'));
+    const all = (currentData.fixtures||[]).concat(currentData.cables||[]);
+    const buckets = { sample:0, group:0, untracked:0, new:0, new_assumed:0, mid:0, near:0, over:0 };
+    all.forEach(function(x){ buckets[lifeStage(x)] = (buckets[lifeStage(x)]||0)+1; });
+    const data = [
+        { name:'新·EDO真值(<20%)', value:buckets.new, itemStyle:{color:COL.green} },
+        { name:'新·假定(无EDO按未用)', value:buckets.new_assumed, itemStyle:{color:'rgba(100,116,139,0.55)'} },
+        { name:'中期(20%-90%)', value:buckets.mid, itemStyle:{color:COL.blue} },
+        { name:'接近寿命·建议更换(>=90%)', value:buckets.near, itemStyle:{color:COL.warn} },
+        { name:'已超寿命·建议更换(>=100%)', value:buckets.over, itemStyle:{color:'rgba(217,119,6,0.85)'} },
+        { name:'机型组寿命管理', value:buckets.group, itemStyle:{color:CHART.colors.blue} },
+        { name:'样机·不适用', value:buckets.sample, itemStyle:{color:'rgba(100,116,139,0.5)'} }
+        // 未纳入(无机型映射)不展示于客户页 — 机型不在产,无寿命数据,admin 可查
+    ].filter(d=>d.value>0);
+    const empty = !data.length;
+    stagePieChart.setOption({
+        title: empty ? { text:'暂无在管资产数据', left:'center', top:'middle', textStyle:{ color:CHART.axisLabel, fontSize:13 } } : { show:false },
+        tooltip:Object.assign(CHART.tooltip(),{ trigger:'item', formatter: p=>p.name+'<br/>'+p.value+' 件 ('+p.percent+'%)' }),
+        legend:{ orient:'vertical', right:0, top:'middle', textStyle:{color:CHART.legendText, fontSize:11}, itemWidth:10, itemHeight:10 },
+        series:[{ type:'pie', radius:['42%','70%'], center:['38%','50%'], avoidLabelOverlap:true,
+            label:{ color:CHART.legendText, fontSize:11 },
+            labelLine:{ lineStyle:{ color:CHART.axisLine } },
+            data: data }]
+    });
+}
+
+/* ========== 明细表 ========== */
+function applyFilter(list){
+    // 客户页默认不显示"未纳入"(机型不在产·无寿命数据),admin 可查全量
+    var base = list.filter(function(x){ return lifeStage(x) !== 'untracked'; });
+    if (filter.onlyNearLife) return base.filter(function(x){ const s=lifeStage(x); return s==='near'||s==='over'; });
+    if (filter.onlyTracked) return base.filter(function(x){ const s=lifeStage(x); return s!=='sample'&&s!=='group'; });
+    return base;
+}
+const PAGE_SIZE = 50; // 台账分页: 全量4822行致89屏灾难, 改每页50行
+var _fxPage = 1, _cbPage = 1;
+function renderPager(id, total, page, pages, onGo){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (total <= PAGE_SIZE) { el.innerHTML = '<span style="color:var(--text-muted);font-size:var(--fs-xs)">共 '+total+' 条</span>'; return; }
+    let html = '<button'+(page<=1?' disabled':'')+' onclick="">‹ 上一页</button>';
+    // 页码窗口: 当前页±2, 首/尾必显
+    const win = [];
+    for (let p=1; p<=pages; p++) if (p===1||p===pages||Math.abs(p-page)<=2) win.push(p);
+    let prev = 0;
+    win.forEach(p => {
+        if (p - prev > 1) html += '<span style="color:var(--text-muted);padding:0 4px">…</span>';
+        html += '<button class="'+(p===page?'active':'')+'" data-p="'+p+'">'+p+'</button>';
+        prev = p;
+    });
+    html += '<button'+(page>=pages?' disabled':'')+'>下一页 ›</button>';
+    html += '<span style="color:var(--text-muted);font-size:var(--fs-xs);margin-left:8px">共 '+total+' 条 / '+pages+' 页</span>';
+    el.innerHTML = html;
+    el.querySelectorAll('button[data-p]').forEach(b => b.addEventListener('click', () => onGo(+b.dataset.p)));
+    const btns = el.querySelectorAll('button:not([data-p])');
+    if (btns[0]) btns[0].addEventListener('click', () => { if (page>1) onGo(page-1); });
+    if (btns[1]) btns[1].addEventListener('click', () => { if (page<pages) onGo(page+1); });
+}
+function renderTables(){
+    const fx = applyFilter(currentData.fixtures||[]);
+    const fxPages = Math.max(1, Math.ceil(fx.length / PAGE_SIZE));
+    if (_fxPage > fxPages) _fxPage = 1;
+    const fxSlice = fx.slice((_fxPage-1)*PAGE_SIZE, _fxPage*PAGE_SIZE);
+    const ftb = document.querySelector('#fixtureTable tbody');
+    ftb.innerHTML = fxSlice.length ? fxSlice.map(x=>{
+        const tracked = x.usage_source==='edo' || x.usage_source==='op';
+        const stage = lifeStage(x);
+        const pct=tracked?(x.progress*100).toFixed(1)+'%':'—';
+        const col=(stage==='near'||stage==='over')?'cell-yellow':'';
+        const src = x.usage_source==='edo' ? '<span style="color:var(--success);font-size:var(--fs-xs)">·EDO</span>' : x.usage_source==='op'?'<span style="color:var(--success);font-size:var(--fs-xs)">·工序</span>':'';
+        const usedCell = tracked ? (x.used_count||0)+' / '+(x.design_life||0)+src : (stage==='group'?'<span style="color:var(--brand)">机型组管理</span>':stage==='sample'?'<span style="color:var(--text-muted)">样机·不适用</span>':'<span style="color:var(--text-muted)">未纳入</span>');
+        const pingPct = (x.ping_used!=null && x.ping_life) ? (x.ping_progress*100).toFixed(1)+'%' : '—';
+        const pingCol = (x.ping_level==='danger'||x.ping_level==='warning') ? 'cell-yellow' : '';
+        return '<tr style="cursor:pointer" data-code="'+escHtml(x.code)+'" onclick="flOpenFixtureDrawer(this.dataset.code)"><td>'+escHtml(x.code)+'</td><td>'+escHtml(x.name)+'<br><span style="color:var(--text-muted);font-size:var(--fs-xs)">'+escHtml(x.type||'')+'</span></td><td>'+escHtml(lineDisplay(x.line_name))+'</td><td>'+(x.work_operation_code?escHtml(x.work_operation_code):'<span style="color:var(--text-muted)">'+escHtml(x.product_model||'—')+'</span>')+'</td><td>'+escHtml(x.install_date)+'</td><td>'+usedCell+'</td><td class="'+col+'">'+pct+'</td><td class="'+pingCol+'">'+pingPct+'</td><td>'+stageTag(stage)+'</td></tr>';
+    }).join('') : '<tr><td colspan="9" style="color:var(--text-muted);padding:20px">暂无治具台账</td></tr>';
+    renderPager('fixturePager', fx.length, _fxPage, fxPages, p=>{ _fxPage=p; renderTables(); });
+
+    const cb = applyFilter(currentData.cables||[]);
+    const cbPages = Math.max(1, Math.ceil(cb.length / PAGE_SIZE));
+    if (_cbPage > cbPages) _cbPage = 1;
+    const cbSlice = cb.slice((_cbPage-1)*PAGE_SIZE, _cbPage*PAGE_SIZE);
+    const ctb = document.querySelector('#cableTable tbody');
+    ctb.innerHTML = cbSlice.length ? cbSlice.map(x=>{
+        const tracked = x.usage_source==='edo' || x.usage_source==='assumed';
+        const stage = lifeStage(x);
+        const pct=tracked?(x.progress*100).toFixed(1)+'%':'—';
+        const col=(stage==='near'||stage==='over')?'cell-yellow':'';
+        const src = x.usage_source==='edo' ? '<span style="color:var(--success);font-size:var(--fs-xs)">·EDO真值</span>' : x.usage_source==='assumed' ? '<span style="color:var(--text-muted);font-size:var(--fs-xs)">·假定新</span>' : '';
+        const usedCell = tracked ? (x.used_count||0)+' / '+(x.design_life||0)+src : (stage==='group'?'<span style="color:var(--brand)">机型组管理</span>':stage==='sample'?'<span style="color:var(--text-muted)">样机·不适用</span>':'<span style="color:var(--text-muted)">未纳入</span>');
+        const edoRem = tracked ? (x.edo_remaining!=null?x.edo_remaining:'—') : '—';
+        return '<tr style="cursor:pointer" data-code="'+escHtml(x.code)+'" onclick="flOpenCableDrawer(this.dataset.code)"><td>'+escHtml(x.code)+'</td><td>'+escHtml(x.name)+'<br><span style="color:var(--text-muted);font-size:var(--fs-xs)">'+escHtml(x.product_model||'')+'</span></td><td>'+escHtml(x.cable_type||'')+'</td><td>'+escHtml(lineDisplay(x.line_name))+'</td><td>'+escHtml(x.install_date)+'</td><td>'+usedCell+'</td><td>'+edoRem+'</td><td class="'+col+'">'+pct+'</td><td>'+stageTag(stage)+'</td><td>'+escHtml(x.keeper||'—')+'</td><td>'+escHtml(x.storage||'—')+'</td></tr>';
+    }).join('') : '<tr><td colspan="11" style="color:var(--text-muted);padding:20px">暂无线材台账</td></tr>';
+    renderPager('cablePager', cb.length, _cbPage, cbPages, p=>{ _cbPage=p; renderTables(); });
+}
+
+function switchTab(t){
+    currentTab = t;
+    document.getElementById('tabFixture').classList.toggle('active', t==='fixture');
+    document.getElementById('tabCable').classList.toggle('active', t==='cable');
+    document.getElementById('fixtureTableWrap').style.display = t==='fixture'?'':'none';
+    document.getElementById('cableTableWrap').style.display = t==='cable'?'':'none';
+}
+
+/* 报废闭环明细列表(已报废件, 治具+线材, 真实记录) */
+function renderScrapDetail(){
+    var rows = [];
+    (currentData.fixtures||[]).forEach(function(x){
+        if (x.scrap && x.scrap.status==='scrapped') rows.push({cat:'治具', code:x.code, name:x.name, model:(x.product_model||'')+' / '+lineDisplay(x.line_name), scrap:x.scrap});
+    });
+    (currentData.cables||[]).forEach(function(x){
+        if (x.scrap && x.scrap.status==='scrapped') rows.push({cat:'线材', code:x.code, name:x.name, model:(x.product_model||'')+' / '+lineDisplay(x.line_name), scrap:x.scrap});
+    });
+    rows.sort(function(a,b){ return (b.scrap.scrap_date||'').localeCompare(a.scrap.scrap_date||''); });
+    var tb = document.querySelector('#scrapTable tbody');
+    tb.innerHTML = rows.length ? rows.map(function(r){
+        var s = r.scrap;
+        return '<tr><td>'+escHtml(r.cat)+'</td><td>'+escHtml(r.code)+'</td><td>'+escHtml(r.name||'')+'</td><td>'+escHtml(r.model)+'</td><td>'+escHtml(s.scrap_date||'—')+'</td><td>'+escHtml(s.reason||'—')+'</td><td>'+escHtml(s.method||'—')+'</td><td>'+escHtml(s.operator||'—')+'</td><td>'+escHtml(s.replacement_code||'—')+'</td></tr>';
+    }).join('') : '<tr><td colspan="9" style="color:var(--text-muted);padding:20px">暂无报废处置记录 · 寿命管控体系运行中,达到寿命的资产将走报废闭环</td></tr>';
+}
+
+/* ========== Export CSV ========== */
+function exportCSV(){
+    const list = currentTab==='fixture' ? (currentData.fixtures||[]) : (currentData.cables||[]);
+    if (!list.length){ return; }
+    const cols = currentTab==='fixture'
+        ? [{k:'code',l:'编号'},{k:'name',l:'名称'},{k:'type',l:'类型'},{k:'line_name',l:'线体'},{k:'work_operation_code',l:'工序'},{k:'install_date',l:'启用日'},{k:'used_count',l:'已用次数'},{k:'design_life',l:'设计寿命'},{k:'progress',l:'进度'},{k:'level',l:'状态'}]
+        : [{k:'code',l:'编号'},{k:'name',l:'名称'},{k:'product_model',l:'机型'},{k:'cable_type',l:'类型'},{k:'line_name',l:'线体'},{k:'install_date',l:'启用日'},{k:'design_life',l:'设计次数'},{k:'used_count',l:'已用(均摊)'},{k:'progress',l:'进度'},{k:'level',l:'状态'},{k:'keeper',l:'负责人'}];
+    function cell(v){ if(v==null)return ''; var s=String(v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+    var rows = [cols.map(c=>cell(c.l)).join(',')];
+    list.forEach(r=>rows.push(cols.map(c=>cell(r[c.k])).join(',')));
+    var blob = new Blob(['﻿'+rows.join('\n')], {type:'text/csv;charset=utf-8'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = '治具线材寿命_'+currentTab+'.csv';
+    a.click();
+}
+
+/* ===== L2 下钻弹窗 ===== */
+function flOpenDrawer(title, html){
+    document.getElementById('flDrawerTitle').textContent = title;
+    document.getElementById('flDrawerBody').innerHTML = html;
+    document.getElementById('flDrawerMask').classList.add('show');
+}
+function flCloseDrawer(){ document.getElementById('flDrawerMask').classList.remove('show'); }
+// ESC / 点遮罩关闭
+(function(){
+    document.getElementById('flDrawerMask').addEventListener('click', function(e){ if(e.target===this) flCloseDrawer(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') flCloseDrawer(); });
+})();
+
+/* 机型组 → 该组全部线材明细(按 internal/match_product_model 匹配, 兼容 line_name) */
+function flOpenCableGroupDrawer(productModel, lineName){
+    var cables = (currentData.cables || []).filter(function(c){
+        return (c.match_product_model === productModel || c.product_model === productModel) && (!lineName || c.line_name === lineName || !c.line_name);
+    });
+    var grp = (currentData.groups || []).find(function(g){ return (g.internal === productModel || g.product_model === productModel) && (!lineName || g.line_name === lineName); }) || {};
+    var stats = [
+        { v: grp.cable_count || cables.length, l: '线材根数' },
+        { v: grp.collective_used || 0, l: '集体过站(真值)' },
+        { v: (grp.progress!=null ? (grp.progress*100).toFixed(1) : '--')+'%', l: '集合进度' }
+    ];
+    var statsHtml = '<div class="fl-modal-stats">'+stats.map(function(s){ return '<div class="fl-modal-stat"><div class="v">'+escHtml(String(s.v))+'</div><div class="l">'+escHtml(s.l)+'</div></div>'; }).join('')+'</div>';
+    var rows = cables.length ? cables.map(function(x){
+        var tracked = x.usage_source === 'edo';
+        var stage = lifeStage(x);
+        var pct = tracked ? (x.progress*100).toFixed(1)+'%' : '—';
+        var col = (stage==='near'||stage==='over') ? 'cell-yellow' : '';
+        var usedCell = tracked ? (x.used_count||0)+' / '+(x.design_life||0) : '<span style="color:var(--text-muted)">未纳入次数管控</span>';
+        return '<tr><td>'+escHtml(x.code)+'</td><td>'+escHtml(x.name)+'</td><td>'+escHtml(x.product_model||'')+'</td><td>'+usedCell+'</td><td class="'+col+'">'+pct+'</td><td>'+stageTag(stage)+'</td></tr>';
+    }).join('') : '<tr><td colspan="6" style="color:var(--text-muted);padding:20px">该组无线材明细</td></tr>';
+    var tableHtml = '<table class="summary-table"><thead><tr><th>编号</th><th>名称</th><th>机型</th><th>已用/设计</th><th>进度</th><th>寿命阶段</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    flOpenDrawer('线材组明细 · ' + (productModel || '未分类') + (lineName ? ' / ' + lineDisplay(lineName) : ''), statsHtml + tableHtml);
+}
+
+/* 治具 → 该治具详情(台账+用量) */
+function flOpenFixtureDrawer(code){
+    var fx = (currentData.fixtures || []).find(function(x){ return x.code === code; });
+    if (!fx) { flOpenDrawer('治具详情 · ' + escHtml(code), '<div style="color:var(--text-muted);padding:20px">未找到该治具台账</div>'); return; }
+    var tracked = fx.usage_source === 'edo' || fx.usage_source === 'op';
+    var stage = lifeStage(fx);
+    var pct = tracked ? (fx.progress*100).toFixed(1)+'%' : '—';
+    var stageText = stage==='untracked' ? '未纳入' : (stage==='new' ? '新' : stage==='mid' ? '中期' : stage==='over' ? '已超寿命·建议更换' : '接近寿命·建议更换');
+    var hasPing = fx.ping_used!=null && fx.ping_life;
+    var pingPct = hasPing ? (fx.ping_progress*100).toFixed(1)+'%' : '—';
+    var stats = [
+        { v: tracked ? (fx.used_count||0)+' / '+(fx.design_life||0) : '未纳入', l: '治具本体 已用/设计' },
+        { v: pct, l: '治具本体进度' },
+        { v: hasPing ? (fx.ping_used+' / '+fx.ping_life) : '无', l: 'PING针 已用/设计' },
+        { v: pingPct, l: 'PING针进度' },
+        { v: stageText, l: '寿命阶段' }
+    ];
+    var statsHtml = '<div class="fl-modal-stats">'+stats.map(function(s){ return '<div class="fl-modal-stat"><div class="v">'+escHtml(String(s.v))+'</div><div class="l">'+escHtml(s.l)+'</div></div>'; }).join('')+'</div>';
+    var rows = [
+        ['编号', escHtml(fx.code)],
+        ['名称', escHtml(fx.name)],
+        ['类型', escHtml(fx.type||'—')],
+        ['线体', escHtml(lineDisplay(fx.line_name))],
+        ['工序', fx.work_operation_code ? escHtml(fx.work_operation_code) : '—'],
+        ['机型', fx.product_model ? escHtml(fx.product_model) : '—'],
+        ['启用日', escHtml(fx.install_date)],
+        ['治具本体寿命', fx.design_life!=null ? escHtml(fx.design_life)+' 次' : '—'],
+        ['EDO剩余', fx.edo_remaining!=null ? escHtml(fx.edo_remaining)+' 次' : '—'],
+        ['PING针寿命', fx.ping_life ? escHtml(fx.ping_life)+' 次' : '— (非测试治具)'],
+        ['PING针已用', fx.ping_used!=null ? escHtml(fx.ping_used)+' 次' : '—'],
+        ['负责人', escHtml(fx.keeper||'—')],
+        ['储位', escHtml(fx.storage||'—')],
+        ['用量来源', fx.usage_source==='edo' ? 'EDO(真值·可对账)' : fx.usage_source==='op' ? '工序过站' : '未纳入次数管控']
+    ];
+    var detailHtml = '<table class="summary-table"><tbody>'+rows.map(function(r){ return '<tr><td style="text-align:left;width:120px">'+r[0]+'</td><td style="text-align:left">'+r[1]+'</td></tr>'; }).join('')+'</tbody></table>';
+    // 报废记录(若已报废)
+    if (fx.scrap && fx.scrap.status === 'scrapped') {
+        var sc = fx.scrap;
+        var scRows = [
+            ['报废日', escHtml(sc.scrap_date||'—')],
+            ['报废原因', escHtml(sc.reason||'—')],
+            ['处理方式', escHtml(sc.method||'—')],
+            ['操作人', escHtml(sc.operator||'—')],
+            ['替换治具', escHtml(sc.replacement_code||'—')]
+        ];
+        detailHtml += '<div style="margin-top:12px;color:var(--text-secondary);font-size:var(--fs-sm)">报废处置记录</div><table class="summary-table" style="margin-top:6px"><tbody>'+scRows.map(function(r){ return '<tr><td style="text-align:left;width:120px">'+r[0]+'</td><td style="text-align:left">'+r[1]+'</td></tr>'; }).join('')+'</tbody></table>';
+    }
+    flOpenDrawer('治具详情 · ' + escHtml(code), statsHtml + detailHtml);
+}
+
+/* 线材 → 单根详情(L3, 台账全字段+用量+EDO) */
+function flOpenCableDrawer(code){
+    var cb = (currentData.cables || []).find(function(x){ return x.code === code; });
+    if (!cb) { flOpenDrawer('线材详情 · ' + escHtml(code), '<div style="color:var(--text-muted);padding:20px">未找到该线材台账</div>'); return; }
+    var tracked = cb.usage_source === 'edo';
+    var stage = lifeStage(cb);
+    var pct = tracked ? (cb.progress*100).toFixed(1)+'%' : '—';
+    var stageText = stage==='untracked' ? '未纳入' : (stage==='new' ? '新' : stage==='mid' ? '中期' : stage==='over' ? '已超寿命·建议更换' : '接近寿命·建议更换');
+    var stats = [
+        { v: tracked ? (cb.used_count||0)+' / '+(cb.design_life||0) : '未纳入', l: '已用/设计次数' },
+        { v: pct, l: '寿命进度' },
+        { v: stageText, l: '寿命阶段' }
+    ];
+    var statsHtml = '<div class="fl-modal-stats">'+stats.map(function(s){ return '<div class="fl-modal-stat"><div class="v">'+escHtml(String(s.v))+'</div><div class="l">'+escHtml(s.l)+'</div></div>'; }).join('')+'</div>';
+    var rows = [
+        ['编号', escHtml(cb.code)],
+        ['名称', escHtml(cb.name)],
+        ['机型', escHtml(cb.product_model||'—')],
+        ['类型', escHtml(cb.cable_type||'—')],
+        ['规格', escHtml(cb.spec||'—')],
+        ['线体', escHtml(lineDisplay(cb.line_name))],
+        ['启用日', escHtml(cb.install_date)],
+        ['设计寿命', cb.design_life!=null ? escHtml(cb.design_life)+' 次' : '—'],
+        ['EDO剩余', cb.edo_remaining!=null ? escHtml(cb.edo_remaining)+' 次' : '—'],
+        ['负责人', escHtml(cb.keeper||'—')],
+        ['储位', escHtml(cb.storage||'—')],
+        ['用量来源', tracked ? 'EDO(真值·可对账)' : '未纳入次数管控']
+    ];
+    var detailHtml = '<table class="summary-table"><tbody>'+rows.map(function(r){ return '<tr><td style="text-align:left;width:120px">'+r[0]+'</td><td style="text-align:left">'+r[1]+'</td></tr>'; }).join('')+'</tbody></table>';
+    flOpenDrawer('线材详情 · ' + escHtml(code), statsHtml + detailHtml);
+}
+
+function scrollToPanel(id){ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }
+function refreshCurrent(){ loadData(); }
+
+window.addEventListener('resize', ()=>{ [healthChart,fixtureBarChart,cableBarChart,stagePieChart].forEach(c=>c&&c.resize()); });
+
+flInitReveal();  // 卡片错峰级联入场
+loadData();
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+</body>
+</html>

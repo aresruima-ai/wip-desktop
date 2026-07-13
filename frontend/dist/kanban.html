@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作看板 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="libs/echarts.min.js"></script>
+<script src="chart-theme.js"></script>
+<script src="wip-ui.js"></script>
+<style>
+/* ============================================================
+   KANBAN — Phase 4 展示型注意力钩子（克制配置）
+   心法：减权周边 → 衬托焦点卡 → 让焦点活起来
+   primary: 焦点单点高光晕 / 数字滚动 LiveNum / 三态呼吸光效
+   secondary: 卡片错峰级联入场 / 光标跟随光晕 / 状态切换光流
+   常驻呼吸 ≤3（focus光环 + live-dot + flow level-3 已有,不新增）
+   动效走 transform/opacity/box-shadow,零重排
+   ============================================================ */
+
+/* --- 钩子 Token 已由 common.css :root 统一注入，本页仅定义页面级专用样式 --- */
+/* 全局：尊重 reduced-motion(全钩子降级为静态色变) --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .kpi-row.wip .kpi-card,
+  .full-stack .chart-panel,
+  .flow-node { opacity: 1 !important; transform: none !important; }
+}
+
+/* chart-box 容器 */
+.chart-box { width:100%; }
+.chart-panel { margin-bottom:0; }
+
+/* KPI 卡 hover */
+.kpi-row.wip .kpi-card { cursor:pointer; transition:border-color .15s; }
+
+/* 明细表 */
+.kb-table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+.kb-table th, .kb-table td { padding:9px 10px; text-align:left; border-bottom:1px solid var(--line-weak); }
+.kb-table th { color:var(--text-muted); font-weight:600; background:var(--surface-2); position:sticky; top:0; }
+.kb-table td { color:var(--text-secondary); }
+.kb-table tr:hover td { background:var(--brand-glow); color:var(--text-primary); }
+.kb-tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size:var(--fs-2xs); font-weight:600; }
+.kb-tag.green { background:var(--success-dim); color:var(--success); }
+.kb-tag.orange { background:var(--warning-dim); color:var(--warning); }
+.kb-tag.red { background:var(--danger-dim); color:var(--danger); }
+.kb-tag.blue { background:var(--brand-dim); color:var(--brand); }
+.kb-tag.gray { background:rgba(148,163,184,0.14); color:var(--text-secondary); }
+
+/* ============================================================
+   PRIMARY 1 — 焦点单点高光晕(Lone Spotlight)
+   焦点卡为唯一 data-focal,径向高光+顶辉光+呼吸光环+微抬升;
+   激活时同壳层兄弟(KPI/Flow)自动压暗 brightness(.84) 形成 12% 势能差
+   ============================================================ */
+.focus-shell {
+  position: relative;
+  isolation: isolate;
+}
+/* 焦点壳层呼吸光环(正常态品牌蓝慢呼吸) */
+.focus-shell::before {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg,
+    rgba(var(--brand-rgb),0.18) 0%,
+    transparent 35%,
+    transparent 65%,
+    rgba(var(--brand-rgb),0.10) 100%);
+  opacity: 0.6; pointer-events: none; z-index: -1;
+  animation: kb-focus-aura 4.2s ease-in-out infinite;
+}
+@keyframes kb-focus-aura {
+  0%, 100% { opacity: 0.32; }
+  50%      { opacity: 0.72; }
+}
+/* 焦点卡径向顶辉光 + 微抬升 */
+.focus-shell .focus-card {
+  position: relative; z-index: 1;
+  box-shadow: var(--light-depth-1), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+  transform: translateY(-2px);
+}
+.focus-shell .focus-card::after {
+  content: '';
+  display: block;
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 70% at 30% 0%, rgba(var(--brand-rgb),0.16), transparent 55%);
+  pointer-events: none; opacity: 0.7;
+  z-index: 0;
+}
+.focus-shell .focus-content { position: relative; z-index: 1; }
+.focus-shell .focus-side { position: relative; z-index: 1; }
+
+/* 三态光环:warn=琥珀3s / danger=红1.6s快脉冲 */
+.focus-shell.state-warn::before {
+  background: linear-gradient(135deg, rgba(var(--warning-rgb),0.22), transparent 50%, rgba(var(--warning-rgb),0.12));
+  animation-duration: 3s;
+}
+.focus-shell.state-alert::before {
+  background: linear-gradient(135deg, rgba(var(--danger-rgb),0.30), transparent 50%, rgba(var(--danger-rgb),0.18));
+  animation: kb-focus-aura-alert 1.6s ease-in-out infinite;
+}
+@keyframes kb-focus-aura-alert {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.95; }
+}
+/* eyebrow pulse 点随状态变色(替代默认 success 静态) */
+.focus-shell.state-warn .focus-eyebrow .pulse { background: var(--warning); box-shadow: 0 0 0 5px rgba(var(--warning-rgb),0.12); }
+.focus-shell.state-alert .focus-eyebrow .pulse {
+  background: var(--danger); box-shadow: 0 0 0 5px rgba(var(--danger-rgb),0.14);
+  animation: kb-pulse-ring-alert 1.2s ease-out infinite;
+}
+@keyframes kb-pulse-ring-alert {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--danger-rgb),0.6); }
+  70%  { box-shadow: 0 0 0 7px rgba(var(--danger-rgb),0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--danger-rgb),0); }
+}
+
+/* 焦点激活 → 兄弟壳层压暗(JS enforceFocal 切换 .focal-active 于 .wip-page) */
+.wip-page.focal-active .kpi-row.wip,
+.wip-page.focal-active .flow-panel,
+.wip-page.focal-active .full-stack,
+.wip-page.focal-active .ai-suggest {
+  filter: var(--focal-dim);
+  transition: filter var(--dur-enter) ease-out;
+}
+.wip-page.focal-active .focus-shell { filter: none; }
+
+/* ============================================================
+   PRIMARY 3 衬底 — 焦点数值跳动高亮(配合 LiveNum)
+   ============================================================ */
+.focus-shell .focus-meta strong,
+.focus-shell .focus-side .value,
+.focus-shell .focus-detail .value {
+  transition: color var(--dur-enter) ease-out, text-shadow var(--dur-enter) ease-out;
+}
+.focus-shell .flash-up   { color: var(--success) !important; text-shadow: 0 0 14px rgba(var(--success-rgb),0.55); }
+.focus-shell .flash-down { color: var(--danger)  !important; text-shadow: 0 0 14px rgba(var(--danger-rgb),0.55); }
+
+/* KPI 数值变化闪光(与 LiveNum 配合) */
+.kpi-row.wip .kpi-value {
+  transition: color var(--dur-enter) ease-out, text-shadow var(--dur-enter) ease-out;
+}
+.kpi-row.wip .kpi-value.flash-up   { color: var(--success) !important; text-shadow: 0 0 14px rgba(var(--success-rgb),0.55); }
+.kpi-row.wip .kpi-value.flash-down { color: var(--danger)  !important; text-shadow: 0 0 14px rgba(var(--danger-rgb),0.55); }
+.kpi-row.wip .kpi-value.flash-flat { color: var(--brand)   !important; text-shadow: 0 0 12px rgba(var(--brand-rgb),0.45); }
+
+/* ============================================================
+   SECONDARY 1 — 卡片错峰级联入场(进阶版:迁移 ATTN.revealCascade)
+   起手态 opacity:0 由 ATTN.revealCascade 注入 .attn-reveal(JS 注入,避免 CSS 写死致永久不可见),
+   进视口加 .attn-in 显形。删除本地 opacity:0 起手态 + .in/.revealed 类机制。
+   ============================================================ */
+.kpi-row.wip .kpi-card {
+  transition: border-color var(--dur-enter) ease-out;
+}
+.kpi-row.wip .kpi-card.in { opacity: 1; transform: translateY(0) scale(1); }
+
+.full-stack .chart-panel {
+  transition: border-color var(--dur-enter) ease-out;
+}
+.full-stack .chart-panel.revealed { opacity: 1; transform: translateY(0); }
+
+/* Flow 节点:跟随 panel 整体淡入,不单独 IO(因 renderFlow 每次重渲染,避免反复重置)
+   仅保留 hover 提升与 common.css 既有 transition */
+.flow-node { transition: transform var(--dur-enter) ease-out, opacity var(--dur-enter) ease-out; }
+
+/* ============================================================
+   SECONDARY 2 — 光标跟随光晕(Cursor Spotlight, pointer 设备)
+   focus-shell mousemove 写入 --mx/--my,radial 柔光晕跟随
+   ============================================================ */
+@media (pointer: fine) {
+  .focus-shell { --mx: 50%; --my: 50%; }
+  .focus-shell::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: var(--radius-xl);
+    background: radial-gradient(280px circle at var(--mx) var(--my),
+      rgba(var(--brand-rgb),0.10), transparent 60%);
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--dur-enter) ease-out;
+    z-index: 0;
+  }
+  .focus-shell:hover::after { opacity: 1; }
+  .focus-shell > * { position: relative; z-index: 1; }
+}
+
+/* ============================================================
+   SECONDARY 3 — 状态切换光流(State Sweep)
+   子导航/快捷查询切换时注入品牌色光条横扫 520ms
+   ============================================================ */
+.wip-page.sweeping::before {
+  content: '';
+  position: fixed; top: var(--nav-h); left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  box-shadow: var(--glow-brand);
+  z-index: 800; pointer-events: none;
+  animation: kb-state-sweep 520ms ease-out forwards;
+}
+@keyframes kb-state-sweep {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* ============================================================
+   加载反馈 — 骨架屏 Shimmer(fetch 期间覆盖主内容区数值)
+   与 stateSweep 顶部光条不冲突:一个扫顶部、一个盖主内容区。
+   入场一次性节奏(--dur-enter),不与常驻呼吸争抢,densitySafe。
+   骨架非 primary 而是加载反馈,不占用 primary 槽位。
+   ============================================================ */
+.kb-skel {
+  background: linear-gradient(90deg,
+    var(--surface-2, #1c2129) 0%,
+    var(--surface-1-hi, #181d24) 50%,
+    var(--surface-2, #1c2129) 100%);
+  background-size: 200% 100%;
+  animation: kb-shimmer 1.8s var(--ease, cubic-bezier(0.16,1,0.3,1)) infinite;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes kb-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* 骨架覆盖块:绝对定位盖住数值区,零重排(opacity 淡出) */
+.kb-skel-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 1;
+  transition: opacity var(--dur-enter) ease-out;
+}
+.kb-skel-cover.kb-skel-out { opacity: 0; }
+/* reduced-motion:骨架退化为静态色变,仍提供占位但无光流横扫 */
+@media (prefers-reduced-motion: reduce) {
+  .kb-skel { animation: none !important; background: var(--surface-2, #1c2129); }
+}
+</style>
+</head>
+<body>
+<!-- sci-glow removed -->
+<!-- dash-scanline removed -->
+
+<div class="wip-page">
+  <!-- Top Bar — 单层顶栏(状态|快捷|导航|操作) 5栏合一(无FilterBar) -->
+  <div class="top-bar">
+    <div class="tb-seg tb-seg-status">
+      <div class="live-dot" id="liveDot"></div>
+      <span class="time" id="updateTime">数据加载中...</span>
+      <span class="nav-trust-text" id="navDataTrust">产出:过站实时 · 工单:MES · 目标:计划</span>
+    </div>
+    <div class="tb-divider"></div>
+    <div class="tb-seg tb-seg-action">
+      <select class="period-select" id="periodSelect">
+        <option value="realtime">实时</option>
+        <option value="week">本周</option>
+        <option value="month">本月</option>
+        <option value="quarter">本季</option>
+        <option value="half">半年</option>
+        <option value="year">年度</option>
+        <option value="all">全部</option>
+        <option value="custom">自定义</option>
+      </select>
+      <div id="toolbar"></div>
+    </div>
+  </div>
+  <!-- 第二行: subnav 导航 + quickQuery 快捷 -->
+  <div class="subnav-row">
+    <div class="wip-subnav-inner" id="pageSubnav">
+      <div class="left" id="subnavLeft">
+        <button class="active" data-target="focusShell">现场关注</button>
+        <button data-target="flowPanel">产线状态</button>
+        <button data-target="chartGrid">产出/趋势</button>
+        <button data-target="orderSection">工单明细</button>
+        <button data-target="alertSection">异常明细</button>
+      </div>
+    </div>
+    <div class="qq-row" id="quickQuery"></div>
+  </div>
+
+  <!-- Focus Command Panel -->
+  <div class="focus-shell" id="focusShell" data-focal="true">
+    <div class="focus-card">
+      <div class="focus-content">
+        <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">现场关注 · 全部产线</span></div>
+        <div class="focus-title" id="focusTitle">正在读取现场状态...</div>
+        <div class="focus-action" id="focusAction">系统会优先指出达成缺口最大工单与停机产线，给出赶工建议。</div>
+        <div class="focus-meta" id="focusMeta"></div>
+        <div class="focus-detail" id="focusDetail">
+          <div class="focus-detail-block">
+            <div class="label">缺口最大工单</div>
+            <div class="value" id="focusGapOrder">--</div>
+            <div class="sub" id="focusGapSub">点击查看工单明细</div>
+          </div>
+          <div class="focus-detail-block">
+            <div class="label">异常产线 Top3</div>
+            <div class="value" id="focusAlertLines">--</div>
+            <div class="sub">按异常工单数统计</div>
+          </div>
+        </div>
+        <div class="focus-actions" id="focusActions">
+          <button onclick="WipUI.Subnav.scrollTo('orderSection')">查看工单明细</button>
+          <button onclick="WipUI.Subnav.scrollTo('alertSection')">查看异常明细</button>
+          <button onclick="WipUI.Subnav.scrollTo('flowPanel')">查看产线状态</button>
+        </div>
+        <div class="focus-trust" id="focusTrust"></div>
+      </div>
+    </div>
+    <div class="focus-side">
+      <div class="focus-mini" id="focusSide1">
+        <div class="label">今日产出</div>
+        <div class="value" id="focusSide1Val">--</div>
+        <div class="hint" id="focusSide1Hint">过站实时</div>
+      </div>
+      <div class="focus-mini" id="focusSide2">
+        <div class="label">达成率</div>
+        <div class="value" id="focusSide2Val">--</div>
+        <div class="hint" id="focusSide2Hint">完成/计划</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-section-title"><span>核心指标</span><span>点击卡片查看明细</span></div>
+  <div class="kpi-row wip">
+    <div class="kpi-card" style="--kpi-color:var(--brand)" onclick="openKpiDrawer('output')">
+      <div class="kpi-label">今日产出</div><div class="kpi-value" id="kpiOutput">--</div><div class="kpi-sub" id="kpiOutputSub">过站实时</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--brand)" onclick="openKpiDrawer('target')">
+      <div class="kpi-label">计划目标</div><div class="kpi-value" id="kpiTarget">--</div><div class="kpi-sub" id="kpiTargetSub">--</div>
+    </div>
+    <div class="kpi-card" id="kpiRateCard" style="--kpi-color:var(--success)" onclick="openKpiDrawer('rate')">
+      <div class="kpi-label">达成率</div><div class="kpi-value" id="kpiRate">--</div><div class="kpi-sub" id="kpiRateSub">--</div>
+    </div>
+    <div class="kpi-card" id="kpiAlertCard" style="--kpi-color:var(--danger)" onclick="openKpiDrawer('alert')">
+      <div class="kpi-label">异常数</div><div class="kpi-value" id="kpiAlert">--</div><div class="kpi-sub" id="kpiAlertSub">未关闭异常</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--success)" onclick="openKpiDrawer('lines')">
+      <div class="kpi-label">在线产线</div><div class="kpi-value" id="kpiLines">--</div><div class="kpi-sub" id="kpiLinesSub">--</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--brand)" onclick="openKpiDrawer('orders')">
+      <div class="kpi-label">工单数</div><div class="kpi-value" id="kpiOrders">--</div><div class="kpi-sub" id="kpiOrdersSub">--</div>
+    </div>
+  </div>
+
+  <!-- AI Suggest -->
+  <div class="ai-suggest" id="aiSuggest" style="display:none">
+    <div class="icon">&#x1F4A1;</div>
+    <div class="content">
+      <div class="title" id="aiSugTitle">--</div>
+      <div class="detail" id="aiSugDetail">--</div>
+    </div>
+  </div>
+
+  <!-- Flow Panel: 产线节点 -->
+  <div class="flow-panel" id="flowPanel">
+    <div class="flow-header">
+      <h3>产线状态 · 实时产出与达成</h3>
+    </div>
+    <div class="process-flow" id="processFlow"></div>
+  </div>
+
+  <!-- Charts — 全宽堆叠 -->
+  <div class="full-stack" id="chartGrid">
+    <div class="chart-panel">
+      <div class="chart-panel-title">&#x1F4CA; 各线今日产出</div>
+      <div class="chart-box" id="chartLine"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">&#x1F3AF; 工单进度</div>
+      <div class="chart-box" id="chartOrder"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">&#x26A0; 异常分布(按产线)</div>
+      <div class="chart-box chart-box-sm" id="chartAlert"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">&#x1F4E6; 产出分段(组装/测试/包装)</div>
+      <div class="chart-box chart-box-sm" id="stageChart"></div>
+    </div>
+  </div>
+
+  <!-- 工单明细 -->
+  <div id="orderSection" style="padding:0 0 8px">
+    <div class="chart-panel">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>&#x1F4CB; 工单明细</span>
+        <span style="font-size:var(--fs-xs);color:var(--text-muted)" id="orderCountHint">--</span>
+      </div>
+      <div style="max-height:360px;overflow:auto;border:1px solid var(--line-weak);border-radius:var(--radius-lg);margin-top:8px">
+        <table class="kb-table" id="orderTable">
+          <thead><tr><th>工单号</th><th>产品型号</th><th>计划</th><th>完成</th><th>达成率</th><th>状态</th></tr></thead>
+          <tbody id="orderTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 异常明细 -->
+  <div id="alertSection" style="padding:0 0 24px">
+    <div class="chart-panel">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>&#x26A0; 异常明细</span>
+        <span style="font-size:var(--fs-xs);color:var(--text-muted)" id="alertCountHint">--</span>
+      </div>
+      <div style="max-height:360px;overflow:auto;border:1px solid var(--line-weak);border-radius:var(--radius-lg);margin-top:8px">
+        <table class="kb-table" id="alertTable">
+          <thead><tr><th>描述</th><th>优先级</th><th>类别</th><th>产线</th><th>负责人</th><th>状态</th></tr></thead>
+          <tbody id="alertTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-mask" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h3 id="drawerTitle">--</h3>
+    <div style="display:flex;gap:8px">
+      <button class="refresh-btn" id="drawerExport">&#x2B07; 导出</button>
+      <button class="drawer-close" id="drawerCloseBtn">&times;</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-stats" id="drawerStats"></div>
+    <div id="drawerContent"></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let dashboardData = null, taskOrders = [], exceptions = [], actions = [];
+let stageData = null; // 分段API结果 {stages,total_output,total_bad,unknown_output}
+let charts = {};
+let currentRange = { dateFrom: '', dateTo: '' };
+let currentPeriod = 'realtime'; // 当前周期标识,供 QuickQuery/Toolbar 复用
+let filter = {}; // 快捷查询栏筛选状态: onlyGap / onlyUrgent / onlyAlert
+
+/* ============================================================
+   KANBAN 注意力钩子模块(Phase 4 展示型克制配置)
+   - LiveNum: easeOutExpo 数字滚动,替换 setKpi 的 textContent
+   - enforceFocal: 焦点激活/取消 → 兄弟壳层压暗/恢复
+   - revealCascade: IO + 40ms 错峰入场(KPI/Chart/Flow)
+   - cursorSpotlight: focus-shell mousemove → --mx/--my
+   - stateSweep: 切换时注入 .sweeping 触发顶部光条横扫
+   - focusState: 焦点三态(normal/warn/danger)光环驱动
+   全程尊重 prefers-reduced-motion,零重排(transform/opacity/box-shadow)
+   ============================================================ */
+const KanbanHooks = (() => {
+  // 进阶版:reduced-motion 单一真源查 ATTN.REDUCED
+  const REDUCED = (window.ATTN && ATTN.REDUCED) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const FINE_POINTER = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+  const lastKPI = {};        // 记录上次值,判断涨/跌/平
+  const flashTimers = {};    // 500ms debounce 同节点闪光
+  let revealObs = null;
+  let sweepTimer = null;
+  let focalActive = false;
+
+  /* ===== easeOutExpo 等价缓动 ===== */
+  function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+
+  /* ===== LiveNum 数字滚动 =====
+   * animate(el, target, opts) — RAF+easeOutExpo 平滑爬值
+   *   opts.format(val)=>string  自定义格式化(千分位/小数/百分号)
+   *   opts.dur                  时长,默认 850ms
+   * 支持纯数字与"12.3%"格式(剥离%后滚动再拼回)
+   * reduced-motion 时直接赋值
+   */
+  function parseNum(v) {
+    if (v == null) return { num: 0, suffix: '' };
+    const s = String(v).trim();
+    const m = s.match(/^(-?[\d,]+(?:\.\d+)?)(.*)$/);
+    if (!m) return { num: 0, suffix: '' }; // 占位符("--"/"加载中"等)不作suffix, 否则会被拼回目标值致"1,038--"
+    return { num: parseFloat(m[1].replace(/,/g, '')) || 0, suffix: m[2] || '' };
+  }
+  function animate(el, target, opts) {
+    if (!el) return;
+    opts = opts || {};
+    const dur = opts.dur || 850;
+    const fmt = opts.format || (v => Math.round(v).toLocaleString('en-US'));
+    // 统一透传 ATTN.liveNum:字符串 target 先 parseNum 拆出 num + suffix,suffix 经 format 拼回
+    const toObj = (typeof target === 'string') ? parseNum(target) : { num: target, suffix: '' };
+    const suffix = toObj.suffix || ((parseNum(el.textContent) || {}).suffix || '');
+    if (window.ATTN && ATTN.liveNum) {
+      ATTN.liveNum(el, toObj.num, { dur: dur, format: function(v){ return fmt(v) + suffix; } });
+      return;
+    }
+    if (REDUCED) { el.textContent = (typeof target === 'string') ? target : fmt(target); return; }
+    const fromObj = parseNum(el.textContent);
+    const from = fromObj.num, to = toObj.num;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const cur = from + (to - from) * easeOutExpo(t);
+      el.textContent = fmt(cur) + suffix;
+      if (t < 1) requestAnimationFrame(step);
+      else el.textContent = (typeof target === 'string') ? target : (fmt(to) + suffix);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ===== flashNode 数值变化高亮 (进阶版:叠加透传 ATTN.flash 涨绿跌红) ===== */
+  function flashNode(el, oldVal, newVal) {
+    if (!el || REDUCED) return;
+    if (window.ATTN && ATTN.flash) { try { ATTN.flash(el, oldVal, newVal); } catch(e){} }
+    const key = el.id || el.dataset.kpi;
+    if (!key) return;
+    if (flashTimers[key]) return; // 500ms 内同节点防抖
+    const o = parseNum(oldVal).num, n = parseNum(newVal).num;
+    let cls = 'flash-flat';
+    if (n > o) cls = 'flash-up';
+    else if (n < o) cls = 'flash-down';
+    el.classList.add(cls);
+    flashTimers[key] = setTimeout(() => {
+      el.classList.remove('flash-up', 'flash-down', 'flash-flat');
+      flashTimers[key] = null;
+    }, 900);
+  }
+
+  /* ===== enforceFocal 焦点激活/取消 (进阶版:叠加 ATTN.enforceFocal 统一压暗,保留 .focal-active 兼容本地 CSS) =====
+   * 给 .wip-page 切 .focal-active → CSS 压暗兄弟壳层
+   * 节流: 进入 focus 视口激活,离开或切换取消
+   */
+  function enforceFocal(active) {
+    if (active === focalActive) return;
+    focalActive = active;
+    const page = document.querySelector('.wip-page');
+    if (!page) return;
+    if (active) page.classList.add('focal-active');
+    else page.classList.remove('focal-active');
+    // 透传统一 focal 机制(ATTN.enforceFocal 认 data-focal=true)
+    if (window.ATTN && ATTN.enforceFocal) { try { ATTN.enforceFocal(page); } catch(e){} }
+  }
+
+  /* ===== revealCascade IO 错峰入场 =====
+   * KPI 卡 + chart-panel + flow-node 进视口按 index 40ms 错峰
+   * threshold 0.12, once
+   */
+  function setupReveal() {
+    // 进阶版:迁移 ATTN.revealCascade(删除本地 IO + .in/.revealed 类机制)
+    if (window.ATTN && ATTN.revealCascade) {
+      try { ATTN.revealCascade('.kpi-row.wip .kpi-card, .full-stack .chart-panel', { step: 40, cap: 200 }); } catch(e){}
+    }
+  }
+
+  /* ===== reRevealKpi KPI 卡重新入场(数据刷新后保留已入场状态,避免反复动画) =====
+   * KPI 卡 DOM 稳定(loadData 不重建 .kpi-card,仅 setKpi 改 textContent),
+   * 故首次入场后无需重置。本函数预留,供后续如需重播时调用。
+   */
+
+  /* ===== cursorSpotlight 光标跟随光晕 ===== */
+  function setupCursorSpotlight() {
+    if (REDUCED || !FINE_POINTER) return;
+    const shell = document.getElementById('focusShell');
+    if (!shell) return;
+    shell.addEventListener('mousemove', e => {
+      const r = shell.getBoundingClientRect();
+      shell.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      shell.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  }
+
+  /* ===== focusState 焦点三态光环 =====
+   * sev: 'normal' | 'warn' | 'danger' → 切 .state-warn / .state-alert
+   */
+  function setFocusState(sev) {
+    const shell = document.getElementById('focusShell');
+    if (!shell) return;
+    shell.classList.remove('state-warn', 'state-alert');
+    if (sev === 'warn') shell.classList.add('state-warn');
+    else if (sev === 'danger') shell.classList.add('state-alert');
+  }
+
+  /* ===== stateSweep 切换光流 =====
+   * 注入 .sweeping 于 .wip-page,520ms 后移除(顶部品牌色光条横扫)
+   */
+  function stateSweep() {
+    if (REDUCED) return;
+    const page = document.querySelector('.wip-page');
+    if (!page) return;
+    if (sweepTimer) clearTimeout(sweepTimer);
+    page.classList.remove('sweeping');
+    void page.offsetWidth; // 强制重排以重启动画
+    page.classList.add('sweeping');
+    sweepTimer = setTimeout(() => page.classList.remove('sweeping'), 560);
+  }
+
+  /* ===== focusScrollActivate 滚动时焦点进入视口激活 focal ===== */
+  function setupFocalActivate() {
+    const shell = document.getElementById('focusShell');
+    if (!shell || REDUCED || !('IntersectionObserver' in window)) {
+      enforceFocal(true); return;
+    }
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(en => enforceFocal(en.isIntersecting && en.intersectionRatio > 0.3));
+    }, { threshold: [0, 0.3, 0.6] });
+    obs.observe(shell);
+  }
+
+  /* ===== 骨架屏 Shimmer(fetch 期间覆盖主内容区数值,数据到达淡出) =====
+   * injectSkeleton(): 给 .focus-shell .focus-card 与 .kpi-row.wip .kpi-card
+   *   的数值区注入 .kb-skel-cover 覆盖块(内含 .kb-skel 光流横扫);
+   *   高度匹配焦点标题/KPI 数值区,绝对定位零重排。
+   * removeSkeleton(): renderKPI/renderFocus 执行后 280ms opacity 淡出移除。
+   * reduced-motion 时跳过注入,直接显示真实数据(占位已退化为静态色变)。
+   * 与 stateSweep 顶部光条不冲突(一个扫顶部、一个盖主内容区)。
+   */
+  function injectSkeleton() {
+    if (REDUCED) return; // reduce-motion 跳过注入,直接显示真实数据
+    // 焦点卡:覆盖标题+meta+detail 数值区(focus-content 主体,不含 side/eyebrow)
+    const focusCard = document.querySelector('.focus-shell .focus-card');
+    if (focusCard && !focusCard.querySelector('.kb-skel-cover')) {
+      const cov = document.createElement('div');
+      cov.className = 'kb-skel-cover';
+      cov.innerHTML =
+        '<div class="kb-skel" style="position:absolute;top:54px;left:32px;right:32px;height:26px"></div>' +
+        '<div class="kb-skel" style="position:absolute;top:92px;left:32px;width:70%;height:16px"></div>' +
+        '<div class="kb-skel" style="position:absolute;top:120px;left:32px;width:55%;height:14px"></div>';
+      focusCard.appendChild(cov);
+    }
+    // KPI 卡:覆盖数值区(kpi-value),不盖 label/sub(保留结构感)
+    document.querySelectorAll('.kpi-row.wip .kpi-card').forEach(card => {
+      if (card.querySelector('.kb-skel-cover')) return;
+      const valEl = card.querySelector('.kpi-value');
+      if (!valEl) return;
+      const cov = document.createElement('div');
+      cov.className = 'kb-skel-cover';
+      cov.innerHTML = '<div class="kb-skel" style="position:absolute;left:20px;right:20px;top:' +
+        (valEl.offsetTop) + 'px;height:' + (valEl.offsetHeight || 44) + 'px"></div>';
+      card.appendChild(cov);
+    });
+  }
+  function removeSkeleton() {
+    const covers = document.querySelectorAll('.kb-skel-cover');
+    if (!covers.length) return;
+    if (REDUCED) { covers.forEach(c => c.remove()); return; }
+    covers.forEach(c => c.classList.add('kb-skel-out'));
+    setTimeout(() => {
+      document.querySelectorAll('.kb-skel-cover').forEach(c => c.remove());
+    }, 280); // --dur-enter 淡出后清理
+  }
+
+  function init() {
+    setupCursorSpotlight();
+    setupReveal();
+    setupFocalActivate();
+  }
+
+  return {
+    animate, flashNode, enforceFocal, setFocusState, stateSweep,
+    setupReveal, init, lastKPI, injectSkeleton, removeSkeleton
+  };
+})();
+
+const LN = {
+  'ASS_Line1':'整机1线','ASS_Line2':'功放线','ASS_Line2-1':'功放2线','ASS_Line3':'整机3线',
+  'PKG_Line1':'包装1线','QJG_Line1':'前加工1线','QJG_Line2':'前加工3线屏组件',
+  'QJG_Line3':'前加工3线','QJG_Line4':'附件盒包装3线'
+};
+
+// ===== 秒开: 用 localStorage 中上次缓存数据即时绘制, 消除白屏 (peek 失败静默 fallback) =====
+// kanban 的渲染函数均为覆盖式(renderFocus/renderKPI/renderAI/renderFlow/renderCharts/renderStageChart/
+// renderOrders/renderAlerts 覆盖 DOM 而非累加), 幂等可重复调用, 故全部参与 peek 秒开。
+function peekWarmRender(dateFrom, dateTo) {
+  try {
+    var dashURL = `${API}/api/dashboard?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    var ordersURL = `${API}/api/task-orders?limit=200`;
+    var excURL = `${API}/api/exceptions`;
+    var stageURL = `${API}/api/production-by-stage?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    var ckDash = window.apiFetch.peek(dashURL);
+    var ckOrders = window.apiFetch.peek(ordersURL);
+    var ckExc = window.apiFetch.peek(excURL);
+    var ckStage = window.apiFetch.peek(stageURL);
+    if (!ckDash && !ckOrders && !ckExc && !ckStage) return false; // 无任何缓存, 跳过秒开
+
+    // 仅在缓存存在时覆盖对应数据片段, 避免用旧值清掉已有新值
+    if (ckDash) dashboardData = ckDash.val;
+    if (ckOrders) {
+      var ov = ckOrders.val;
+      taskOrders = Array.isArray(ov) ? ov : (ov && ov.rows) ? ov.rows : [];
+    }
+    if (ckExc) {
+      var ev = ckExc.val;
+      exceptions = (ev && ev.rows) ? ev.rows : Array.isArray(ev) ? ev : [];
+    }
+    if (ckStage) {
+      var sv = ckStage.val;
+      stageData = (sv && sv.success !== false) ? sv : null;
+    }
+
+    currentRange = { dateFrom: dateFrom, dateTo: dateTo };
+    applyFilter();
+    renderFocus();
+    renderKPI();
+    renderAI();
+    renderFlow();
+    renderCharts();
+    renderStageChart();
+    renderOrders();
+    renderAlerts();
+    return true; // 秒开成功, 已有数据, 无需骨架屏
+  } catch (e) { /* peek 失败静默, 不影响后续真实 fetch */ return false; }
+}
+
+// ===== 加载数据 =====
+async function loadData(dateFrom, dateTo) {
+  currentRange = { dateFrom, dateTo };
+  WipUI.UpdateBar.setTime('加载中...');
+  // 秒开: 先用上次缓存即时绘制, 再发起真实请求覆盖。秒开成功(已有缓存数据)则跳过骨架屏
+  var warmed = peekWarmRender(dateFrom, dateTo);
+  // 骨架屏 Shimmer: 仅在无缓存数据时注入覆盖块, 盖住焦点/KPI 数值区
+  if (!warmed) KanbanHooks.injectSkeleton();
+  try {
+    const [dash, orders, exc, act, stage] = await Promise.all([
+      apiFetch(`${API}/api/dashboard?dateFrom=${dateFrom}&dateTo=${dateTo}`).catch(() => null),
+      apiFetch(`${API}/api/task-orders?limit=200`).catch(() => []),
+      apiFetch(`${API}/api/exceptions`).catch(() => ({ rows: [] })),
+      apiFetch(`${API}/api/action-items`).catch(() => ({ rows: [] })),
+      apiFetch(`${API}/api/production-by-stage?dateFrom=${dateFrom}&dateTo=${dateTo}`).catch(() => null)
+    ]);
+
+    dashboardData = dash;
+    taskOrders = Array.isArray(orders) ? orders : (orders.rows || []);
+    exceptions = (exc && exc.rows) || [];
+    actions = (act && act.rows) || [];
+    stageData = (stage && stage.success !== false) ? stage : null;
+
+    // 应用快捷查询栏筛选
+    applyFilter();
+
+    renderFocus();
+    renderKPI();
+    renderAI();
+    renderFlow();
+    renderCharts();
+    renderStageChart();
+    renderOrders();
+    renderAlerts();
+
+    // renderKPI/renderFocus 执行后,骨架屏 280ms opacity 淡出移除
+    KanbanHooks.removeSkeleton();
+
+    const now = new Date();
+    WipUI.UpdateBar.setTime(`更新于 ${now.toLocaleTimeString('zh-CN')} · ${dateFrom===dateTo?dateFrom:dateFrom+'~'+dateTo}`);
+  } catch (e) {
+    console.error(e);
+    KanbanHooks.removeSkeleton(); // 加载失败也清理骨架,避免残留覆盖
+    WipUI.UpdateBar.setTime('加载失败，请检查网络');
+  }
+}
+
+// ===== 应用快捷查询栏筛选(过滤 taskOrders / line_summary) =====
+function applyFilter() {
+  // 先从 dashboardData 取全量,再按 filter 过滤
+  const allOrders = (dashboardData && dashboardData.task_orders) || taskOrders;
+  const allLines = (dashboardData && dashboardData.line_summary) || [];
+
+  let filtOrders = allOrders, filtLines = allLines;
+
+  if (filter.onlyGap) {
+    // 达成缺口:达成率 < 80% 且未完成
+    filtOrders = allOrders.filter(o => {
+      const qty = o.qty || 0, done = o.completed_qty || 0;
+      const p = qty > 0 ? done / qty * 100 : 0;
+      const isActive = o.status !== '已完成' && o.status !== 'done' && done < qty;
+      return isActive && p < 80;
+    });
+    // 产线:按估算目标达成 < 80%
+    const totalOut = allLines.reduce((s, l) => s + (l.output || 0), 0);
+    const avgTarget = allLines.length ? totalOut / allLines.length * 1.1 : 0;
+    filtLines = allLines.filter(l => avgTarget > 0 && (l.output || 0) / avgTarget < 0.8);
+  } else if (filter.onlyUrgent) {
+    // 紧急工单:高优先级或状态为紧急/加急,达成率 < 50% 视为紧急缺口
+    filtOrders = allOrders.filter(o => {
+      const qty = o.qty || 0, done = o.completed_qty || 0;
+      const p = qty > 0 ? done / qty * 100 : 0;
+      const pri = (o.priority || '') + (o.remark || '');
+      return /紧急|加急|urgent|high/i.test(pri) || p < 50;
+    });
+  } else if (filter.onlyAlert) {
+    // 异常产线:有未关闭异常的产线
+    const alertLines = new Set();
+    exceptions.forEach(e => {
+      if (e.status === 'closed' || e.status === 'done') return;
+      const ln = e.line_name || e.line || '';
+      if (ln) alertLines.add(ln);
+    });
+    filtLines = allLines.filter(l => alertLines.has(l.name) || alertLines.has(l.code));
+    filtOrders = allOrders.filter(o => {
+      const ln = o.line_name || o.line || '';
+      return alertLines.has(ln);
+    });
+  }
+
+  // 回写过滤结果到 dashboardData(供 renderFocus/KPI/Charts/Orders 使用)
+  if (dashboardData) {
+    dashboardData.task_orders = filtOrders;
+    dashboardData.line_summary = filtLines;
+  } else {
+    dashboardData = { task_orders: filtOrders, line_summary: filtLines, upph: null };
+    taskOrders = filtOrders;
+  }
+}
+
+// 目标产出 = Σ(线目标UPH × 线工时), 仅汇总已配置目标UPH的线; 无任何配置→target=0(达成率不可算)
+// 替代旧的 upph.target×hours×lineCount 均匀假设; 披露 target_match_rate(多少比例产出有目标配置)
+function computeTargetSummary(d) {
+  const lines = (d && d.line_summary) || [];
+  let target = 0, configuredOutput = 0, configured = 0;
+  lines.forEach(l => { if (l.target_uph != null && l.shift_hours != null) { target += l.target_uph * l.shift_hours; configuredOutput += l.output; configured++; } });
+  const output = d && d.upph ? (d.upph.total_output || 0) : 0;
+  const matchRate = d && d.upph ? (d.upph.target_match_rate || 0) : 0;
+  const targetR = Math.round(target);
+  // 达成率口径: 配置线产出 / 配置线目标(与目标同口径); 未配置线产出不计入分子, 由matchRate披露覆盖比例
+  const rate = targetR > 0 ? configuredOutput / targetR : 0;
+  return { target: targetR, rate, ratePct: (rate * 100).toFixed(1), output, configuredOutput, matchRate, hasConfig: configured > 0, configured, total: lines.length };
+}
+
+// ===== Focus 焦点判断 =====
+function renderFocus() {
+  const d = dashboardData || {};
+  const ts = computeTargetSummary(d);
+  const output = ts.output;
+  const target = ts.target;
+  const rate = ts.rate;
+  const ratePct = ts.ratePct;
+  const openExc = exceptions.filter(e => e.status !== 'closed' && e.status !== 'done').length;
+
+  // 找缺口最大工单
+  let gapOrder = null, gapPct = 100;
+  (d.task_orders || taskOrders).forEach(t => {
+    const p = t.progress != null ? t.progress : (t.qty > 0 ? (t.completed_qty || 0) / t.qty * 100 : 0);
+    const isActive = t.status !== '已完成' && t.status !== 'done' && (t.completed_qty || 0) < (t.qty || 0);
+    if (isActive && p < gapPct) { gapPct = p; gapOrder = t; }
+  });
+
+  // 找停机/异常产线
+  const lineAlerts = {};
+  exceptions.forEach(e => {
+    if (e.status === 'closed' || e.status === 'done') return;
+    const ln = e.line_name || e.line || '未知';
+    lineAlerts[ln] = (lineAlerts[ln] || 0) + 1;
+  });
+  const alertLines = Object.entries(lineAlerts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const maxAlert = alertLines.length ? alertLines[0][1] : 0;
+
+  // 焦点判断:有停机产线/异常多 danger,达成率低 warn,否则 normal
+  const sev = WipUI.Focus.severity(openExc, { danger: 8, warn: 3 });
+  const rateSev = rate > 0 && rate < 0.6 ? 'danger' : rate < 0.8 ? 'warn' : 'normal';
+  const finalSev = (sev === 'danger' || rateSev === 'danger') ? 'danger' : (sev === 'warn' || rateSev === 'warn') ? 'warn' : 'normal';
+
+  // 三态呼吸光环驱动:normal=蓝慢呼吸 / warn=琥珀 / danger=红快脉冲
+  KanbanHooks.setFocusState(finalSev === 'danger' ? 'danger' : finalSev === 'warn' ? 'warn' : 'normal');
+
+  const titleEl = document.getElementById('focusTitle');
+  const scopeEl = document.getElementById('focusScope');
+  let title = '', action = '';
+  scopeEl.textContent = `现场关注 · ${currentRange.dateFrom === currentRange.dateTo ? '实时' : (currentRange.dateFrom + '~' + currentRange.dateTo)}`;
+
+  if (finalSev === 'danger' && alertLines.length) {
+    title = `${alertLines[0][0]} 当前异常 ${alertLines[0][1]} 起,需立即排查`;
+    action = `建议优先排查 ${alertLines.map(a => a[0]).join('、')} 的异常情况,核实停机原因并恢复生产。`;
+  } else if (gapOrder) {
+    const gap = ((gapOrder.qty || 0) - (gapOrder.completed_qty || 0));
+    title = `今日达成 ${ratePct}%,工单 ${gapOrder.task_no || gapOrder.taskNo} 缺口最大(达成 ${gapPct.toFixed(0)}%)`;
+    action = `建议优先赶工工单 ${gapOrder.task_no || gapOrder.taskNo},剩余 ${gap} 件,产品 ${gapOrder.product_model || gapOrder.productModel || '--'}。`;
+  } else if (output === 0 && target === 0) {
+    title = `今日暂无过站数据,待 MES 同步`;
+    action = `产线无工单过站记录,确认数据同步状态或筛选条件。`;
+  } else {
+    title = `今日达成 ${ratePct}%,现场运行平稳`;
+    action = `产出 ${output} / 目标 ${Math.round(target)},异常 ${openExc} 起。继续保持当前节拍。`;
+  }
+  titleEl.innerHTML = finalSev === 'danger' ? `<span class="danger">${escapeHtml(title)}</span>` : escapeHtml(title);
+  document.getElementById('focusAction').textContent = action;
+
+  // focusMeta
+  document.getElementById('focusMeta').innerHTML = WipUI.Focus.metaChips([
+    { val: output, label: '今日产出' },
+    { val: Math.round(target), label: '目标' },
+    { val: ratePct + '%', label: '达成率' },
+    { val: openExc, label: '异常数' }
+  ]);
+
+  // focusDetail
+  document.getElementById('focusGapOrder').textContent = gapOrder ? (gapOrder.task_no || gapOrder.taskNo || '--') : '无缺口工单';
+  document.getElementById('focusGapSub').textContent = gapOrder ? `${gapOrder.product_model || gapOrder.productModel || '--'} · 缺口 ${((gapOrder.qty || 0) - (gapOrder.completed_qty || 0))} 件` : '所有工单已完成';
+  document.getElementById('focusAlertLines').textContent = alertLines.length ? alertLines.map(a => `${a[0]}(${a[1]})`).join('、') : '无异常产线';
+
+  // focusSide
+  const side1 = document.getElementById('focusSide1');
+  side1.className = 'focus-mini' + (WipUI.Focus.sideMiniState(0, {}) || '');
+  const side1Val = document.getElementById('focusSide1Val');
+  const side1Prev = KanbanHooks.lastKPI['focusSide1Val'];
+  if (side1Prev !== undefined && String(side1Prev) !== String(output)) KanbanHooks.flashNode(side1Val, side1Prev, output);
+  KanbanHooks.animate(side1Val, output, { format: x => Math.round(x).toLocaleString('en-US'), dur: 850 });
+  KanbanHooks.lastKPI['focusSide1Val'] = output;
+  document.getElementById('focusSide1Hint').textContent = `目标 ${Math.round(target)}`;
+
+  const side2 = document.getElementById('focusSide2');
+  const rateState = rate < 0.6 ? 'danger' : rate < 0.8 ? 'warn' : '';
+  side2.className = 'focus-mini' + (rateState ? ' ' + rateState : '');
+  const side2Val = document.getElementById('focusSide2Val');
+  const side2NewVal = ratePct + '%';
+  const side2Prev = KanbanHooks.lastKPI['focusSide2Val'];
+  if (side2Prev !== undefined && String(side2Prev) !== String(side2NewVal)) KanbanHooks.flashNode(side2Val, side2Prev, side2NewVal);
+  KanbanHooks.animate(side2Val, side2NewVal, { format: x => x.toFixed(1), dur: 850 });
+  KanbanHooks.lastKPI['focusSide2Val'] = side2NewVal;
+  document.getElementById('focusSide2Hint').textContent = rateState === 'danger' ? '低于60%,紧急' : rateState === 'warn' ? '低于80%,关注' : '达成良好';
+
+  // focusTrust
+  document.getElementById('focusTrust').innerHTML = WipUI.Focus.trustLabel([
+    '产出:过站实时', '工单:MES', '目标:计划', '异常:人工录入'
+  ]);
+
+  // navDataTrust
+  document.getElementById('navDataTrust').textContent = `产出:过站实时 · 工单:MES · 异常 ${openExc} 起 · 更新 ${new Date().toLocaleTimeString('zh-CN')}`;
+
+  // KPI 卡 alert 闪烁
+  const alertCard = document.getElementById('kpiAlertCard');
+  if (alertCard) alertCard.classList.toggle('alert', openExc >= 5);
+  const rateCard = document.getElementById('kpiRateCard');
+  if (rateCard) rateCard.classList.toggle('alert', rate > 0 && rate < 0.6);
+}
+
+// ===== KPI =====
+function renderKPI() {
+  const d = dashboardData || {};
+  const ts = computeTargetSummary(d);
+  const output = ts.output;
+  const target = ts.target;
+  const rate = ts.hasConfig ? ts.ratePct : '—';
+  const openExc = exceptions.filter(e => e.status !== 'closed' && e.status !== 'done').length;
+  const lines = (d.line_summary || []).length;
+  const orders = (d.task_orders || taskOrders).length;
+  const offline = d.upph && d.upph.offline_output!=null ? d.upph.offline_output : null;
+
+  setKpi('kpiOutput', output, 'kpiOutputSub', `下线 ${offline!=null?Math.round(offline).toLocaleString():'--'} · ${lines} 条产线`);
+  setKpi('kpiTarget', ts.hasConfig ? target : '—', 'kpiTargetSub', ts.hasConfig ? `计划目标·${ts.configured}/${ts.total}线` : `未配置·仅${ts.matchRate}%产出有配置`);
+  setKpi('kpiRate', ts.hasConfig ? rate + '%' : '—', 'kpiRateSub', !ts.hasConfig ? '目标未配置' : (parseFloat(rate) < 80 ? '低于80%需关注' : '达成良好'));
+  setKpi('kpiAlert', openExc, 'kpiAlertSub', openExc >= 5 ? '异常较多' : '未关闭异常');
+  setKpi('kpiLines', lines, 'kpiLinesSub', '在线产线');
+  setKpi('kpiOrders', orders, 'kpiOrdersSub', '工单总数');
+}
+function setKpi(valId, val, subId, sub) {
+  const v = document.getElementById(valId);
+  if (v) {
+    // 数字滚动 + 变化闪光(涨绿/跌红/平蓝)
+    const prev = KanbanHooks.lastKPI[valId];
+    if (prev !== undefined && String(prev) !== String(val)) {
+      KanbanHooks.flashNode(v, prev, val);
+    }
+    // 依据目标值精度选择格式化:含小数则保留1位,否则取整千分位
+    const valStr = String(val);
+    const hasDecimal = /^-?[\d,]+\.\d+%?$/.test(valStr.trim());
+    const isNumeric = /^-?[\d,]+(\.\d+)?%?$/.test(valStr.trim());
+    KanbanHooks.animate(v, val, {
+      format: x => {
+        if (!isNumeric) return valStr;
+        return (hasDecimal ? x.toFixed(1) : Math.round(x).toLocaleString('en-US'));
+      },
+      dur: 850
+    });
+    KanbanHooks.lastKPI[valId] = val;
+  }
+  const s = document.getElementById(subId); if (s) s.textContent = sub;
+}
+
+// ===== AI 建议 =====
+function renderAI() {
+  const d = dashboardData || {};
+  const ts = computeTargetSummary(d);
+  const output = ts.output;
+  const target = ts.target;
+  const rate = ts.rate;
+  const openExc = exceptions.filter(e => e.status !== 'closed' && e.status !== 'done').length;
+
+  let title = '', detail = '';
+  if (rate > 0 && rate < 0.6) {
+    title = '达成缺口告警';
+    detail = `今日达成率仅 ${(rate * 100).toFixed(1)}%,低于 60% 红线。建议立即盘点在制工单,优先赶工缺口最大工单,排查产线停机/瓶颈。`;
+  } else if (openExc >= 5) {
+    title = '异常堆积提醒';
+    detail = `当前未关闭异常 ${openExc} 起,集中在 ${topAlertLines(3)}。建议安排专人跟进,优先处理高优先级项。`;
+  } else if (rate < 0.8) {
+    title = '达成率偏低';
+    detail = `今日达成 ${(rate * 100).toFixed(1)}%,低于 80% 关注线。建议关注低产出产线,调整节拍或加班补产。`;
+  } else {
+    document.getElementById('aiSuggest').style.display = 'none';
+    return;
+  }
+  document.getElementById('aiSugTitle').textContent = title;
+  document.getElementById('aiSugDetail').textContent = detail;
+  document.getElementById('aiSuggest').style.display = 'flex';
+}
+function topAlertLines(n) {
+  const m = {};
+  exceptions.forEach(e => { if (e.status === 'closed' || e.status === 'done') return; const ln = e.line_name || e.line || '未知'; m[ln] = (m[ln] || 0) + 1; });
+  return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, n).map(a => a[0]).join('、') || '各线';
+}
+
+// ===== Flow 产线节点 =====
+function renderFlow() {
+  const lines = (dashboardData && dashboardData.line_summary) || [];
+  const oeeByLine = (dashboardData && dashboardData.oee_by_line) || [];
+  const alertMap = {};
+  exceptions.forEach(e => { if (e.status === 'closed' || e.status === 'done') return; const ln = e.line_name || e.line || ''; if (ln) alertMap[ln] = (alertMap[ln] || 0) + 1; });
+
+  const flow = document.getElementById('processFlow');
+  if (!lines.length) { flow.innerHTML = '<div style="color:var(--text-muted);padding:20px">暂无产线数据</div>'; return; }
+
+  // 估算目标(按平均)
+  const totalOut = lines.reduce((s, l) => s + (l.output || 0), 0);
+  const avgTarget = lines.length ? Math.round(totalOut / lines.length * 1.1) : 0;
+
+  let html = '';
+  lines.forEach((l, i) => {
+    const name = l.name || LN[l.code] || l.code || '--';
+    const out = l.output || 0;
+    const tgt = avgTarget || 1;
+    const r = out / tgt;
+    const alertCnt = alertMap[name] || alertMap[l.code] || 0;
+    let level = 1;
+    if (alertCnt >= 2 || r < 0.5) level = 3;
+    else if (alertCnt >= 1 || r < 0.8) level = 2;
+    const countCls = level === 3 ? 'c-red' : level === 2 ? 'c-orange' : 'c-green';
+    const arrow = i < lines.length - 1
+      ? '<div class="flow-arrow"><span class="particle"></span><span class="particle"></span><span class="particle"></span></div>'
+      : '';
+    html += `<div class="flow-node" onclick="openLineDrawer('${escapeAttr(name)}')">
+      <div class="flow-card level-${level}">
+        <span class="op-name">${escapeHtml(name)}</span>
+        <span class="op-count ${countCls}">${out}</span>
+        <span class="op-status">达成 ${(r * 100).toFixed(0)}%${alertCnt ? ' · 异常 ' + alertCnt : ''}</span>
+        <span class="op-sort">${i + 1}</span>
+      </div>
+    </div>${arrow}`;
+  });
+  flow.innerHTML = html;
+}
+
+// ===== Charts =====
+// 3 级下钻 L2:图表 click → DrillLink 单点直跳 L3
+var KB_DRILL = {
+  chartLine:  {
+    dimension: 'line',  source: 'work-orders', title: '该线工单明细',
+    pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; },
+    // 点某线产出柱 → 该线工单分组(top10 工单, 按 progress 降序), 供 openL2 渲染。
+    // 返回 null 时 bindChart 退化为单点直跳 L3。
+    // 数据源:dashboardData.task_orders(/api/dashboard, 驼峰无 line_code) 或全局 taskOrders(/api/task-orders, 蛇形带 line_code)。
+    // params.name = line_summary[].name(显示名), 需先反查 line.code 再按 line_code/line_name/line 多口径过滤(同 openLineDrawer)。
+    buildGroups: function (params, chart) {
+      if (!dashboardData && !taskOrders.length) return null;
+      var lineName = (chart && chart._drillDim && chart._drillDim[params.dataIndex]) || params.name;
+      if (!lineName) return null;
+      var lines = (dashboardData && dashboardData.line_summary) || [];
+      var l = lines.find(function (x) { return x.name === lineName; });
+      var lineCode = l ? l.code : lineName; // line_summary.code = 原始 line_name
+      // 合并两源工单: dashboardData.task_orders(/api/dashboard, 驼峰无 line_code) + 全局 taskOrders(/api/task-orders, 蛇形带 line_code)。
+      // 看板 dashboard 的 task_orders 不带线体归属, 线→工单关联仅 /api/task-orders 的 line_code 有; 合并后按 line_code/line_name/line 多口径过滤, 任一源带线体字段即可命中。
+      // 注意:空数组是 truthy, 不能用 || 兜底(空 task_orders 会遮蔽 taskOrders), 故显式合并; 按 task_no/taskNo 去重避免 L2 重复行。
+      var ddOrders = (dashboardData && dashboardData.task_orders) || [];
+      var toOrders = taskOrders || [];
+      var seen = {};
+      var orders = ddOrders.concat(toOrders).filter(function (o) {
+        var key = o.task_no || o.taskNo || ('k' + Math.random());
+        if (seen[key]) return false; seen[key] = true; return true;
+      });
+      if (!orders.length) return null;
+      // 多口径匹配: line_code(蛇形 /api/task-orders) / line_name / line(驼峰 dashboard 无 line_code 时兜底)
+      var lineOrders = orders.filter(function (o) {
+        return o.line_code === lineCode || o.line_name === lineName || o.line === lineCode || o.line === lineName;
+      });
+      if (!lineOrders.length) return null;
+      // 按 progress 降序取 top10; progress 字段两种口径均为 progress(dashboard 已算好, /api/task-orders 也直出)
+      var sorted = lineOrders.slice().sort(function (a, b) {
+        var pa = a.progress != null ? a.progress : 0;
+        var pb = b.progress != null ? b.progress : 0;
+        return pb - pa;
+      }).slice(0, 10);
+      return sorted.map(function (o) {
+        return {
+          name: o.task_no || o.taskNo || '--',
+          value: o.progress != null ? o.progress : 0,
+          sub: o.product_model || o.productModel || '--'
+        };
+      });
+    }
+    // onItem 用默认: openL3('work-orders', item.name=task_no, ...) 已在 common.js 实现
+  },
+  chartOrder: { dimension: 'order', source: 'work-orders', title: '工单明细',     pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+  chartAlert: { dimension: 'line',  source: 'exceptions',  title: '该线异常明细' },
+  stageChart: { dimension: 'stage', source: 'bad-records', title: '工艺段不良记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } }
+};
+function bindAllDrillKB() {
+  if (!window.DrillLink) return;
+  Object.keys(KB_DRILL).forEach(function (id) {
+    var el = document.getElementById(id);
+    var chart = window.echarts && el ? echarts.getInstanceByDom(el) : null;
+    if (chart) DrillLink.bindChart(chart, Object.assign({ chartId: id }, KB_DRILL[id]));
+  });
+}
+function renderCharts() {
+  renderLineChart();
+  renderOrderChart();
+  renderAlertChart();
+  bindAllDrillKB();
+}function renderLineChart() {
+  const lines = (dashboardData && dashboardData.line_summary) || [];
+  if (!lines.length) return;
+  if (!charts.line) charts.line = echarts.init(document.getElementById('chartLine'));
+  charts.line.setOption({
+    tooltip: CHART.tooltip(),
+    grid: { left: 40, right: 20, top: 30, bottom: 60 },
+    xAxis: { type: 'category', data: lines.map(l => l.name), axisLabel: { color: CHART.axisLabel, rotate: 30, fontSize: 10 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+    yAxis: { type: 'value', axisLabel: { color: CHART.axisLabel }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+    series: [{ type: 'bar', data: lines.map(l => l.output), itemStyle: { color: CHART.colors.blue, borderRadius: [4, 4, 0, 0] }, barWidth: '55%', label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10 } }]
+  });
+  charts.line._drillDim = lines.map(function (l) { return l.name; });
+}
+function renderOrderChart() {
+  const orders = (dashboardData && dashboardData.task_orders) || taskOrders.slice(0, 15);
+  if (!orders.length) return;
+  if (!charts.order) charts.order = echarts.init(document.getElementById('chartOrder'));
+  charts.order.setOption({
+    tooltip: CHART.tooltip(),
+    legend: { data: ['完成', '计划'], textStyle: { color: CHART.legendText }, top: 0 },
+    grid: { left: 40, right: 20, top: 36, bottom: 60 },
+    xAxis: { type: 'category', data: orders.map(o => (o.task_no || o.taskNo || '').slice(-6)), axisLabel: { color: CHART.axisLabel, rotate: 30, fontSize: 10 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+    yAxis: { type: 'value', axisLabel: { color: CHART.axisLabel }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+    series: [
+      { name: '完成', type: 'bar', data: orders.map(o => o.completed_qty || 0), itemStyle: { color: CHART.colors.green, borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10 } },
+      { name: '计划', type: 'bar', data: orders.map(o => o.qty || 0), itemStyle: { color: CHART.colors.blue, borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10 } }
+    ]
+  });
+  charts.order._drillDim = orders.map(function (o) { return o.task_no || o.taskNo || ''; });
+}
+function renderAlertChart() {
+  const m = {};
+  exceptions.forEach(e => { if (e.status === 'closed' || e.status === 'done') return; const ln = e.line_name || e.line || '未知'; m[ln] = (m[ln] || 0) + 1; });
+  const arr = Object.entries(m).sort((a, b) => b[1] - a[1]);
+  if (!arr.length) {
+    if (charts.alert) charts.alert.clear();
+    document.getElementById('chartAlert').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:80px 0">暂无未关闭异常</div>';
+    return;
+  }
+  if (!charts.alert) {
+    const box = document.getElementById('chartAlert');
+    box.innerHTML = '';
+    charts.alert = echarts.init(box);
+  }
+  charts.alert.setOption({
+    tooltip: CHART.tooltip(),
+    grid: { left: 100, right: 30, top: 20, bottom: 30 },
+    xAxis: { type: 'value', axisLabel: { color: CHART.axisLabel }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+    yAxis: { type: 'category', data: arr.map(a => a[0]), axisLabel: { color: CHART.axisLabel }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+    series: [{ type: 'bar', data: arr.map(a => a[1]), itemStyle: { color: CHART.colors.red, borderRadius: [0, 4, 4, 0] }, barWidth: '55%', label: { show: true, position: 'right', color: CHART.legendText, fontSize: 10 } }]
+  });
+}
+
+// ===== 产出分段图(组装/测试/包装 + 良率标注) =====
+function renderStageChart() {
+  const box = document.getElementById('stageChart');
+  if (!box) return;
+  const stages = (stageData && stageData.stages) || [];
+  if (!stages.length) {
+    if (charts.stage) charts.stage.clear();
+    box.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:80px 0">暂无分段数据</div>';
+    return;
+  }
+  if (!charts.stage) {
+    box.innerHTML = '';
+    charts.stage = echarts.init(box);
+  }
+  const labels = stages.map(s => s.label);
+  const outputs = stages.map(s => s.output || 0);
+  const bads = stages.map(s => s.bad || 0);
+  const fpyVals = stages.map(s => (s.fpy != null ? s.fpy : null));
+  charts.stage.setOption({
+    tooltip: Object.assign(CHART.tooltip(), {
+      axisPointer: { type: 'shadow' },
+      formatter: function(params) {
+        let s = params[0].name + '<br/>';
+        params.forEach(p => {
+          const idx = p.dataIndex;
+          if (p.seriesName === '良率') {
+            const v = fpyVals[idx];
+            s += p.marker + p.seriesName + ': ' + (v != null ? v + '%' : '--') + '<br/>';
+          } else {
+            s += p.marker + p.seriesName + ': ' + (p.value || 0) + '<br/>';
+          }
+        });
+        // 不良率额外提示
+        const st = stages[idx];
+        if (st && st.output > 0) s += '不良率: ' + (st.bad_rate || 0) + '%';
+        return s;
+      }
+    }),
+    legend: { data: ['产出', '不良', '良率'], textStyle: { color: CHART.legendText }, top: 0 },
+    grid: { left: 50, right: 50, top: 40, bottom: 40 },
+    xAxis: { type: 'category', data: labels, axisLabel: { color: CHART.axisLabel, fontSize: 12 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+    yAxis: [
+      { type: 'value', name: '产出', nameTextStyle: { color: CHART.axisLabel }, axisLabel: { color: CHART.axisLabel }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+      { type: 'value', name: '良率%', min: 0, max: 100, nameTextStyle: { color: CHART.axisLabel }, axisLabel: { color: CHART.axisLabel, formatter: '{value}%' }, splitLine: { show: false } }
+    ],
+    series: [
+      { name: '产出', type: 'bar', data: outputs, itemStyle: { color: CHART.colors.blue, borderRadius: [4, 4, 0, 0] }, barWidth: '28%', label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10 } },
+      { name: '不良', type: 'bar', data: bads, itemStyle: { color: CHART.colors.orange, borderRadius: [4, 4, 0, 0] }, barWidth: '28%', label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10 } },
+      {
+        name: '良率', type: 'line', yAxisIndex: 1, data: fpyVals,
+        symbol: 'circle', symbolSize: 8, lineStyle: { color: CHART.colors.green, width: 2 }, itemStyle: { color: CHART.colors.green },
+        label: { show: true, position: 'top', color: CHART.colors.green, fontSize: 11, formatter: function(p) { return p.value != null ? p.value + '%' : ''; } }
+      }
+    ]
+  });
+  charts.stage._drillDim = stages.map(function (s) { return s.stage; });
+  bindAllDrillKB();
+}
+
+// ===== 工单明细表 =====
+function renderOrders() {
+  const orders = (dashboardData && dashboardData.task_orders) || taskOrders;
+  const tb = document.getElementById('orderTbody');
+  document.getElementById('orderCountHint').textContent = `共 ${orders.length} 单`;
+  if (!orders.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">暂无工单</td></tr>'; return; }
+  tb.innerHTML = orders.map(o => {
+    const qty = o.qty || 0, done = o.completed_qty || 0;
+    const p = qty > 0 ? (done / qty * 100).toFixed(1) : '0.0';
+    const st = o.status || o.task_mes_status || '--';
+    const cls = st === '已完成' || st === 'done' ? 'green' : st === '生产中' || st === 'running' ? 'blue' : parseFloat(p) < 50 ? 'red' : 'orange';
+    return `<tr>
+      <td>${escapeHtml(o.task_no || o.taskNo || '--')}</td>
+      <td>${escapeHtml(o.product_model || o.productModel || '--')}</td>
+      <td>${qty}</td><td>${done}</td>
+      <td>${p}%</td>
+      <td><span class="kb-tag ${cls}">${escapeHtml(st)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== 异常明细表 =====
+function renderAlerts() {
+  const open = exceptions.filter(e => e.status !== 'closed' && e.status !== 'done');
+  document.getElementById('alertCountHint').textContent = `未关闭 ${open.length} / 共 ${exceptions.length}`;
+  const tb = document.getElementById('alertTbody');
+  if (!open.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">暂无未关闭异常</td></tr>'; return; }
+  tb.innerHTML = open.map(e => {
+    const pri = e.priority || '中';
+    const priCls = pri === '高' ? 'red' : pri === '中' ? 'orange' : 'gray';
+    const st = e.status || 'open';
+    const stCls = st === 'in_progress' ? 'orange' : st === 'open' ? 'red' : 'gray';
+    return `<tr>
+      <td>${escapeHtml((e.description || '').slice(0, 50))}</td>
+      <td><span class="kb-tag ${priCls}">${escapeHtml(pri)}</span></td>
+      <td>${escapeHtml(e.category || '--')}</td>
+      <td>${escapeHtml(e.line_name || e.line || '--')}</td>
+      <td>${escapeHtml(e.assignee || '--')}</td>
+      <td><span class="kb-tag ${stCls}">${escapeHtml(st)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== Drawer =====
+function openKpiDrawer(type) {
+  const d = dashboardData || {};
+  const ts = computeTargetSummary(d);
+  const output = ts.output;
+  const target = ts.target;
+  const rate = ts.hasConfig ? ts.ratePct : '0.0';
+  const openExc = exceptions.filter(e => e.status !== 'closed' && e.status !== 'done');
+  const orders = (d.task_orders || taskOrders);
+  const lines = (d.line_summary || []);
+
+  let title = '', stats = [], html = '', exportData = [], cols = [];
+  if (type === 'output') {
+    title = '今日产出明细(按产线)';
+    stats = [{ val: output, lbl: '总产出' }, { val: lines.length, lbl: '产线数' }, { val: lines.length ? Math.round(output / lines.length) : 0, lbl: '线均产出' }];
+    html = tableHtml(['产线', '产出', '占比'], lines.map(l => [l.name, l.output, lines.length ? (l.output / output * 100).toFixed(1) + '%' : '0%']));
+    exportData = lines.map(l => ({ line: l.name, output: l.output }));
+    cols = [{ key: 'line', label: '产线' }, { key: 'output', label: '产出' }];
+  } else if (type === 'target') {
+    title = '计划目标明细';
+    stats = [{ val: ts.hasConfig ? target : '—', lbl: '总目标' }, { val: output, lbl: '已产出' }, { val: ts.hasConfig ? rate + '%' : '—', lbl: '达成率' }];
+    if (!ts.hasConfig) {
+      html = `<div style="padding:16px;color:var(--text-secondary);line-height:1.8">
+        <div>当前产线均未配置目标UPH, 无法计算计划目标与达成率。</div>
+        <div>仅 ${ts.matchRate}% 的产出对应型号在 product_config 中有 UPH 配置。请在系统设置中补全产品型号 UPH。</div>
+      </div>`;
+    } else {
+      html = `<div style="padding:16px;color:var(--text-secondary);line-height:1.8">
+        <div>计划目标 <strong style="color:var(--text-primary)">${target}</strong> 件(按各线 Σ 目标UPH×工时 汇总, ${ts.configured}/${ts.total} 线已配置)</div>
+        <div>实际产出 <strong style="color:var(--success)">${output}</strong> 件</div>
+        <div>达成率 <strong style="color:${parseFloat(rate) < 80 ? 'var(--warning)' : 'var(--success)'}">${rate}%</strong></div>
+        ${ts.matchRate < 100 ? `<div style="color:var(--warning);font-size:12px">注意: 仅 ${ts.matchRate}% 产出有目标配置, 其余线按未配置处理</div>` : ''}
+      </div>`;
+    }
+  } else if (type === 'rate') {
+    title = '达成率明细';
+    stats = [{ val: ts.hasConfig ? rate + '%' : '—', lbl: '总体达成' }, { val: output, lbl: '产出' }, { val: ts.hasConfig ? target : '—', lbl: '目标' }];
+    html = tableHtml(['产线', '产出', '目标UPH', '工时h', '目标产出', '达成率'], lines.map(l => {
+      const lt = (l.target_uph != null && l.shift_hours != null) ? Math.round(l.target_uph * l.shift_hours) : null;
+      const lr = lt != null && lt > 0 ? (l.output / lt * 100).toFixed(1) + '%' : '—';
+      return [l.name, l.output, l.target_uph != null ? l.target_uph : '—', l.shift_hours != null ? l.shift_hours : '—', lt != null ? lt : '未配置', lr];
+    }));
+    exportData = lines.map(l => {
+      const lt = (l.target_uph != null && l.shift_hours != null) ? Math.round(l.target_uph * l.shift_hours) : null;
+      return { line: l.name, output: l.output, target_uph: l.target_uph ?? '—', shift_hours: l.shift_hours ?? '—', target_output: lt ?? '未配置', rate: lt > 0 ? (l.output / lt * 100).toFixed(1) + '%' : '—' };
+    });
+    cols = [{ key: 'line', label: '产线' }, { key: 'output', label: '产出' }, { key: 'target_uph', label: '目标UPH' }, { key: 'shift_hours', label: '工时h' }, { key: 'target_output', label: '目标产出' }, { key: 'rate', label: '达成率' }];
+  } else if (type === 'alert') {
+    title = '异常明细';
+    stats = [{ val: openExc.length, lbl: '未关闭异常' }, { val: exceptions.length, lbl: '异常总数' }, { val: openExc.filter(e => e.priority === '高').length, lbl: '高优先级' }];
+    html = tableHtml(['描述', '优先级', '类别', '产线', '负责人', '状态'], openExc.map(e => [escapeHtml((e.description || '').slice(0, 40)), escapeHtml(e.priority || '中'), escapeHtml(e.category || '--'), escapeHtml(e.line_name || e.line || '--'), escapeHtml(e.assignee || '--'), escapeHtml(e.status || 'open')]));
+    exportData = openExc.map(e => ({ desc: e.description, priority: e.priority, category: e.category, line: e.line_name || e.line, assignee: e.assignee, status: e.status }));
+    cols = [{ key: 'desc', label: '描述' }, { key: 'priority', label: '优先级' }, { key: 'category', label: '类别' }, { key: 'line', label: '产线' }, { key: 'assignee', label: '负责人' }, { key: 'status', label: '状态' }];
+  } else if (type === 'lines') {
+    title = '在线产线明细';
+    stats = [{ val: lines.length, lbl: '产线数' }, { val: output, lbl: '总产出' }, { val: openExc.length, lbl: '关联异常' }];
+    html = tableHtml(['产线', '产出', '异常数'], lines.map(l => {
+      const cnt = exceptions.filter(e => e.status !== 'closed' && (e.line_name === l.name || e.line === l.code)).length;
+      return [l.name, l.output, cnt];
+    }));
+    exportData = lines.map(l => ({ line: l.name, output: l.output, exceptions: exceptions.filter(e => e.status !== 'closed' && (e.line_name === l.name || e.line === l.code)).length }));
+    cols = [{ key: 'line', label: '产线' }, { key: 'output', label: '产出' }, { key: 'exceptions', label: '异常数' }];
+  } else if (type === 'orders') {
+    title = '工单明细';
+    stats = [{ val: orders.length, lbl: '工单总数' }, { val: orders.filter(o => o.status === '已完成' || o.status === 'done').length, lbl: '已完成' }, { val: orders.filter(o => o.status !== '已完成' && o.status !== 'done').length, lbl: '进行中' }];
+    html = tableHtml(['工单号', '产品', '计划', '完成', '达成率', '状态'], orders.map(o => [escapeHtml(o.task_no || o.taskNo || '--'), escapeHtml(o.product_model || o.productModel || '--'), o.qty || 0, o.completed_qty || 0, (o.qty > 0 ? (o.completed_qty / o.qty * 100).toFixed(1) : '0.0') + '%', escapeHtml(o.status || o.task_mes_status || '--')]));
+    exportData = orders.map(o => ({ taskNo: o.task_no || o.taskNo, product: o.product_model || o.productModel, qty: o.qty, completed: o.completed_qty, status: o.status || o.task_mes_status }));
+    cols = [{ key: 'taskNo', label: '工单号' }, { key: 'product', label: '产品' }, { key: 'qty', label: '计划' }, { key: 'completed', label: '完成' }, { key: 'status', label: '状态' }];
+  }
+  WipUI.Drawer.open({ title, stats, html, exportData, exportColumns: cols, showExport: !!exportData.length });
+}
+function openLineDrawer(lineName) {
+  const d = dashboardData || {};
+  const lines = d.line_summary || [];
+  const l = lines.find(x => x.name === lineName);
+  const out = l ? l.output : 0;
+  const lineExc = exceptions.filter(e => e.status !== 'closed' && (e.line_name === lineName));
+  const lineOrders = (d.task_orders || taskOrders).filter(o => (o.line_name || o.line) === lineName || (l && o.line === l.code));
+  WipUI.Drawer.open({
+    title: lineName + ' · 产线明细',
+    stats: [{ val: out, lbl: '产出' }, { val: lineExc.length, lbl: '异常数' }, { val: lineOrders.length, lbl: '工单数' }],
+    html: '<div style="margin-bottom:12px;color:var(--text-secondary)">产线实时产出与关联异常/工单</div>' +
+      tableHtml(['工单号', '产品', '完成/计划', '状态'], lineOrders.slice(0, 10).map(o => [escapeHtml(o.task_no || o.taskNo || '--'), escapeHtml(o.product_model || o.productModel || '--'), (o.completed_qty || 0) + '/' + (o.qty || 0), escapeHtml(o.status || o.task_mes_status || '--')])) ||
+      '<div style="color:var(--text-muted);padding:20px">无关联工单</div>',
+    exportData: lineOrders.map(o => ({ taskNo: o.task_no || o.taskNo, product: o.product_model || o.productModel, completed: o.completed_qty, qty: o.qty, status: o.status || o.task_mes_status })),
+    exportColumns: [{ key: 'taskNo', label: '工单号' }, { key: 'product', label: '产品' }, { key: 'qty', label: '计划' }, { key: 'completed', label: '完成' }, { key: 'status', label: '状态' }],
+    showExport: !!lineOrders.length
+  });
+}
+
+function tableHtml(headers, rows) {
+  if (!rows || !rows.length) return '<div style="color:var(--text-muted);padding:20px">暂无数据</div>';
+  return '<div style="max-height:420px;overflow:auto;border:1px solid var(--line-weak);border-radius:var(--radius)"><table class="kb-table"><thead><tr>' +
+    headers.map(h => '<th>' + h + '</th>').join('') +
+    '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+}
+
+// ===== 工具 =====
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+
+// ===== 初始化 =====
+window.addEventListener('DOMContentLoaded', () => {
+  // 抽屉关闭(关闭按钮 + 遮罩点击, 与 wip/bad/oee 一致)
+  const closeBtn = document.getElementById('drawerCloseBtn');
+  if (closeBtn) closeBtn.addEventListener('click', () => WipUI.Drawer.close());
+  const dMask = document.getElementById('drawerMask');
+  if (dMask) dMask.addEventListener('click', () => WipUI.Drawer.close());
+
+  // 注意力钩子初始化(光标跟随光晕 / 级联入场 / 焦点滚动激活)
+  KanbanHooks.init();
+
+  // 周期切换
+  WipUI.UpdateBar.init({
+    periodTabsSelector: '#periodSelect',
+    enableCustomRange: true,
+    refreshBtnSelector: '#refreshBtn',
+    timeElSelector: '#updateTime',
+    liveDotSelector: '#liveDot',
+    onPeriod: (period, range) => { currentPeriod = period; KanbanHooks.stateSweep(); loadData(range.dateFrom, range.dateTo); },
+    onRefresh: () => { var r = WipUI.periodRange(currentPeriod || 'realtime'); loadData(r.dateFrom, r.dateTo); }
+  });
+
+  // 子导航
+  const subnavBtns = document.querySelectorAll('#subnavLeft button');
+  WipUI.Subnav.init('#pageSubnav', Array.from(subnavBtns).map((b, i) => ({ btn: b, target: b.dataset.target, active: i === 0 })));
+  // 子导航切换 → 状态切换光流(顶部品牌色光条横扫 520ms)
+  subnavBtns.forEach(btn => btn.addEventListener('click', () => KanbanHooks.stateSweep()));
+
+  // 快捷查询栏(页定制项)
+  WipUI.QuickQuery.init('#quickQuery', [
+    { key: 'all', label: '全部', icon: '⌧', apply: () => { filter = {}; } },
+    { key: 'gap', label: '达成缺口', icon: '📋', apply: () => { filter = { onlyGap: true }; } },
+    { key: 'urgent', label: '紧急工单', icon: '🚨', apply: () => { filter = { onlyUrgent: true }; } },
+    { key: 'alert', label: '异常产线', icon: '⚠', apply: () => { filter = { onlyAlert: true }; } }
+  ], {
+    activeKey: 'all',
+    onAfter: function (it) {
+      KanbanHooks.stateSweep();
+      var r = WipUI.periodRange(currentPeriod || 'realtime');
+      loadData(r.dateFrom, r.dateTo);
+    }
+  });
+
+  // 功能键条
+  WipUI.Toolbar.init('#toolbar', {
+    buttons: ['refresh', 'exportCSV', 'fullscreen', 'bigscreen'],
+    onRefresh: function () { var r = WipUI.periodRange(currentPeriod || 'realtime'); loadData(r.dateFrom, r.dateTo); },
+    onExportCSV: function () { exportMainCSV(); },
+    targetSelector: '.wip-page'
+  });
+
+  // 首次加载(实时=今天)
+  const r = WipUI.periodRange('realtime');
+  loadData(r.dateFrom, r.dateTo);
+
+  // 定时刷新(标签页隐藏时暂停)
+  window.withVisibilityGuard(() => loadData(currentRange.dateFrom, currentRange.dateTo), 60000, { noImmediate: true });
+
+  // 窗口 resize
+  window.addEventListener('resize', () => {
+    Object.values(charts).forEach(c => c && c.resize());
+  });
+});
+
+// ===== 主表 CSV 导出(工单明细 + 产线产出) =====
+function exportMainCSV() {
+  const d = dashboardData || {};
+  const orders = (d.task_orders || taskOrders || []);
+  const lines = (d.line_summary || []);
+  // 工单明细
+  let csv = '﻿工单号,产品型号,计划,完成,达成率,状态\n';
+  orders.forEach(o => {
+    const qty = o.qty || 0, done = o.completed_qty || 0;
+    const p = qty > 0 ? (done / qty * 100).toFixed(1) : '0.0';
+    csv += csvCell(o.task_no || o.taskNo || '') + ',' + csvCell(o.product_model || o.productModel || '') + ',' + qty + ',' + done + ',' + p + '%,' + csvCell(o.status || o.task_mes_status || '') + '\n';
+  });
+  csv += '\n产线产出\n产线,产出\n';
+  lines.forEach(l => { csv += csvCell(l.name || '') + ',' + (l.output || 0) + '\n'; });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'kanban_' + (currentRange.dateFrom || '') + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function csvCell(v) {
+  if (v == null) return '';
+  var s = String(v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+</body>
+</html>

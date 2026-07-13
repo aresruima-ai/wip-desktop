@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI中心 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="libs/echarts.min.js"></script>
+<script src="wip-ui.js"></script>
+<script src="chart-theme.js"></script>
+<style>
+/* AI 中心专属(WIP 设计语言外壳 + 暗色) */
+
+/* AI 对话区 */
+.ai-chat-box { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
+.ai-chat-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.ai-chat-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 8px rgba(var(--purple-rgb),0.5); }
+.ai-chat-messages { height: 320px; overflow-y: auto; padding: 12px; background: rgba(2,6,23,0.5); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+.ai-chat-messages::-webkit-scrollbar { width: 4px; }
+.ai-chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.ai-msg { margin-bottom: 10px; font-size: 12px; line-height: 1.7; }
+.ai-msg.user { text-align: right; }
+.ai-msg.user span { background: rgba(var(--purple-rgb),0.15); padding: 6px 12px; border-radius: 10px; display: inline-block; color: var(--purple); max-width: 80%; }
+.ai-msg.bot span { background: rgba(15,23,42,0.7); padding: 8px 12px; border-radius: 10px; display: inline-block; color: #cbd5e1; border-left: 3px solid var(--purple); white-space: pre-wrap; max-width: 88%; text-align: left; }
+.ai-input-row { display: flex; gap: 8px; }
+.ai-input-row input { flex: 1; padding: 10px 14px; background: rgba(15,23,42,0.8); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 12px; outline: none; font-family: inherit; }
+.ai-input-row input:focus { border-color: var(--purple); }
+.ai-input-row button { padding: 10px 20px; background: var(--purple); border: none; border-radius: var(--radius); color: #fff; font-size: 12px; cursor: pointer; font-family: inherit; }
+.ai-input-row button:hover { background: var(--purple); filter: brightness(0.85); }
+.ai-quick-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.ai-quick-btn { padding: 4px 10px; font-size: 11px; border: 1px solid var(--border); border-radius: var(--radius); background: none; color: var(--text-muted); cursor: pointer; font-family: inherit; }
+.ai-quick-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+/* 洞察列表 */
+.insight-list { display: flex; flex-direction: column; gap: 8px; }
+.insight-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; background: rgba(15,23,42,0.6); cursor: pointer; transition: all .15s; }
+.insight-item:hover { border-color: var(--brand); background: var(--brand-glow); }
+.insight-item.danger { border-left: 3px solid var(--danger); }
+.insight-item.warning { border-left: 3px solid var(--warning); }
+.insight-item.success { border-left: 3px solid var(--success); }
+.insight-item.info { border-left: 3px solid var(--brand); }
+.insight-item .it-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.insight-item .it-level { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 600; flex-shrink: 0; }
+.insight-item.danger .it-level { background: rgba(var(--danger-rgb),0.15); color: var(--danger); }
+.insight-item.warning .it-level { background: rgba(var(--warning-rgb),0.15); color: var(--warning); }
+.insight-item.success .it-level { background: rgba(var(--success-rgb),0.15); color: var(--success); }
+.insight-item.info .it-level { background: var(--brand-dim); color: var(--brand); }
+.insight-item.it-handled { background: rgba(var(--success-rgb),0.04); }
+.insight-item .it-detail { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.insight-item .it-sug { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.insight-item .it-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.insight-item .it-tags span { font-size: 9px; color: var(--text-muted); border: 1px solid rgba(148,163,184,0.18); border-radius: 999px; padding: 1px 6px; background: rgba(15,23,42,0.5); }
+.empty-note { text-align: center; color: var(--text-muted); font-size: 12px; padding: 20px; }
+.drawer-row-btns { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+@media(max-width:768px){ .ai-input-row{flex-direction:column} }
+
+/* ============================================================
+   AI 中心 · 注意力钩子 (Attention Hooks) — 展示型克制配 3 primary + 3 secondary
+   心法: 减权非焦点 → 衬托焦点 → 让焦点呼吸
+   primary:   焦点单点高光晕(AI诊断核心结论) + AI诊断严重度呼吸(danger/warning 级呼应) + 卡片错峰级联入场
+   secondary: 骨架屏 Shimmer(AI生成/分析等待) + 数字滚动 LiveNum + 光标跟随光晕(轻 hover)
+   全部走 transform/opacity/box-shadow, 零重排; 尊重 prefers-reduced-motion
+   一屏动画预算: 呼吸 ≤3 (焦点卡 + danger 洞察 ≤2), 入场一次性, 触发 150ms; 不堆砌
+   ============================================================ */
+
+/* === 钩子 Token (页面级, 不污染共享变量; 对齐 spec 20 token) === */
+.ai-page {
+  --ai-glow-danger: 0 0 0 1px var(--danger-border), 0 0 26px -8px rgba(var(--danger-rgb),0.55);
+  --ai-glow-warn:   0 0 0 1px var(--warning-border), 0 0 22px -10px rgba(var(--warning-rgb),0.42);
+  --ai-glow-brand:  0 0 0 1px var(--brand-border), 0 0 22px -12px rgba(var(--brand-rgb),0.38);
+  --ai-glow-purple: 0 0 0 1px rgba(var(--purple-rgb),0.30), 0 0 20px -10px rgba(var(--purple-rgb),0.42);
+  --ai-breathe-danger: aiBreatheDanger 0.8s var(--ease) infinite;   /* 报警快脉冲 */
+  --ai-breathe-warn:   aiBreatheWarn   2.8s var(--ease) infinite;   /* 预警慢呼吸 */
+  --ai-dur-enter: 280ms;
+}
+
+/* --- PRIMARY 1: 焦点单点高光晕 — focus-shell 是全页唯一 data-focal, AI 诊断核心结论所在 --- */
+.ai-page .focus-shell .focus-card {
+  transition: box-shadow var(--dur-slow) var(--ease-out),
+              border-color var(--dur-slow) var(--ease-out),
+              transform var(--dur-slow) var(--ease-out);
+  position: relative;
+}
+/* 减权: data-focal 激活时, focus-side 兄弟节点压暗成衬底 (12% 明度差势能, spec 准绳1)
+   复用全局 --focal-dim token (Phase 1 已注入 common.css), 保持全站一致 */
+.ai-page .focus-shell[data-focal="true"] .focus-side .focus-mini {
+  filter: var(--focal-dim, brightness(0.84) saturate(0.70));
+  transition: filter var(--dur-slow) var(--ease-out);
+}
+.ai-page .focus-shell[data-focal="true"] .focus-side .focus-mini:hover { filter: none; }
+.ai-page .focus-shell[data-focal="true"] .focus-side .focus-mini.warn,
+.ai-page .focus-shell[data-focal="true"] .focus-side .focus-mini.danger { filter: none; }
+/* focus-card 设为视口焦点: 径向高光 + 微抬升 + 顶辉光 (Z 轴景深, 不靠变大) */
+.ai-page .focus-shell[data-focal="true"] .focus-card {
+  box-shadow: var(--ai-glow-brand), inset 0 1px 0 rgba(255,255,255,0.04);
+  transform: translateY(-2px);
+}
+.ai-page .focus-shell[data-focal="true"] .focus-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--purple), transparent);
+  opacity: 0.55; pointer-events: none;
+}
+
+/* --- PRIMARY 2: AI 诊断严重度呼吸 — 与诊断结论呼应, danger/warning 级卡片边缘呼吸 --- */
+/* focus-shell 严重度三态: 正常静止紫(AI 助手色) / 预警 2.8s 慢呼吸 amber / 报警 0.8s 快脉冲 red */
+.ai-page .focus-shell.sev-normal .focus-card { box-shadow: var(--ai-glow-purple); }
+.ai-page .focus-shell.sev-warn   .focus-card { box-shadow: var(--ai-glow-warn);   animation: var(--ai-breathe-warn); }
+.ai-page .focus-shell.sev-danger .focus-card { box-shadow: var(--ai-glow-danger); animation: var(--ai-breathe-danger); }
+.ai-page .focus-shell.data-flash .focus-card { animation: aiDataFlash 1.2s var(--ease-out); }
+/* 焦点 eyebrow pulse 跟随严重度变色 (AI 中心用紫色作正常态, 与 AI 助手主题呼应) */
+.ai-page .focus-shell.sev-normal .focus-eyebrow .pulse { background: var(--purple); box-shadow: 0 0 0 5px rgba(var(--purple-rgb),0.10); }
+.ai-page .focus-shell.sev-warn   .focus-eyebrow .pulse { background: var(--warning); box-shadow: 0 0 0 5px rgba(var(--warning-rgb),0.10); animation: var(--ai-breathe-warn); }
+.ai-page .focus-shell.sev-danger .focus-eyebrow .pulse { background: var(--danger);  box-shadow: 0 0 0 5px rgba(var(--danger-rgb),0.10);  animation: var(--ai-breathe-danger); }
+
+/* 洞察列表 danger/warning 项轻边缘呼吸 — 与焦点严重度呼应, 但更克制(常驻呼吸每屏 ≤3, 这里只点亮最差级别) */
+.ai-page .insight-list .insight-item.danger {
+  box-shadow: 0 0 0 1px var(--danger-border), 0 0 14px -8px rgba(var(--danger-rgb),0.28);
+  animation: aiInsightEdgeDanger 2.6s var(--ease) infinite;
+}
+/* warning 项不持续呼吸(让位给 danger + focus), 仅静态 amber 边光; hover 才亮起 */
+.ai-page .insight-list .insight-item.warning {
+  box-shadow: 0 0 0 1px var(--warning-border), 0 0 12px -10px rgba(var(--warning-rgb),0.22);
+}
+/* 已处理项熄灭呼吸 — 闭环后不再争抢注意力 */
+.ai-page .insight-list .insight-item.it-handled.danger,
+.ai-page .insight-list .insight-item.it-handled.warning {
+  animation: none;
+  box-shadow: none;
+  opacity: 0.78;
+}
+
+/* --- PRIMARY 3: 卡片错峰级联入场 — chart-panel / kpi-card / insight-item 按序错峰升起 --- */
+.ai-page .full-stack > .chart-panel { animation: aiRiseIn 0.55s var(--ease-out) backwards; }
+.ai-page .full-stack > .chart-panel:nth-child(1) { animation-delay: 0.04s; }
+.ai-page .full-stack > .chart-panel:nth-child(2) { animation-delay: 0.10s; }
+.ai-page .full-stack > .chart-panel:nth-child(3) { animation-delay: 0.16s; }
+.ai-page .full-stack > .chart-panel:nth-child(4) { animation-delay: 0.22s; }
+.ai-page .kpi-row.wip .kpi-card { animation: aiRiseIn 0.5s var(--ease-out) backwards; }
+.ai-page .kpi-row.wip .kpi-card:nth-child(1) { animation-delay: 0.06s; }
+.ai-page .kpi-row.wip .kpi-card:nth-child(2) { animation-delay: 0.11s; }
+.ai-page .kpi-row.wip .kpi-card:nth-child(3) { animation-delay: 0.16s; }
+.ai-page .kpi-row.wip .kpi-card:nth-child(4) { animation-delay: 0.21s; }
+.ai-page .kpi-row.wip .kpi-card:nth-child(5) { animation-delay: 0.26s; }
+.ai-page .kpi-row.wip .kpi-card:nth-child(6) { animation-delay: 0.31s; }
+.ai-page .focus-shell .focus-card,
+.ai-page .focus-shell .focus-side { animation: aiRiseIn 0.5s var(--ease-out) backwards; }
+.ai-page .focus-shell .focus-card { animation-delay: 0.02s; }
+.ai-page .focus-shell .focus-side { animation-delay: 0.10s; }
+
+/* --- SECONDARY 1: 骨架屏 Shimmer — AI 生成/分析等待时光流横扫 1.8s, 数据到达淡出 --- */
+.ai-skeleton {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  background: var(--surface-1); border-radius: inherit;
+  z-index: 2; transition: opacity var(--dur-slow) var(--ease-out);
+}
+.ai-skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--purple-rgb),0.10) 40%, rgba(var(--info-rgb),0.14) 50%, rgba(var(--purple-rgb),0.10) 60%, transparent 100%);
+  transform: translateX(-100%);
+  animation: aiShimmer 1.8s var(--ease-in-out) infinite;
+}
+.ai-skeleton.hide { opacity: 0; }
+.ai-sk-bar {
+  height: 10px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04); margin: 8px 0;
+}
+.ai-sk-bar.lg { height: 22px; width: 60%; background: rgba(255,255,255,0.06); }
+.ai-sk-bar.md { width: 80%; }
+.ai-sk-bar.sm { width: 40%; }
+
+/* --- SECONDARY 2: 数字滚动 LiveNum — KPI 涨绿/跌红闪光 900ms 自动消退 --- */
+.ai-page .kpi-value.is-rolling { transition: color var(--dur-fast) var(--ease-out); }
+.ai-page .kpi-value.flash-up   { color: var(--success) !important; }
+.ai-page .kpi-value.flash-down { color: var(--danger)  !important; }
+.ai-page .kpi-value.flash-flat { color: var(--info)    !important; }
+/* focus-side 小卡数值也走 LiveNum */
+.ai-page .focus-mini .value.is-rolling { transition: color var(--dur-fast) var(--ease-out); }
+
+/* --- SECONDARY 3: 光标跟随光晕 — insight-item 上柔光跟随 (轻 hover, 克制)
+   注: focus-card::after 被 common.css 置 display:none, 故焦点卡光晕改由 sev-* 呼吸光承担;
+       这里只给洞察列表项加光标跟随, 避免与焦点呼吸/边缘呼吸争抢动画预算 --- */
+.ai-page .insight-item {
+  --mx: 50%; --my: 50%;
+  position: relative; overflow: hidden;
+}
+.ai-page .insight-item::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(110px circle at var(--mx) var(--my), rgba(var(--brand-rgb),0.10), transparent 60%);
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.ai-page .insight-item:hover::after { opacity: 1; }
+
+/* --- Keyframes --- */
+@keyframes aiBreatheDanger {
+  0%,100% { box-shadow: 0 0 0 1px var(--danger-border), 0 0 18px -10px rgba(var(--danger-rgb),0.30); }
+  50%     { box-shadow: 0 0 0 1px var(--danger-border), 0 0 34px -4px  rgba(var(--danger-rgb),0.75); }
+}
+@keyframes aiBreatheWarn {
+  0%,100% { box-shadow: 0 0 0 1px var(--warning-border), 0 0 16px -10px rgba(var(--warning-rgb),0.22); }
+  50%     { box-shadow: 0 0 0 1px var(--warning-border), 0 0 30px -6px  rgba(var(--warning-rgb),0.55); }
+}
+@keyframes aiInsightEdgeDanger {
+  /* 洞察卡 danger 呼吸更克制 — 仅边缘光强变化, 不位移不放大 */
+  0%,100% { box-shadow: 0 0 0 1px var(--danger-border), 0 0 14px -8px rgba(var(--danger-rgb),0.22); }
+  50%     { box-shadow: 0 0 0 1px var(--danger-border), 0 0 22px -6px rgba(var(--danger-rgb),0.50); }
+}
+@keyframes aiDataFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--purple-rgb),0.0); }
+  25%  { box-shadow: 0 0 0 2px rgba(var(--purple-rgb),0.55), 0 0 30px -4px rgba(var(--purple-rgb),0.5); }
+  100% { box-shadow: var(--ai-glow-purple); }
+}
+@keyframes aiShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes aiRiseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 尊重 prefers-reduced-motion: 关闭所有呼吸/脉冲/入场/骨架流光/光标跟随, 仅保留 hover 色变 --- */
+@media (prefers-reduced-motion: reduce) {
+  .ai-page .focus-shell.sev-danger .focus-card,
+  .ai-page .focus-shell.sev-warn .focus-card,
+  .ai-page .focus-shell.sev-normal .focus-card,
+  .ai-page .focus-shell.data-flash .focus-card,
+  .ai-page .focus-eyebrow .pulse,
+  .ai-page .full-stack > .chart-panel,
+  .ai-page .kpi-row.wip .kpi-card,
+  .ai-page .focus-shell .focus-card,
+  .ai-page .focus-shell .focus-side,
+  .ai-page .insight-list .insight-item.danger,
+  .ai-page .ai-skeleton::after {
+    animation: none !important;
+  }
+  .ai-page .full-stack > .chart-panel,
+  .ai-page .kpi-row.wip .kpi-card,
+  .ai-page .focus-shell .focus-card,
+  .ai-page .focus-shell .focus-side { opacity: 1; transform: none; }
+  .ai-page .full-stack > .chart-panel { opacity: 0.82; }
+}
+</style>
+</head>
+<body>
+<!-- sci-glow removed --><!-- dash-scanline removed-->
+
+<div class="wip-page ai-page">
+  <!-- Top Bar — 单层顶栏(状态|快捷|导航|操作) 5栏合一(无FilterBar) -->
+  <div class="top-bar">
+    <div class="tb-seg tb-seg-status">
+      <div class="live-dot" id="liveDot"></div>
+      <span class="time" id="updateTime">数据加载中...</span>
+      <span class="nav-trust-text" id="navDataTrust">聚合:各看板风险 · 洞察:规则+AI · 对话:AI模型</span>
+    </div>
+    <div class="tb-divider"></div>
+    <div class="tb-seg tb-seg-action">
+      <select class="period-select" id="periodSelect">
+        <option value="realtime">实时</option>
+        <option value="week">本周</option>
+        <option value="month">本月</option>
+        <option value="quarter">本季</option>
+        <option value="half">半年</option>
+        <option value="year">年度</option>
+        <option value="all">全部</option>
+        <option value="custom">自定义</option>
+      </select>
+      <div id="toolbar"></div>
+    </div>
+  </div>
+  <!-- 第二行: subnav 导航 + quickQuery 快捷 -->
+  <div class="subnav-row">
+    <div class="wip-subnav-inner" id="pageSubnav">
+      <button class="active" data-target="focusShell">现场关注</button>
+      <button data-target="insightSection">洞察</button>
+      <button data-target="chartGrid">趋势</button>
+      <button data-target="chatSection">对话</button>
+    </div>
+    <div class="qq-row" id="quickQuery"></div>
+  </div>
+
+  <!-- Focus Command Panel (data-focal: 全页唯一焦点, AI 诊断核心结论所在) -->
+  <div class="focus-shell" id="focusShell" data-focal="true">
+    <div class="focus-card">
+      <div class="focus-content">
+        <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">AI 指挥中心 · 全局风险聚合</span></div>
+        <div class="focus-title" id="focusTitle">正在聚合各看板风险...</div>
+        <div class="focus-action" id="focusAction">系统会聚合各看板 focus，识别最危险的一项并给出行动建议。</div>
+        <div class="focus-meta" id="focusMeta">
+          <span class="focus-chip"><strong>--</strong>危险</span>
+          <span class="focus-chip"><strong>--</strong>警告</span>
+          <span class="focus-chip"><strong>--</strong>已处理</span>
+          <span class="focus-chip"><strong>--</strong>覆盖页</span>
+        </div>
+        <div class="focus-detail" id="focusDetail">
+          <div class="focus-detail-block"><div class="label">最危险项</div><div class="value" id="focusTopRisk">--</div><div class="sub" id="focusTopRiskSub">聚合各看板 focus</div></div>
+          <div class="focus-detail-block"><div class="label">来源看板</div><div class="value" id="focusSourcePage">--</div><div class="sub" id="focusSourcePageSub">点击下方按钮前往处理</div></div>
+        </div>
+        <div class="focus-actions" id="focusActions">
+          <button id="focusActGo">前往对应看板处理</button>
+          <button id="focusActDetail">查看洞察明细</button>
+        </div>
+        <div class="focus-trust" id="focusTrust"></div>
+      </div>
+    </div>
+    <div class="focus-side">
+      <div class="focus-mini" id="focusSide1"><div class="label">洞察总数</div><div class="value" id="focusSide1Val">--</div><div class="hint" id="focusSide1Hint">规则+AI 聚合</div></div>
+      <div class="focus-mini" id="focusSide2"><div class="label">未处理</div><div class="value" id="focusSide2Val">--</div><div class="hint" id="focusSide2Hint">需关注的洞察</div></div>
+    </div>
+  </div>
+
+  <div class="kpi-section-title"><span>核心指标</span><span>点击查看明细</span></div>
+  <!-- KPI -->
+  <div class="kpi-row wip">
+    <div class="kpi-card" style="--kpi-color:var(--brand);cursor:pointer" onclick="openInsightDrawer('all')"><div class="kpi-label">洞察总数</div><div class="kpi-value" id="kpiTotal">--</div><div class="kpi-sub" id="kpiTotalSub">规则+AI 聚合</div></div>
+    <div class="kpi-card" style="--kpi-color:var(--danger);cursor:pointer" onclick="openInsightDrawer('danger')"><div class="kpi-label">危险</div><div class="kpi-value" id="kpiDanger">--</div><div class="kpi-sub" id="kpiDangerSub">--</div></div>
+    <div class="kpi-card" style="--kpi-color:var(--warning);cursor:pointer" onclick="openInsightDrawer('warning')"><div class="kpi-label">警告</div><div class="kpi-value" id="kpiWarn">--</div><div class="kpi-sub" id="kpiWarnSub">--</div></div>
+    <div class="kpi-card" style="--kpi-color:var(--success);cursor:pointer" onclick="openInsightDrawer('handled')"><div class="kpi-label">已处理</div><div class="kpi-value" id="kpiHandled">--</div><div class="kpi-sub" id="kpiHandledSub">--</div></div>
+    <div class="kpi-card" style="--kpi-color:var(--brand);cursor:pointer" onclick="openChatDrawer()"><div class="kpi-label">AI对话数</div><div class="kpi-value" id="kpiChat">--</div><div class="kpi-sub" id="kpiChatSub">--</div></div>
+    <div class="kpi-card" style="--kpi-color:var(--brand);cursor:pointer" onclick="openInsightDrawer('all')"><div class="kpi-label">覆盖页数</div><div class="kpi-value" id="kpiCover">--</div><div class="kpi-sub" id="kpiCoverSub">--</div></div>
+  </div>
+
+  <!-- AI Suggestion -->
+  <div class="ai-suggest" id="aiSuggest" style="display:none">
+    <div class="icon">&#x1F4A1;</div>
+    <div class="content"><div class="title" id="aiSugTitle">AI 指挥建议</div><div class="detail" id="aiSugDetail">--</div></div>
+  </div>
+
+  <!-- Charts — 全宽堆叠 -->
+  <div class="full-stack" id="chartGrid">
+    <div class="chart-panel"><div class="chart-panel-title">&#x1F4CA; 洞察严重度分布</div><div class="chart-box" id="chartSev"></div></div>
+    <div class="chart-panel"><div class="chart-panel-title">&#x1F3AF; 各看板风险评分</div><div class="chart-box" id="chartPageRisk"></div></div>
+  </div>
+
+  <!-- 洞察列表 -->
+  <div id="insightSection" style="padding:0 0 12px">
+    <div class="chart-panel">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>&#x1F4CB; AI 洞察列表</span>
+        <span style="font-size:11px;color:var(--text-muted)" id="insightCount">--</span>
+      </div>
+      <div class="insight-list" id="insightList"></div>
+    </div>
+  </div>
+
+  <div id="detailSection" style="padding:0 0 12px"></div>
+
+  <!-- 对话 -->
+  <div id="chatSection" style="padding:0 0 24px">
+    <div class="ai-chat-box">
+      <div class="ai-chat-title"><span class="dot"></span> AI 智能问答</div>
+      <div class="ai-chat-messages" id="chatMsgs">
+        <div class="ai-msg bot"><span>你好，我是 AI 生产助手。你可以问我任何关于生产数据的问题，例如"今天直通率怎么样"、"哪个不良最多"、"给出改善建议"。</span></div>
+      </div>
+      <div class="ai-input-row">
+        <input id="chatInput" placeholder="输入你的问题..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()">发送</button>
+      </div>
+      <div class="ai-quick-btns">
+        <button class="ai-quick-btn" onclick="askQ('今天直通率怎么样')">直通率</button>
+        <button class="ai-quick-btn" onclick="askQ('哪个不良最多')">TOP不良</button>
+        <button class="ai-quick-btn" onclick="askQ('OEE怎么样')">OEE</button>
+        <button class="ai-quick-btn" onclick="askQ('产量情况')">产量</button>
+        <button class="ai-quick-btn" onclick="askQ('给出改善建议')">改善建议</button>
+        <button class="ai-quick-btn" onclick="askQ('误测率怎么样')">误测率</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-mask" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header"><h3 id="drawerTitle">--</h3><div style="display:flex;gap:8px"><button class="refresh-btn" id="drawerExport">&#x2B07; 导出</button><button class="drawer-close" id="drawerCloseBtn">&times;</button></div></div>
+  <div class="drawer-body"><div class="drawer-stats" id="drawerStats"></div><div id="drawerContent"></div></div>
+</div>
+
+<script>
+const API=(location.port==='8080'||(location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'))?'':'http://'+location.hostname+':8080';
+
+/* ============================================================
+   AI 中心 · 注意力钩子模块 (AIHooks)
+   展示型克制: 3 primary (焦点高光/严重度呼吸/级联入场) + 3 secondary (骨架屏/数字滚动/光标跟随)
+   全部走 transform/opacity/box-shadow, 零重排; 尊重 prefers-reduced-motion
+   ============================================================ */
+var AIHooks=(function(){
+  'use strict';
+  var reduce = (window.ATTN && ATTN.REDUCED) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var _lastKPI = {};     // 记录上次 KPI 原始值, 用于涨跌闪光
+  var _lastSide = {};    // focus-side 小卡数值缓存
+  var _flashLock = null; // focus-shell data-flash 防抖
+
+  /* 严重度映射 -> focus-shell 严重度 class (sev-normal/sev-warn/sev-danger)
+     AI 中心: 有 danger 洞察=报警, 有 warning=预警, 否则正常(AI 助手紫) */
+  function sevClass(level){
+    if(level==='danger') return 'sev-danger';
+    if(level==='warn')   return 'sev-warn';
+    return 'sev-normal';
+  }
+
+  /* 应用严重度到 focus-shell (呼吸光效) — 与 AI 诊断结论呼应 */
+  function applySeverity(level){
+    var shell=document.getElementById('focusShell');
+    if(!shell) return;
+    shell.classList.remove('sev-normal','sev-warn','sev-danger');
+    shell.classList.add(sevClass(level));
+  }
+
+  /* data-flash: 数据刷新时 focus-card 闪一帧 (250ms 防抖) */
+  function flashFocusShell(){
+    if(reduce) return;
+    var shell=document.getElementById('focusShell');
+    if(!shell) return;
+    if(_flashLock) return;
+    _flashLock=setTimeout(function(){ _flashLock=null; }, 250);
+    shell.classList.remove('data-flash');
+    void shell.offsetWidth;            // 强制 reflow 重启动画
+    shell.classList.add('data-flash');
+    setTimeout(function(){ shell.classList.remove('data-flash'); }, 1300);
+  }
+
+  /* LiveNum: 统一由 ATTN.liveNum 接管 (v4.1), 仅保留 is-rolling class 同步 */
+  // 进阶版:补 easeOutExpo 定义(原潜伏 ReferenceError,animateNum 内部调用但未定义)
+  function easeOutExpo(t){ return t===1?1:1-Math.pow(2,-10*t); }
+  function animateNum(el, target, opts){
+    if(!el) return;
+    opts=opts||{};
+    var tv=typeof target;
+    if(tv==='string' && isNaN(parseFloat(target))){ el.textContent=target; return; }
+    if(tv!=='number' && tv!=='string'){ el.textContent='--'; return; }
+    var num=parseFloat(target);
+    if(isNaN(num)){ el.textContent=target; return; }
+    if(!reduce) el.classList.add('is-rolling');
+    var done = ATTN.liveNum(el, num, { decimals: 0, dur: opts.dur || 850 });
+    if (done && done.then) done.then(function(){ el.classList.remove('is-rolling'); });
+    else setTimeout(function(){ el.classList.remove('is-rolling'); }, (opts.dur || 850) + 20);
+  }
+
+  /* KPI 跳变闪光: 统一透传 ATTN.flash (涨绿/跌红/平灰, 900ms 自动消退, 500ms debounce) */
+  function flashKPI(el, oldV, newV){
+    if(!el||reduce) return;
+    if(window.ATTN && ATTN.flash){ try { ATTN.flash(el, oldV, newV); } catch(e){} return; }
+    var o=parseFloat(oldV), n=parseFloat(newV);
+    if(isNaN(o)||isNaN(n)) return;
+    el.classList.remove('flash-up','flash-down','flash-flat');
+    void el.offsetWidth;
+    el.classList.add(o===n?'flash-flat':(n>o?'flash-up':'flash-down'));
+    setTimeout(function(){ el.classList.remove('flash-up','flash-down','flash-flat'); }, 900);
+  }
+
+  /* 公共: 带缓存的 KPI 赋值 (滚动+闪光). 值变化才触发闪光 */
+  function setKPIAnimated(id, val){
+    var el=document.getElementById(id);
+    if(!el) return;
+    var old=_lastKPI[id];
+    var isNumeric = typeof val==='number' || (typeof val==='string' && !isNaN(parseFloat(val)) && val.trim()!=='');
+    if(isNumeric){
+      var nv=parseFloat(val);
+      if(old!=null && old!==nv){ flashKPI(el, old, nv); }
+      _lastKPI[id]=nv;
+      animateNum(el, nv);
+    }else{
+      _lastKPI[id]=null;
+      el.textContent=val;
+    }
+  }
+
+  /* focus-side 小卡数值也走 LiveNum (无闪光, 仅滚动) — 统一透传 ATTN.liveNum */
+  function setSideAnimated(id, val){
+    var el=document.getElementById(id);
+    if(!el) return;
+    var nv=parseFloat(val);
+    if(isNaN(nv)){ el.textContent=val; _lastSide[id]=null; return; }
+    _lastSide[id]=nv;
+    if(reduce){ el.textContent=String(nv); el.setAttribute('data-num', nv); return; }
+    el.classList.add('is-rolling');
+    ATTN.liveNum(el, nv, { decimals: 0, dur: 850, format: function(v){ return Math.round(v); } });
+    setTimeout(function(){ el.setAttribute('data-num', nv); el.classList.remove('is-rolling'); }, 870);
+  }
+
+  /* 骨架屏: 显示/隐藏. 在首次加载前注入, 数据到达淡出 */
+  function showSkeleton(host, bars){
+    if(!host) return null;
+    var cs=getComputedStyle(host);
+    if(cs.position==='static'){ host.style.position='relative'; }
+    var old=host.querySelector('.ai-skeleton');
+    if(old) old.remove();
+    var sk=document.createElement('div');
+    sk.className='ai-skeleton';
+    var html='';
+    var b=bars||[{cls:'lg'},{cls:'md'},{cls:'sm'}];
+    b.forEach(function(bar){ html+='<div class="ai-sk-bar '+(bar.cls||'')+'" style="width:'+(bar.w||'')+'"></div>'; });
+    sk.innerHTML=html;
+    host.appendChild(sk);
+    return sk;
+  }
+  function hideSkeleton(host, delay){
+    if(!host) return;
+    var sk=host.querySelector('.ai-skeleton');
+    if(!sk) return;
+    setTimeout(function(){
+      sk.classList.add('hide');
+      setTimeout(function(){ if(sk.parentNode) sk.remove(); }, 400);
+    }, delay||0);
+  }
+
+  /* 光标跟随光晕: 写入 --mx/--my 到元素 (轻 hover, 克制) */
+  function bindCursorSpotlight(el){
+    if(!el||reduce) return;
+    el.addEventListener('mousemove', function(e){
+      var r=el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX-r.left)+'px');
+      el.style.setProperty('--my', (e.clientY-r.top)+'px');
+    });
+  }
+
+  /* 绑定光标跟随到 insight-item (事件委托, 列表重建后仍生效)
+     注: focus-card::after 被 common.css 置 display:none, 故不为焦点卡绑光标跟随;
+         焦点卡的"活起来"由 sev-* 严重度呼吸光承担(primary 2) */
+  function bindAllSpotlights(){
+    var list=document.getElementById('insightList');
+    if(list && !list._aiSpotlightBound){
+      list._aiSpotlightBound=true;
+      list.addEventListener('mousemove', function(e){
+        var item=e.target.closest('.insight-item');
+        if(!item) return;
+        var r=item.getBoundingClientRect();
+        item.style.setProperty('--mx', (e.clientX-r.left)+'px');
+        item.style.setProperty('--my', (e.clientY-r.top)+'px');
+      });
+    }
+  }
+
+  return {
+    reduce:reduce,
+    applySeverity:applySeverity,
+    flashFocusShell:flashFocusShell,
+    setKPIAnimated:setKPIAnimated,
+    setSideAnimated:setSideAnimated,
+    showSkeleton:showSkeleton,
+    hideSkeleton:hideSkeleton,
+    bindAllSpotlights:bindAllSpotlights
+  };
+})();
+
+/* 各看板(用于风险聚合 / 来源页 / 跳转) */
+const PAGE_MAP=[
+  {key:'oee',name:'OEE设备效率',href:'oee.html',metric:'OEE'},
+  {key:'bad',name:'品质不良',href:'bad.html',metric:'FPY/PPM'},
+  {key:'wip',name:'WIP追踪',href:'wip.html',metric:'在制品'},
+  {key:'line-balance',name:'生产线平衡',href:'line-balance.html',metric:'平衡率'},
+  {key:'health',name:'设备健康',href:'health.html',metric:'MTBF'}
+];
+
+let state={
+  period:'realtime',
+  range:null,
+  insights:[],          // /api/ai-insights
+  announcements:[],     // /api/announcements
+  suggestions:[],       // /api/announcements.suggestions
+  weekly:null,
+  chatCount:parseInt(localStorage.getItem('_aiChatCount')||'0'),
+  handled:new Set(JSON.parse(localStorage.getItem('_aiHandledInsights')||'[]')),
+  pageRisks:[],         // [{page,name,risk,level,detail,href}]
+  topRisk:null,         // {title,detail,suggestion,sourcePage,level}
+  charts:{}
+};
+
+/* 当前周期标识(供 QuickQuery/Toolbar 回调使用 periodRange) */
+let currentPeriod='realtime';
+/* 快捷查询筛选条件(由 QuickQuery apply 设置,loadData 渲染时过滤洞察列表) */
+let filter={};
+
+// esc 收口到 common.js (window.esc = escHtml 别名), 本页不再单独定义
+function levelText(l){return {danger:'危险',warning:'警告',success:'良好',info:'信息'}[l]||l;}
+/* 据 filter 过滤洞察列表(供洞察列表/严重度图/抽屉使用;focus/KPI 保持全局聚合口径) */
+function getFilteredInsights(){
+  let list=state.insights;
+  if(filter.level){ list=list.filter(i=>i.level===filter.level); }
+  if(filter.onlyOpen){ list=list.filter((_,i)=>!state.handled.has(i)); }
+  return list;
+}
+function pageName(key){const p=PAGE_MAP.find(x=>x.key===key);return p?p.name:'OEE设备效率';}
+function pageHref(key){const p=PAGE_MAP.find(x=>x.key===key);return p?p.href:'portal.html';}
+function inferPageFromInsight(ins){
+  const t=(ins.title||'')+' '+(ins.detail||'')+' '+(ins.suggestion||'');
+  if(/OEE|稼动|MTBF/.test(t))return 'oee';
+  if(/直通率|PPM|不良|误测|NG|FPY/.test(t))return 'bad';
+  if(/UPPH|产量/.test(t))return 'oee';
+  if(/WIP|在制品|工单|堆积|瓶颈/.test(t))return 'wip';
+  if(/停机|产线异常|节拍/.test(t))return 'health';
+  if(/平衡/.test(t))return 'line-balance';
+  if(/设备|MTTR/.test(t))return 'health';
+  return 'oee';
+}
+
+/* ========== 主加载入口 ========== */
+async function loadData(dateFrom,dateTo){
+  state.range={dateFrom,dateTo,label:WipUI.periodRange(state.period||'realtime').label};
+  WipUI.UpdateBar.setTime('数据加载中...');
+
+  // 【SECONDARY 1】骨架屏 Shimmer — AI 聚合/分析等待时光流横扫, 数据到达淡出
+  const insightHost=document.getElementById('insightList').parentElement;
+  const chartHosts=[
+    document.getElementById('chartSev'),
+    document.getElementById('chartPageRisk')
+  ];
+  // 仅在洞察列表为空时显示骨架(避免每次刷新闪屏; 首次加载或无数据时)
+  const firstLoad = !state.insights.length;
+  if(firstLoad){
+    AIHooks.showSkeleton(insightHost, [{cls:'lg'},{cls:'md'},{cls:'md'},{cls:'sm'},{cls:'md'}]);
+    chartHosts.forEach(function(h){ if(h) AIHooks.showSkeleton(h, [{cls:'lg',w:'40%'},{cls:'md',w:'70%'},{cls:'md',w:'60%'},{cls:'sm',w:'30%'}]); });
+  }
+
+  // 聚合多个 API
+  const qInsights='/api/ai-insights?dateFrom='+encodeURIComponent(dateFrom)+'&dateTo='+encodeURIComponent(dateTo);
+  const [insRes,annRes]=await Promise.allSettled([
+    apiFetch(API+qInsights),
+    apiFetch(API+'/api/announcements?days=7')
+  ]);
+  state.insights=(insRes.status==='fulfilled'&&insRes.value&&insRes.value.success)?(insRes.value.insights||[]):[];
+  if(annRes.status==='fulfilled'&&annRes.value&&annRes.value.success){
+    state.announcements=annRes.value.announcements||[];
+    state.suggestions=annRes.value.suggestions||[];
+    state.weekly=annRes.value.weekly||null;
+  }else{ state.announcements=[]; state.suggestions=[]; state.weekly=null; }
+
+  aggregatePageRisks();
+  renderFocus();
+  renderKPI();
+  renderAISuggest();
+  renderCharts();
+  renderInsightList();
+  updateTimeBar();
+
+  // 骨架屏淡出 + 焦点闪一帧(数据刷新反馈)
+  if(firstLoad){
+    AIHooks.hideSkeleton(insightHost, 200);
+    chartHosts.forEach(function(h){ if(h) AIHooks.hideSkeleton(h, 200); });
+  }
+  // 【PRIMARY 2】数据刷新时 focus-card 闪一帧 (data-flash), 提示"AI 重新聚合完成"
+  if(!firstLoad){ AIHooks.flashFocusShell(); }
+  // 重新绑定光标跟随(insight-list 重建后委托失效则补绑)
+  AIHooks.bindAllSpotlights();
+}
+
+/* ========== 聚合各看板风险评分 ========== */
+function aggregatePageRisks(){
+  // 取最新有数据的日报
+  const latest=state.announcements.find(a=>a.level!=='neutral')||state.announcements[0]||null;
+  // 从 highlights + insights 提取关键指标
+  const hl={};
+  (latest&&latest.highlights||[]).forEach(h=>{
+    const t=h.text||'';
+    let m;
+    if((m=t.match(/OEE\s*([\d.]+)/)))hl.oee=+m[1];
+    if((m=t.match(/直通率\s*([\d.]+)/)))hl.fpy=+m[1];
+    if((m=t.match(/PPM\s*(\d+)/)))hl.ppm=+m[1];
+    if((m=t.match(/产量\s*(\d+)/)))hl.output=+m[1];
+    if((m=t.match(/不良\s*(\d+)/)))hl.ng=+m[1];
+    if((m=t.match(/误测率\s*([\d.]+)/)))hl.mistest=+m[1];
+  });
+  state.insights.forEach(it=>{
+    const t=it.title||'';
+    let m;
+    if((m=t.match(/OEE\s*([\d.]+)/))&&!hl.oee)hl.oee=+m[1];
+    if((m=t.match(/直通率\s*([\d.]+)/))&&!hl.fpy)hl.fpy=+m[1];
+    if((m=t.match(/PPM\s*(\d+)/))&&!hl.ppm)hl.ppm=+m[1];
+    if((m=t.match(/误测率\s*([\d.]+)/)))hl.mistest=+m[1];
+    if((m=t.match(/UPPH\s*([\d.]+)/)))hl.upph=+m[1];
+  });
+
+  const risks=[];
+  const riskLevel=r=>r>=60?'danger':r>=35?'warning':'normal';
+
+  // OEE 设备效率
+  if(hl.oee!=null){
+    const risk=Math.max(5,Math.round(100-hl.oee));
+    risks.push({page:'oee',name:'OEE设备效率',risk,level:hl.oee<60?'danger':hl.oee<80?'warning':'normal',detail:'OEE '+hl.oee+'%',href:'oee.html'});
+  }
+  // 品质不良
+  if(hl.fpy!=null||hl.ppm!=null){
+    let risk=20, detail='FPY '+(hl.fpy||'--')+'%';
+    if(hl.ppm!=null){ risk=Math.min(95,Math.round(hl.ppm/30)); detail='PPM '+hl.ppm; }
+    if(hl.fpy!=null&&hl.fpy<95){ risk=Math.max(risk,Math.round(100-hl.fpy)); detail='FPY '+hl.fpy+'%'; }
+    risks.push({page:'bad',name:'品质不良',risk,level:riskLevel(risk),detail,href:'bad.html'});
+  }
+  // 误测率(归品质页)
+  if(hl.mistest!=null){
+    const risk=Math.min(95,Math.round(hl.mistest*1.2));
+    risks.push({page:'bad',name:'误测率',risk,level:riskLevel(risk),detail:'误测率 '+hl.mistest+'%',href:'bad.html'});
+  }
+  // 产线状态 → 产线监控 / OEE 最低线
+  const lines=(latest&&latest.lines)||[];
+  if(lines.length){
+    const withOee=lines.filter(l=>l.oee!=null);
+    if(withOee.length){
+      const worst=withOee.reduce((a,b)=>(a.oee<b.oee?a:b));
+      const risk=Math.max(5,Math.round(100-worst.oee));
+      risks.push({page:'oee',name:worst.name+' 最低 OEE',risk,level:worst.oee<60?'danger':worst.oee<80?'warning':'normal',detail:worst.name+' OEE '+worst.oee+'%',href:'oee.html'});
+    }
+  }
+
+  // 未覆盖页补占位(体现"覆盖"概念)
+  const have=new Set(risks.map(r=>r.page));
+  PAGE_MAP.forEach(p=>{
+    if(!have.has(p.key)) risks.push({page:p.key,name:p.name,risk:0,level:'normal',detail:'暂无数据',href:p.href});
+  });
+  state.pageRisks=risks;
+
+  // 顶级风险: danger 类 insight 优先 → 否则取风险评分最高
+  const dangerIns=state.insights.find(i=>i.level==='danger');
+  if(dangerIns){
+    state.topRisk={title:dangerIns.title, detail:dangerIns.detail, suggestion:dangerIns.suggestion||('建议前往 '+pageName(inferPageFromInsight(dangerIns))+' 看板核实并处理'), sourcePage:inferPageFromInsight(dangerIns), level:'danger'};
+  }else{
+    const sorted=risks.filter(r=>r.risk>0).sort((a,b)=>b.risk-a.risk);
+    if(sorted.length&&sorted[0].risk>=45){
+      const r=sorted[0];
+      state.topRisk={title:r.name+' 为当前最高风险项', detail:r.detail, suggestion:'建议前往 '+r.name+' 看板核实并处理', sourcePage:r.page, level:r.level};
+    }else{
+      state.topRisk=null;
+    }
+  }
+}
+
+/* ========== Focus 渲染 ========== */
+function renderFocus(){
+  const F=WipUI.Focus;
+  const dangerN=state.insights.filter(i=>i.level==='danger').length;
+  const warnN=state.insights.filter(i=>i.level==='warning').length;
+  const handledN=state.handled.size;
+  const total=state.insights.length;
+  const unhandled=Math.max(0,total-handledN);
+  const cover=state.pageRisks.filter(r=>r.risk>0).length;
+
+  const titleEl=document.getElementById('focusTitle');
+  const actionEl=document.getElementById('focusAction');
+  // 重置 danger 类
+  titleEl.classList.remove('danger');
+  if(state.topRisk){
+    titleEl.textContent=state.topRisk.title;
+    if(state.topRisk.level==='danger') titleEl.classList.add('danger');
+    actionEl.textContent=state.topRisk.suggestion||('建议前往 '+pageName(state.topRisk.sourcePage)+' 看板处理');
+  }else{
+    titleEl.textContent='全局运行平稳，无紧急风险';
+    actionEl.textContent='各看板指标正常，建议保持日常监控，关注趋势变化与 TOP 不良项。';
+  }
+  document.getElementById('focusScope').textContent='AI 指挥中心 · '+(state.range?(state.range.label||'实时'):'实时')+'窗口';
+
+  // 【PRIMARY 2】AI 诊断严重度呼吸 — 与诊断结论呼应
+  // 有 danger 洞察=报警(0.8s 快脉冲红), 有 warning=预警(2.8s 慢呼吸 amber), 否则正常(静止紫)
+  AIHooks.applySeverity(dangerN>0?'danger':(warnN>0?'warn':'normal'));
+
+  // meta chips
+  document.getElementById('focusMeta').innerHTML=F.metaChips([
+    {val:dangerN,label:'危险'},
+    {val:warnN,label:'警告'},
+    {val:handledN,label:'已处理'},
+    {val:cover,label:'覆盖页'}
+  ]);
+
+  // detail blocks
+  document.getElementById('focusTopRisk').textContent=state.topRisk?state.topRisk.title:'无';
+  document.getElementById('focusTopRiskSub').textContent=state.topRisk?state.topRisk.detail:'所有看板指标正常';
+  document.getElementById('focusSourcePage').textContent=state.topRisk?pageName(state.topRisk.sourcePage):'--';
+  document.getElementById('focusSourcePageSub').textContent=state.topRisk?'点击下方按钮前往':'无紧急风险';
+
+  // actions
+  document.getElementById('focusActGo').onclick=()=>{ location.href=state.topRisk?pageHref(state.topRisk.sourcePage):'portal.html'; };
+  document.getElementById('focusActDetail').onclick=()=>openInsightDrawer('all');
+
+  // trust
+  document.getElementById('focusTrust').innerHTML=F.trustLabel(['聚合:各看板focus','洞察:规则+AI','对话:AI模型']);
+
+  // side1: 洞察总数
+  const side1=document.getElementById('focusSide1');
+  side1.className='focus-mini';
+  side1.querySelector('.label').textContent='洞察总数';
+  AIHooks.setSideAnimated('focusSide1Val', total);   // 【SECONDARY 2】LiveNum
+  document.getElementById('focusSide1Hint').textContent='规则+AI 聚合';
+
+  // side2: 未处理(sideMiniState: 未处理>0 warn, >5 danger)
+  const side2=document.getElementById('focusSide2');
+  const s2=F.sideMiniState(unhandled,{warnAt:1,dangerAt:5});
+  side2.className='focus-mini'+(s2?' '+s2:'');
+  side2.querySelector('.label').textContent='未处理';
+  AIHooks.setSideAnimated('focusSide2Val', unhandled);  // 【SECONDARY 2】LiveNum
+  document.getElementById('focusSide2Hint').textContent=s2==='danger'?'需立即处理':s2==='warn'?'有待办待处理':'全部已处理';
+
+  // 数据信任栏(子导航右侧)
+  document.getElementById('navDataTrust').textContent='聚合:各看板focus · 洞察:规则+AI · 对话:AI模型 · '+((state.range&&state.range.label)||'实时');
+}
+
+/* ========== KPI 渲染 ========== */
+function renderKPI(){
+  const total=state.insights.length;
+  const danger=state.insights.filter(i=>i.level==='danger').length;
+  const warn=state.insights.filter(i=>i.level==='warning').length;
+  const handled=state.handled.size;
+  const cover=state.pageRisks.filter(r=>r.risk>0).length;
+  setKPI('kpiTotal',total,'kpiTotalSub','规则+AI 聚合');
+  setKPI('kpiDanger',danger,'kpiDangerSub',danger>0?'需立即处理':'无危险项');
+  setKPI('kpiWarn',warn,'kpiWarnSub',warn>0?'建议跟进':'无警告');
+  setKPI('kpiHandled',handled,'kpiHandledSub','已确认/闭环');
+  setKPI('kpiChat',state.chatCount,'kpiChatSub',state.chatCount>0?'累计对话':'暂未开始对话');
+  setKPI('kpiCover',cover,'kpiCoverSub','已接入看板 '+(PAGE_MAP.length)+' 页');
+}
+/* 【SECONDARY 2】数字滚动 LiveNum + 跳变闪光 (替代 textContent 直赋) */
+function setKPI(id,val,subId,sub){
+  AIHooks.setKPIAnimated(id, val);
+  document.getElementById(subId).textContent=sub;
+}
+
+/* ========== AI 建议 ========== */
+function renderAISuggest(){
+  const box=document.getElementById('aiSuggest');
+  const titleEl=document.getElementById('aiSugTitle');
+  const detailEl=document.getElementById('aiSugDetail');
+  const lines=[];
+  if(state.topRisk){
+    lines.push('【顶级风险】'+state.topRisk.title+' — '+(state.topRisk.suggestion||'建议立即处理'));
+  }
+  state.suggestions.forEach(s=>{
+    const tag=({danger:'危险',warning:'警告',info:'提示',success:'良好'}[s.level]||s.level);
+    lines.push('【'+tag+'】'+s.text);
+  });
+  if(lines.length===0){ box.style.display='none'; return; }
+  box.style.display='flex';
+  titleEl.textContent='AI 指挥建议 · '+lines.length+' 条';
+  detailEl.innerHTML=lines.slice(0,8).map(l=>'<div style="margin-bottom:4px">'+esc(l)+'</div>').join('');
+}
+
+/* ========== 图表 ========== */
+var AI_DRILL = {
+  chartSev:     {
+    dimension: 'level', source: 'insights', title: '该级别洞察明细',
+    pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; },
+    // 点某级别 → 该级别洞察按 page 分组(中文级别名→英文 level key),每组点行默认 openL3
+    buildGroups: function (params, chart) {
+      var sevMap = { '危险': 'danger', '警告': 'warning', '良好': 'success', '信息': 'info' };
+      var levelKey = (chart && chart._drillDim && params.dataIndex != null) ? chart._drillDim[params.dataIndex] : sevMap[params.name];
+      if (!levelKey) levelKey = sevMap[params.name] || params.name;
+      var list = (typeof getFilteredInsights === 'function' ? getFilteredInsights() : state.insights)
+        .filter(function (i) { return i.level === levelKey; });
+      if (!list.length) return null;
+      var counts = {};
+      list.forEach(function (it) {
+        var p = pageName(inferPageFromInsight(it));
+        counts[p] = (counts[p] || 0) + 1;
+      });
+      return Object.keys(counts).map(function (name) { return { name: name, value: counts[name] }; })
+        .sort(function (a, b) { return b.value - a.value; });
+    }
+  },
+  chartPageRisk:{ dimension: 'page',  source: 'insights', title: '该页洞察明细', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } }
+};
+function bindAllDrillAI() {
+  if (!window.DrillLink) return;
+  Object.keys(AI_DRILL).forEach(function (id) {
+    var el = document.getElementById(id);
+    var chart = window.echarts && el ? echarts.getInstanceByDom(el) : null;
+    if (chart) DrillLink.bindChart(chart, Object.assign({ chartId: id }, AI_DRILL[id]));
+  });
+}
+function renderCharts(){
+  renderSevChart();
+  renderPageRiskChart();
+  bindAllDrillAI();
+}
+function renderSevChart(){
+  const el=document.getElementById('chartSev');
+  if(!window.echarts){ el.innerHTML='<div class="empty-note">ECharts 未加载</div>'; return; }
+  if(!state.charts.sev) state.charts.sev=echarts.init(el);
+  const c=state.charts.sev;
+  const list=getFilteredInsights();
+  const data=[
+    {name:'危险',value:list.filter(i=>i.level==='danger').length,itemStyle:{color:CHART.colors.red}},
+    {name:'警告',value:list.filter(i=>i.level==='warning').length,itemStyle:{color:CHART.colors.orange}},
+    {name:'良好',value:list.filter(i=>i.level==='success').length,itemStyle:{color:CHART.colors.green}},
+    {name:'信息',value:list.filter(i=>i.level==='info').length,itemStyle:{color:CHART.colors.blue}}
+  ].filter(d=>d.value>0);
+  c.setOption({
+    tooltip:Object.assign(CHART.tooltip(),{trigger:'item',formatter:'{b}: {c} ({d}%)'}),
+    legend:CHART.legend({bottom:0,type:'scroll'}),
+    series:[{type:'pie',radius:['45%','70%'],center:['50%','45%'],label:{color:CHART.tooltipText,fontSize:11,formatter:'{b}\n{c}'},
+      data:data.length?data:[{name:'无数据',value:1,itemStyle:{color:CHART.tooltipBorder}}]}]
+  });
+  c._drillDim = data.map(function (d) { return ({ '危险': 'danger', '警告': 'warning', '良好': 'success', '信息': 'info' })[d.name] || d.name; });
+}
+function renderPageRiskChart(){
+  const el=document.getElementById('chartPageRisk');
+  if(!window.echarts){ el.innerHTML='<div class="empty-note">ECharts 未加载</div>'; return; }
+  if(!state.charts.risk) state.charts.risk=echarts.init(el);
+  const c=state.charts.risk;
+  const data=state.pageRisks.filter(r=>r.risk>0).sort((a,b)=>b.risk-a.risk).slice(0,8);
+  const names=data.map(r=>r.name);
+  c._drillDim=data.map(r=>r.page);
+  const colors=data.map(r=>r.level==='danger'?CHART.colors.red:r.level==='warning'?CHART.colors.orange:CHART.colors.green);
+  c.setOption({
+    tooltip:Object.assign(CHART.tooltip(),{trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>p.map(x=>x.name+': '+x.value+' 分').join('<br/>')}),
+    grid:{left:'3%',right:'6%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:names,axisLabel:{color:CHART.axisLabel,fontSize:10,interval:0,rotate:20}},
+    yAxis:{type:'value',max:100,axisLabel:{color:CHART.axisLabel,formatter:'{value}'},splitLine:{lineStyle:{color:CHART.splitLine}}},
+    series:[{type:'bar',data:data.map((r,i)=>({value:r.risk,itemStyle:{color:colors[i],borderRadius:[3,3,0,0]}})),barWidth:'48%',
+      label:{show:true,position:'top',color:CHART.legendText,fontSize:10,formatter:'{c}'}}]
+  });
+}
+
+/* ========== 洞察列表 ========== */
+function renderInsightList(){
+  const box=document.getElementById('insightList');
+  const list=getFilteredInsights();
+  document.getElementById('insightCount').textContent=list.length+' 条';
+  if(!list.length){ box.innerHTML='<div class="empty-note">当前筛选暂无洞察</div>'; AIHooks.bindAllSpotlights(); return; }
+  const order={danger:0,warning:1,info:2,success:3};
+  const sorted=[...list].sort((a,b)=>(order[a.level]??9)-(order[b.level]??9));
+  box.innerHTML=sorted.map(it=>{
+    const idx=state.insights.indexOf(it);
+    const isH=state.handled.has(idx);
+    return '<div class="insight-item '+(it.level||'info')+(isH?' it-handled':'')+'" onclick="openInsightDetail('+idx+')">'+
+      '<div class="it-title">'+esc(it.title||'--')+
+        '<span style="display:flex;gap:6px;align-items:center">'+
+          '<span class="it-level">'+levelText(it.level)+'</span>'+
+          (isH?'<span class="it-level" style="background:rgba(148,163,184,0.15);color:var(--text-secondary)">已处理</span>':'')+
+        '</span>'+
+      '</div>'+
+      '<div class="it-detail">'+esc(it.detail||'')+'</div>'+
+      (it.suggestion?'<div class="it-sug">建议：'+esc(it.suggestion)+'</div>':'')+
+      '<div class="it-tags"><span>来源：'+pageName(inferPageFromInsight(it))+'</span></div>'+
+    '</div>';
+  }).join('');
+  // 【SECONDARY 3】列表重建后, 光标跟随委托需重新绑定 focus-card(insight-list 用事件委托已持久)
+  AIHooks.bindAllSpotlights();
+}
+
+/* ========== Drawer ========== */
+function openInsightDrawer(filter){
+  const list=filter==='handled'
+    ? state.insights.filter((_,i)=>state.handled.has(i))
+    : filter==='danger' ? state.insights.filter(i=>i.level==='danger')
+    : filter==='warning' ? state.insights.filter(i=>i.level==='warning')
+    : state.insights;
+  const order={danger:0,warning:1,info:2,success:3};
+  const sorted=[...list].sort((a,b)=>(order[a.level]??9)-(order[b.level]??9));
+  const dangerN=state.insights.filter(i=>i.level==='danger').length;
+  const warnN=state.insights.filter(i=>i.level==='warning').length;
+  WipUI.Drawer.open({
+    title:'AI 洞察明细 ('+({all:'全部',danger:'危险',warning:'警告',handled:'已处理'}[filter]||'全部')+')',
+    stats:[
+      {val:state.insights.length,lbl:'洞察总数'},
+      {val:dangerN,lbl:'危险'},
+      {val:warnN,lbl:'警告'},
+      {val:state.handled.size,lbl:'已处理'},
+      {val:state.pageRisks.filter(r=>r.risk>0).length,lbl:'覆盖页'},
+      {val:state.chatCount,lbl:'AI对话'}
+    ],
+    html: sorted.length ? sorted.map(it=>{
+      const idx=state.insights.indexOf(it);
+      const isH=state.handled.has(idx);
+      return '<div class="insight-item '+(it.level||'info')+(isH?' it-handled':'')+'">'+
+        '<div class="it-title">'+esc(it.title||'--')+'<span class="it-level">'+levelText(it.level)+'</span></div>'+
+        '<div class="it-detail">'+esc(it.detail||'')+'</div>'+
+        (it.suggestion?'<div class="it-sug">建议：'+esc(it.suggestion)+'</div>':'')+
+        '<div class="it-tags"><span>来源：'+pageName(inferPageFromInsight(it))+'</span></div>'+
+        '<div class="drawer-row-btns">'+
+          '<button class="ai-quick-btn" onclick="location.href=\''+pageHref(inferPageFromInsight(it))+'\'">前往看板</button>'+
+          '<button class="ai-quick-btn" onclick="toggleHandled('+idx+')">'+(isH?'标记未处理':'标记已处理')+'</button>'+
+        '</div>'+
+      '</div>';
+    }).join('') : '<div class="empty-note">无符合条件的洞察</div>',
+    exportData: sorted.map(it=>({level:levelText(it.level),title:it.title||'',detail:it.detail||'',suggestion:it.suggestion||'',page:pageName(inferPageFromInsight(it))})),
+    exportColumns:[
+      {key:'level',label:'级别'},{key:'title',label:'洞察'},{key:'detail',label:'详情'},
+      {key:'suggestion',label:'建议'},{key:'page',label:'来源看板'}
+    ]
+  });
+}
+function openInsightDetail(i){
+  const it=state.insights[i]; if(!it)return;
+  const isH=state.handled.has(i);
+  const src=pageName(inferPageFromInsight(it));
+  WipUI.Drawer.open({
+    title:'洞察详情',
+    stats:[
+      {val:levelText(it.level),lbl:'级别'},
+      {val:src,lbl:'来源看板'},
+      {val:isH?'已处理':'未处理',lbl:'状态'}
+    ],
+    html:'<div class="insight-item '+(it.level||'info')+'">'+
+        '<div class="it-title">'+esc(it.title||'--')+'<span class="it-level">'+levelText(it.level)+'</span></div>'+
+        '<div class="it-detail">'+esc(it.detail||'')+'</div>'+
+        (it.suggestion?'<div class="it-sug">建议：'+esc(it.suggestion)+'</div>':'')+
+        '<div class="it-tags"><span>来源：'+src+'</span></div>'+
+      '</div>'+
+      '<div class="drawer-row-btns">'+
+        '<button class="ai-quick-btn" onclick="location.href=\''+pageHref(inferPageFromInsight(it))+'\'">前往看板处理</button>'+
+        '<button class="ai-quick-btn" onclick="toggleHandled('+i+')">'+(isH?'标记未处理':'标记已处理')+'</button>'+
+        '<button class="ai-quick-btn" onclick=\'askQ("深入分析：'+(it.title||'').replace(/'/g,' ')+'")\'>问 AI 深入分析</button>'+
+      '</div>'
+  });
+}
+function openChatDrawer(){
+  WipUI.Drawer.open({
+    title:'AI 对话统计',
+    stats:[
+      {val:state.chatCount,lbl:'累计对话'},
+      {val:state.insights.length,lbl:'洞察总数'},
+      {val:state.pageRisks.filter(r=>r.risk>0).length,lbl:'覆盖页'}
+    ],
+    html:'<div style="font-size:12px;color:var(--text-secondary);line-height:1.7">本会话累计与 AI 助手对话 <strong style="color:var(--purple)">'+state.chatCount+'</strong> 次。<br>可在下方"对话"区域继续提问，AI 会基于当前生产数据(产量/OEE/直通率/PPM/不良等)给出分析与建议。</div>'+
+      '<div class="drawer-row-btns"><button class="ai-quick-btn" onclick="WipUI.Drawer.close();WipUI.Subnav.scrollTo(\'chatSection\')">前往对话区</button></div>'
+  });
+}
+function toggleHandled(i){
+  if(state.handled.has(i)) state.handled.delete(i);
+  else state.handled.add(i);
+  try{ localStorage.setItem('_aiHandledInsights',JSON.stringify([...state.handled])); }catch(e){}
+  WipUI.Drawer.close();
+  renderFocus(); renderKPI(); renderInsightList();
+}
+
+/* 导出当前筛选下的洞察列表为 CSV(供 Toolbar 的导出CSV按钮使用) */
+function exportInsightsCSV(){
+  var list=getFilteredInsights();
+  var order={danger:0,warning:1,info:2,success:3};
+  list=[...list].sort((a,b)=>(order[a.level]??9)-(order[b.level]??9));
+  var cols=[
+    {key:'level',label:'级别'},{key:'title',label:'洞察'},{key:'detail',label:'详情'},
+    {key:'suggestion',label:'建议'},{key:'page',label:'来源看板'},{key:'status',label:'状态'}
+  ];
+  var rows=list.map(it=>{
+    var idx=state.insights.indexOf(it);
+    return {
+      level:levelText(it.level),
+      title:it.title||'',
+      detail:it.detail||'',
+      suggestion:it.suggestion||'',
+      page:pageName(inferPageFromInsight(it)),
+      status:state.handled.has(idx)?'已处理':'未处理'
+    };
+  });
+  if(!rows.length){ if(window.Toast) Toast.info('当前筛选无洞察可导出'); else alert('当前筛选无洞察可导出'); return; }
+  var cell=function(v){ if(v==null)return ''; var s=String(v); return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  var csv='﻿'+cols.map(c=>cell(c.label)).join(',')+'\n'+rows.map(r=>cols.map(c=>cell(r[c.key])).join(',')).join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='ai-insights_'+WipUI.periodRange(currentPeriod||'realtime').label+'_'+(function(){var n=new Date(),p=function(x){return String(x).padStart(2,'0')};return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate());})()+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ========== 对话 ========== */
+function askQ(q){ document.getElementById('chatInput').value=q; sendChat(); }
+async function sendChat(){
+  const input=document.getElementById('chatInput');
+  const q=input.value.trim(); if(!q)return; input.value='';
+  const msgs=document.getElementById('chatMsgs');
+  msgs.innerHTML+='<div class="ai-msg user"><span>'+window.escHtml(q)+'</span></div>';
+  /* 【SECONDARY 1】AI 思考等待: bot 气泡内嵌骨架流光, 替代纯文字"思考中..." */
+  const loading=document.createElement('div');
+  loading.className='ai-msg bot';
+  loading.id='aiLoading';
+  const span=document.createElement('span');
+  span.style.position='relative';
+  span.style.overflow='hidden';
+  span.style.minWidth='120px';
+  span.style.minHeight='22px';
+  span.style.display='inline-block';
+  span.textContent='思考中';
+  loading.appendChild(span);
+  msgs.appendChild(loading);
+  // 在 bot 气泡内叠一层骨架流光
+  if(!AIHooks.reduce){
+    var sk=document.createElement('div');
+    sk.className='ai-skeleton';
+    sk.style.position='absolute';
+    sk.style.inset='0';
+    sk.style.borderRadius='inherit';
+    sk.style.background='transparent';
+    span.style.position='relative';
+    span.appendChild(sk);
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+  try{
+    const r=await apiFetch(API+'/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const el=document.getElementById('aiLoading'); if(el)el.remove();
+    msgs.innerHTML+='<div class="ai-msg bot"><span>'+window.escHtml(r.success?r.result:(r.error||'分析失败'))+'</span></div>';
+    state.chatCount++; try{localStorage.setItem('_aiChatCount',String(state.chatCount));}catch(e){}
+    renderKPI();
+  }catch(e){
+    const el=document.getElementById('aiLoading'); if(el)el.remove();
+    msgs.innerHTML+='<div class="ai-msg bot"><span style="color:var(--danger)">请求失败</span></div>';
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+/* ========== 时间栏 ========== */
+function updateTimeBar(){
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const t=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  const lbl=(state.range&&state.range.label)?state.range.label:'实时';
+  WipUI.UpdateBar.setTime(lbl+' · '+t+' 更新');
+}
+
+/* ========== 初始化 ========== */
+function init(){
+  // 周期切换
+  WipUI.UpdateBar.init({
+    periodTabsSelector:'#periodSelect',
+    enableCustomRange:true,
+    onPeriod:function(period,range){ state.period=period; currentPeriod=period; loadData(range.dateFrom,range.dateTo); },
+    refreshBtnSelector:'#refreshBtn',
+    onRefresh:function(){ if(state.range) loadData(state.range.dateFrom,state.range.dateTo); },
+    timeElSelector:'#updateTime',
+    liveDotSelector:'#liveDot'
+  });
+  // 子导航锚点
+  WipUI.Subnav.init('#pageSubnav',[
+    {btn:'[data-target="focusShell"]',target:'focusShell',active:true},
+    {btn:'[data-target="insightSection"]',target:'insightSection'},
+    {btn:'[data-target="chartGrid"]',target:'chartGrid'},
+    {btn:'[data-target="chatSection"]',target:'chatSection'}
+  ]);
+
+  // 快捷查询栏: 一键过滤洞察列表(level / onlyOpen)
+  WipUI.QuickQuery.init('#quickQuery',[
+    {key:'all',label:'全部洞察',icon:'⌧',apply:function(){ filter={}; }},
+    {key:'danger',label:'危险',icon:'🔴',apply:function(){ filter={level:'danger'}; }},
+    {key:'warn',label:'警告',icon:'🟠',apply:function(){ filter={level:'warning'}; }},
+    {key:'open',label:'未处理',icon:'🔓',apply:function(){ filter={onlyOpen:true}; }}
+  ],{ activeKey:'all', onAfter:function(){
+    var r=WipUI.periodRange(currentPeriod||'realtime');
+    loadData(r.dateFrom,r.dateTo);
+  }});
+
+  // 功能键条: 刷新 / 导出CSV / 全屏 / 大屏
+  WipUI.Toolbar.init('#toolbar',{
+    buttons:['refresh','exportCSV','fullscreen','bigscreen'],
+    onRefresh:function(){
+      var r=WipUI.periodRange(currentPeriod||'realtime');
+      loadData(r.dateFrom,r.dateTo);
+    },
+    onExportCSV:function(){ exportInsightsCSV(); },
+    targetSelector:'.wip-page'
+  });
+
+  // drawer 关闭 + 导出(wip-ui 仅在注入按钮时绑定,页面自带 #drawerExport 需自行绑定)
+  document.getElementById('drawerCloseBtn').addEventListener('click',WipUI.Drawer.close);
+  document.getElementById('drawerMask').addEventListener('click',WipUI.Drawer.close);
+  var expBtn=document.getElementById('drawerExport');
+  if(expBtn) expBtn.addEventListener('click',function(){ WipUI.Drawer.exportCSV(); });
+  // resize
+  window.addEventListener('resize',function(){
+    Object.values(state.charts).forEach(c=>{try{c.resize();}catch(e){}});
+  });
+  // 每秒更新时间栏
+  setInterval(updateTimeBar,1000);
+  // 【SECONDARY 3】初始化光标跟随光晕(focus-card; insight-list 用事件委托在 bindAllSpotlights 内绑定)
+  AIHooks.bindAllSpotlights();
+  // 首次加载 realtime
+  const r=WipUI.periodRange('realtime');
+  loadData(r.dateFrom,r.dateTo);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工程不良分析 - AI数字化平台</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <script src="nav.js"></script>
+    <script src="common.js"></script>
+    <script src="filter-bar.js"></script>
+    <script src="libs/echarts.min.js"></script>
+    <script src="libs/echarts-liquidfill.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0166B1">
+    <style>
+        /* bad 页面在 WIP 外壳基础上仅做少量补充 */
+        .bad-page .kpi-liquid { width:56px; height:56px; margin:0 auto 2px; }
+        .bad-page .kpi-value { font-weight:800; font-family:var(--font-mono); line-height:1.1; }
+        .bad-page .kpi-label { color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.3px; }
+        .bad-page .kpi-sub { color:var(--text-muted); margin-top:6px; }
+        .bad-page .kpi-delta { display:inline-block; font-size:var(--fs-xs); font-weight:600; margin-left:6px; padding:1px 5px; border-radius:3px; }
+        .bad-page .kpi-delta.up { color:var(--danger); background:rgba(var(--danger-rgb),0.12); }
+        .bad-page .kpi-delta.down { color:var(--success); background:rgba(var(--success-rgb),0.12); }
+        .bad-page .chart-box { flex:1; }
+        .bad-page .badge-new { font-size:9px; background:var(--brand); color:#fff; padding:2px 6px; border-radius:8px; font-weight:500; }
+        .bad-page .badge { display:inline-block; padding:3px 8px; border-radius:4px; font-size:var(--fs-xs); font-weight:600; }
+        .bad-page .badge.closed { background:rgba(var(--success-rgb),0.12); color:var(--success); }
+        .bad-page .badge.open { background:rgba(var(--danger-rgb),0.12); color:var(--danger); }
+        .bad-page .misce-seg { display:inline-flex; align-items:center; gap:3px; padding:1px 6px; border-radius:var(--radius-sm); font-size:var(--fs-xs); color:var(--text-secondary); }
+        .bad-page .misce-seg.active { background:rgba(255,255,255,0.04); }
+        .bad-page .misce-seg[role="button"] { cursor:pointer; transition: background var(--dur-fast) var(--ease-out); }
+        .bad-page .misce-seg[role="button"]:hover { background:rgba(255,255,255,0.06); }
+        .bad-page .sn-table td { text-align: left; } /* 表头已左对齐, 内容统一左对齐(不良项等长文本居中难看, 且与表头一致) */
+        .bad-page .sn-table th[role="button"] { cursor:pointer; user-select:none; }
+        .bad-page .sn-table th[role="button"]::after { content:'⇅'; margin-left:4px; color:var(--text-muted); font-size:var(--fs-2xs); opacity:0.5; }
+        .bad-page .sn-table th[role="button"].asc::after { content:'↑'; color:var(--brand); opacity:1; }
+        .bad-page .sn-table th[role="button"].desc::after { content:'↓'; color:var(--brand); opacity:1; }
+        .bad-page .pagination { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 0; font-size:var(--fs-sm); color:var(--text-muted); }
+        .bad-page .pagination button { padding:4px 12px; border-radius:var(--radius); border:1px solid var(--border); background:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-sm); }
+        .bad-page .pagination button:hover { border-color:var(--brand); color:var(--brand); }
+        .bad-page .pagination button:disabled { opacity:0.3; cursor:not-allowed; }
+        .bad-page .pagination .current { color:var(--brand); font-weight:600; }
+        .loading-mask { position:fixed; inset:0; background:rgba(10,16,37,0.6); z-index:9999; display:none; align-items:center; justify-content:center; }
+        .loading-mask.show { display:flex; }
+        .bad-page .loading-spinner { width:40px; height:40px; border:3px solid var(--brand-border); border-top-color:var(--brand); border-radius:50%; animation:badSpin 0.8s linear infinite; }
+        @keyframes badSpin { to { transform:rotate(360deg); } }
+        /* drawer 内表格复用 sn-table(已在 common.css WIP 区块定义) */
+
+        /* ============================================================
+           不良页注意力钩子 (Attention Hooks)
+           心法: 减权非焦点 → 衬托焦点 → 让焦点呼吸
+           全部走 transform/opacity, 零重排; 尊重 prefers-reduced-motion
+           ============================================================ */
+
+        /* === 钩子 Token (页面级, 不污染共享变量) === */
+        .bad-page {
+            --hook-glow-danger: 0 0 0 1px var(--danger-border), 0 0 28px -6px rgba(var(--danger-rgb),0.55);
+            --hook-glow-warn:   0 0 0 1px var(--warning-border), 0 0 24px -8px rgba(var(--warning-rgb),0.45);
+            --hook-glow-brand:  0 0 0 1px var(--brand-border), 0 0 22px -10px rgba(var(--brand-rgb),0.40);
+            --hook-breathe-danger: badBreatheDanger 2.6s var(--ease) infinite;
+            --hook-breathe-warn:   badBreatheWarn   3.2s var(--ease) infinite;
+            --hook-breathe-brand:  badBreatheBrand  4.0s var(--ease) infinite;
+        }
+
+        /* --- 1. 减权: 非锚点图表 quieter, hover 才完全亮起 --- */
+        .bad-page .full-stack > .chart-panel {
+            opacity: 0.82;
+            transition: opacity var(--dur-slow) var(--ease-out), border-color var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+        }
+        .bad-page .full-stack > .chart-panel:hover { opacity: 1; }
+        /* 锚点图表 (trend/pareto/spc) 恒亮 + 锚点徽章 */
+        .bad-page .full-stack > .chart-panel.is-anchor {
+            opacity: 1;
+            border-color: var(--brand-border) !important;
+            box-shadow: var(--hook-glow-brand);
+        }
+        .bad-page .is-anchor > .chart-panel-title::after {
+            content: 'ANCHOR';
+            float: right;
+            font-size: 9px;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--brand);
+            background: var(--brand-glow);
+            border: 1px solid var(--brand-border);
+            border-radius: 999px;
+            padding: 2px 7px;
+            margin-left: 8px;
+        }
+
+        /* --- 2. 焦点: focus-shell 严重度边缘呼吸光 (压倒性焦点) --- */
+        .bad-page .focus-card {
+            transition: box-shadow var(--dur-slow) var(--ease-out), border-color var(--dur-slow) var(--ease-out);
+        }
+        .bad-page .focus-shell.sev-danger .focus-card {
+            box-shadow: var(--hook-glow-danger);
+            animation: var(--hook-breathe-danger);
+        }
+        .bad-page .focus-shell.sev-warn .focus-card {
+            box-shadow: var(--hook-glow-warn);
+            animation: var(--hook-breathe-warn);
+        }
+        .bad-page .focus-shell.sev-normal .focus-card {
+            box-shadow: var(--hook-glow-brand);
+            animation: var(--hook-breathe-brand);
+        }
+        .bad-page .focus-shell.data-flash .focus-card { animation: badDataFlash 1.2s var(--ease-out); }
+
+        /* --- 3. KPI: 英雄卡三态呼吸环 + 跳变 (sev-* 为主, state-* 作 legacy alias) --- */
+        .bad-page .kpi-card.is-hero { position: relative; }
+        .bad-page .kpi-card.is-hero::after {
+            content: ''; position: absolute; inset: -1px; border-radius: inherit;
+            pointer-events: none; opacity: 0;
+            transition: opacity var(--dur-slow) var(--ease-out);
+        }
+        .bad-page .kpi-card.sev-danger::after,
+        .bad-page .kpi-card.state-danger::after { opacity: 1; box-shadow: var(--hook-glow-danger); animation: var(--hook-breathe-danger); }
+        .bad-page .kpi-card.sev-warn::after,
+        .bad-page .kpi-card.state-warn::after   { opacity: 1; box-shadow: var(--hook-glow-warn);   animation: var(--hook-breathe-warn); }
+        .bad-page .kpi-card.sev-normal::after,
+        .bad-page .kpi-card.state-good::after   { opacity: 1; box-shadow: var(--hook-glow-brand); }
+        .bad-page .kpi-value.is-rolling { transition: color var(--dur-fast) var(--ease-out); }
+
+        /* --- 4. 入场 stagger (chart-panel / ai card / table row) --- */
+        .bad-page .full-stack > .chart-panel { animation: badRiseIn 0.6s var(--ease-out) backwards; }
+        .bad-page .full-stack > .chart-panel:nth-child(1) { animation-delay: 0.02s; }
+        .bad-page .full-stack > .chart-panel:nth-child(2) { animation-delay: 0.08s; }
+        .bad-page .full-stack > .chart-panel:nth-child(3) { animation-delay: 0.14s; }
+        .bad-page .full-stack > .chart-panel:nth-child(4) { animation-delay: 0.20s; }
+        .bad-page .full-stack > .chart-panel:nth-child(n+5) { animation-delay: 0.26s; }
+
+        .bad-page .ai-insight-card {
+            opacity: 0; transform: translateX(-8px);
+            animation: badSlideIn 0.5s var(--ease-out) forwards;
+        }
+        .bad-page .corr-block {
+            opacity: 0; transform: translateY(6px);
+            animation: badSlideUp 0.5s var(--ease-out) forwards;
+        }
+
+        /* --- 5. 表格: 行 hover + 新数据行脉冲 --- */
+        .bad-page .sn-table tbody tr {
+            transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+        }
+        .bad-page .sn-table tbody tr:hover {
+            background: var(--brand-glow);
+            transform: translateX(2px);
+        }
+        .bad-page .sn-table tbody tr.row-new {
+            animation: badRowFlash 2.4s var(--ease-out);
+        }
+
+        /* --- 6. SPC 越界徽章脉冲 (DOM 兜底, 与 echarts effectScatter 互补) --- */
+        .bad-page .spc-viol-row {
+            display: flex; align-items: center; gap: 6px; padding: 3px 0;
+            animation: badBreatheDanger 2.6s var(--ease) infinite;
+            border-radius: var(--radius-sm);
+        }
+        .bad-page .spc-viol-row .spc-icon {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--danger); flex-shrink: 0;
+            box-shadow: 0 0 0 0 rgba(var(--danger-rgb),0.6);
+            animation: badDotRipple 1.6s var(--ease) infinite;
+        }
+
+        /* --- Keyframes --- */
+        @keyframes badBreatheDanger {
+            0%,100% { box-shadow: 0 0 0 1px var(--danger-border), 0 0 18px -10px rgba(var(--danger-rgb),0.25); }
+            50%     { box-shadow: 0 0 0 1px var(--danger-border), 0 0 34px -4px  rgba(var(--danger-rgb),0.70); }
+        }
+        @keyframes badBreatheWarn {
+            0%,100% { box-shadow: 0 0 0 1px var(--warning-border), 0 0 16px -10px rgba(var(--warning-rgb),0.22); }
+            50%     { box-shadow: 0 0 0 1px var(--warning-border), 0 0 30px -6px  rgba(var(--warning-rgb),0.55); }
+        }
+        @keyframes badBreatheBrand {
+            0%,100% { box-shadow: 0 0 0 1px var(--brand-border), 0 0 14px -12px rgba(var(--brand-rgb),0.20); }
+            50%     { box-shadow: 0 0 0 1px var(--brand-border), 0 0 26px -8px  rgba(var(--brand-rgb),0.45); }
+        }
+        @keyframes badDataFlash {
+            0%   { box-shadow: 0 0 0 0 rgba(var(--info-rgb),0.0); }
+            25%  { box-shadow: 0 0 0 2px rgba(var(--info-rgb),0.55), 0 0 30px -4px rgba(var(--info-rgb),0.5); }
+            100% { box-shadow: var(--hook-glow-brand); }
+        }
+        @keyframes badDotRipple {
+            0%   { box-shadow: 0 0 0 0 rgba(var(--danger-rgb),0.6); }
+            70%  { box-shadow: 0 0 0 8px rgba(var(--danger-rgb),0); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--danger-rgb),0); }
+        }
+        @keyframes badRiseIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 0.82; transform: translateY(0); }
+        }
+        .bad-page .full-stack > .chart-panel.is-anchor { animation-name: badRiseInLoud; }
+        @keyframes badRiseInLoud {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes badSlideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes badSlideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes badRowFlash {
+            0%   { background: rgba(var(--info-rgb),0.22); }
+            100% { background: transparent; }
+        }
+
+        /* --- 尊重 prefers-reduced-motion: 关闭所有呼吸/脉冲/入场, 仅保留 hover (与 ATTN.REDUCED 协作) --- */
+        @media (prefers-reduced-motion: reduce) {
+            .bad-page .focus-shell.sev-danger .focus-card,
+            .bad-page .focus-shell.sev-warn .focus-card,
+            .bad-page .focus-shell.sev-normal .focus-card,
+            .bad-page .focus-shell.data-flash .focus-card,
+            .bad-page .kpi-card.sev-danger::after,
+            .bad-page .kpi-card.sev-warn::after,
+            .bad-page .kpi-card.state-danger::after,
+            .bad-page .kpi-card.state-warn::after,
+            .bad-page .ai-insight-card.sev-danger,
+            .bad-page .ai-insight-card.sev-warn,
+            .bad-page .spc-viol-row,
+            .bad-page .spc-viol-row .spc-icon,
+            .bad-page .full-stack > .chart-panel,
+            .bad-page .ai-insight-card,
+            .bad-page .corr-block,
+            .bad-page .sn-table tbody tr.row-new {
+                animation: none !important;
+            }
+            .bad-page .ai-insight-card,
+            .bad-page .corr-block { opacity: 1; transform: none; }
+            .bad-page .full-stack > .chart-panel { opacity: 1; }
+            .bad-page .loading-spinner { animation: none !important; }
+        }
+        /* --- xs 表格首列(条码)水平 sticky: 横向滚动时条码列固定, 便于扫码核对 --- */
+        @media (max-width: 767px) {
+            .bad-page .sn-table th:first-child,
+            .bad-page .sn-table td:first-child {
+                position: sticky; left: 0; background: var(--surface-1); z-index: 2;
+            }
+            .bad-page .sn-table thead th:first-child { z-index: 3; } /* 角点(首行+首列)叠加 */
+            .bad-page .sn-table tbody tr:hover td:first-child { background: var(--brand-glow); }
+        }
+
+        /* --- 打印: 隐藏交互/遮罩/抽屉; 图表 canvas→img 由 common.js autoPrintCharts + common.css @media print 统一处理 --- */
+        @media print {
+            .loading-mask, .drawer, .drawer-mask, .wip-subnav, #toolbar, #quickQuery,
+            #filterContainer, .update-bar, .pagination, .badge-new, #dataQualityPill { display: none !important; }
+            .bad-page .focus-shell { grid-template-columns: 1fr !important; box-shadow: none !important; }
+            .bad-page .focus-shell.sev-danger .focus-card,
+            .bad-page .focus-shell.sev-warn .focus-card,
+            .bad-page .focus-shell.sev-normal .focus-card { box-shadow: none !important; animation: none !important; }
+            .bad-page .kpi-card, .bad-page .chart-panel, #comparePanel, #tableSection { page-break-inside: avoid; }
+            body { background: #fff !important; color: #000 !important; }
+            .bad-page .kpi-value, .bad-page .focus-title { color: #000 !important; }
+            .wip-page { max-width: 100% !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-mask" id="loadingMask"><div class="loading-spinner"></div></div>
+
+    <div class="wip-page bad-page">
+
+    <!-- Top Bar — 单层顶栏(状态|筛选+快捷|导航|操作) 5栏合一 -->
+    <div class="top-bar">
+        <!-- 状态段: live-dot + 更新时间 + 三分类chip + 数据来源 -->
+        <div class="tb-seg tb-seg-status">
+            <div class="live-dot" id="liveDot"></div>
+            <span class="time" id="updateTime">数据加载中...</span>
+            <span id="misceInfo" style="font-size:var(--fs-xs);color:var(--text-secondary);display:inline-flex;align-items:center;gap:4px;"></span>
+            <span class="nav-trust-text" id="navDataTrust">不良:MES维修 · FPY:产出-unique · SPC:P-chart</span>
+            <span id="dataQualityPill" class="source-pill" style="display:none;"></span>
+        </div>
+        <div class="tb-divider"></div>
+        <!-- 筛选段: FilterBar 筛选(quickQuery 移到下方独立行, 避免拥挤) -->
+        <div class="tb-seg tb-seg-filter">
+            <div id="filterContainer"></div>
+        </div>
+        <div class="tb-divider"></div>
+        <!-- 操作段: 周期 + 导出图片 + toolbar功能键(刷新/导出CSV/全屏/大屏) -->
+        <div class="tb-seg tb-seg-action">
+            <select class="period-select" id="periodSelect">
+                <option value="realtime">实时</option>
+                <option value="week">本周</option>
+                <option value="month">本月</option>
+                <option value="quarter">本季</option>
+                <option value="half">半年</option>
+                <option value="year">年度</option>
+                <option value="all">全部</option>
+                <option value="custom">自定义</option>
+            </select>
+            <button class="refresh-btn" id="exportImgBtn">📷 导出图片</button>
+            <div id="toolbar"></div>
+        </div>
+    </div>
+    <!-- 第二行: quickQuery 快捷筛选 + subnav 导航(从 top-bar 移出, 避免拥挤) -->
+    <div class="subnav-row">
+        <div class="wip-subnav-inner" id="pageSubnav">
+            <button class="active" data-target="focusShell">现场关注</button>
+            <button data-target="trendPanel">趋势</button>
+            <button data-target="paretoPanel">Pareto</button>
+            <button data-target="spcPanel">SPC</button>
+            <button data-target="tableSection">明细</button>
+        </div>
+        <div class="qq-row" id="quickQuery"></div>
+    </div>
+
+    <!-- Focus Command Panel — 焦点靠 sev-* 呼吸光 + 非锚点图 opacity:0.82 减权衬托, 不挂 data-focal(避免 enforceFocal 把 KPI/筛选栏/表也压暗) -->
+    <div class="focus-shell" id="focusShell">
+        <div class="focus-card">
+            <div class="focus-content">
+                <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">现场关注 · 全部产线</span></div>
+                <div class="focus-title" id="focusTitle">正在读取不良现场状态...</div>
+                <div class="focus-action" id="focusAction">系统会优先指出当前最该处理的不良项、闭环风险和下一步行动建议。</div>
+                <div class="focus-meta" id="focusMeta">
+                    <span class="focus-chip"><strong>--</strong>TOP1不良</span>
+                    <span class="focus-chip"><strong>--</strong>集中度</span>
+                    <span class="focus-chip"><strong>--</strong>未闭环</span>
+                </div>
+                <div class="focus-detail" id="focusDetail">
+                    <div class="focus-detail-block"><div class="label">闭环率</div><div class="value" id="focusClosureVal">--</div><div class="sub" id="focusClosureSub">--</div></div>
+                    <div class="focus-detail-block"><div class="label">重复NG最高项</div><div class="value" id="focusRepeatVal">--</div><div class="sub" id="focusRepeatSub">--</div></div>
+                </div>
+                <div class="focus-actions" id="focusActions">
+                    <button onclick="drillKPI('top1')" aria-label="查看TOP1不良项明细">查看TOP1明细</button>
+                    <button onclick="drillKPI('closure')" aria-label="督促维修闭环,查看未闭环明细">督促维修闭环</button>
+                    <button onclick="WipUI.Subnav.scrollTo('tableSection')" aria-label="查看不良明细表">查看不良明细</button>
+                </div>
+                <div class="focus-trust" id="focusTrust"><span>不良:MES维修</span><span>FPY:产出-unique</span><span>SPC:P-chart</span></div>
+            </div>
+        </div>
+        <div class="focus-side">
+            <div class="focus-mini" id="focusSide1"><div class="label">直通率 FPY</div><div class="value" id="focusFpy">--</div><div class="hint" id="focusFpyHint">目标 ≥ 95%</div></div>
+            <div class="focus-mini" id="focusSide2"><div class="label">闭环P90时长</div><div class="value" id="focusClosure">--</div><div class="hint" id="focusClosureHint">目标 ≤ 24h</div></div>
+        </div>
+    </div>
+
+    <div class="kpi-section-title"><span>核心指标</span><span>点击卡片查看明细</span></div>
+
+    <!-- KPI Cards (WIP 行,onclick 弹 Drawer) -->
+    <div class="kpi-row wip">
+        <div class="kpi-card" style="--kpi-color:var(--success)" tabindex="0" role="button" aria-label="FPY 直通率,点击查看按工序分解明细" onclick="drillKPI('rate')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillKPI('rate')}">
+            <div class="kpi-label">FPY 直通率</div>
+            <div class="kpi-liquid" id="liquidRate"></div>
+            <div class="kpi-value" id="kpiRate" style="text-align:center">--</div>
+            <div class="kpi-sub" id="kpiRateSub"></div>
+        </div>
+        <div class="kpi-card is-hero" style="--kpi-color:var(--danger)" tabindex="0" role="button" aria-label="不良率,点击查看按日趋势" onclick="drillKPI('badRate')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillKPI('badRate')}">
+            <div class="kpi-label">不良率</div>
+            <div class="kpi-value is-rolling" id="kpiBadRate">--</div>
+            <div class="kpi-sub" id="kpiBadRateSub"></div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--success)" tabindex="0" role="button" aria-label="闭环率,点击查看未闭环明细" onclick="drillKPI('closure')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillKPI('closure')}">
+            <div class="kpi-label">闭环率</div>
+            <div class="kpi-value" id="kpiClosure">--</div>
+            <div class="kpi-sub" id="kpiClosureSub"></div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--danger)" tabindex="0" role="button" aria-label="PPM,点击查看按日趋势" onclick="drillKPI('ppm')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillKPI('ppm')}">
+            <div class="kpi-label">PPM</div>
+            <div class="kpi-value" id="kpiPpm">--</div>
+            <div class="kpi-sub" id="kpiPpmSub">目标 < 5000</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--warning)" tabindex="0" role="button" aria-label="不良总数,点击查看 TOP15 不良项" onclick="drillKPI('bad')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillKPI('bad')}">
+            <div class="kpi-label">不良总数</div>
+            <div class="kpi-value" id="kpiBadTotal">--</div>
+            <div class="kpi-sub" id="kpiBadTotalSub"></div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--purple)" tabindex="0" role="button" aria-label="返工率,点击查看按不良分类" onclick="drillKPI('rework')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillKPI('rework')}">
+            <div class="kpi-label">返工率</div>
+            <div class="kpi-value" id="kpiRework">--</div>
+            <div class="kpi-sub" id="kpiReworkSub">维修>1次的SN占比</div>
+        </div>
+    </div>
+
+    <!-- AI Suggestion Bar -->
+    <div class="ai-suggest" id="aiSuggest" style="display:none">
+        <div class="icon">💡</div>
+        <div class="content">
+            <div class="title" id="aiSugTitle">AI品质诊断</div>
+            <div class="detail" id="aiSugDetail">分析中...</div>
+        </div>
+    </div>
+
+    <!-- Charts — 全宽堆叠 -->
+    <div class="full-stack" id="chartGrid">
+        <div class="chart-panel is-anchor" id="trendPanel">
+            <div class="chart-panel-title">📈 不良趋势<span style="font-size:var(--fs-2xs);color:var(--text-muted);font-weight:400;margin-left:6px">·产量按过站日/不良按测试日,日FPY为估算(口径差1-2天)</span></div>
+            <div class="chart-box chart-box-lg" id="trendChart" role="img" aria-label="不良趋势图,横轴日期纵轴不良数与直通率"></div>
+        </div>
+        <div class="chart-panel is-anchor" id="paretoPanel">
+            <div class="chart-panel-title">📊 不良帕累托 (TOP15)</div>
+            <div class="chart-box" id="paretoChart" role="img" aria-label="不良帕累托图,TOP15不良项数量与累计占比"></div>
+        </div>
+        <div class="chart-panel" id="reworkPanel">
+            <div class="chart-panel-title">🔧 返工按不良分类<span style="font-size:var(--fs-2xs);color:var(--text-muted);font-weight:400;margin-left:6px">·来自维修报表 repair_total&gt;1</span></div>
+            <div class="chart-box" id="reworkChart" role="img" aria-label="返工按不良分类饼图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">⚙️ 工序不良分布</div>
+            <div class="chart-box" id="processChart" role="img" aria-label="工序不良分布横向柱图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">🏭 线体不良对比</div>
+            <div class="chart-box" id="lineChart" role="img" aria-label="线体不良对比横向柱图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">📦 型号不良对比</div>
+            <div class="chart-box" id="modelChart" role="img" aria-label="型号不良对比横向柱图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">📈 TOP不良项趋势分析</div>
+            <div class="chart-box" id="topTrendChart" role="img" aria-label="TOP5不良项趋势折线图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">🔥 工序×不良项热力图</div>
+            <div class="chart-box chart-box-xl" id="heatmapChart" role="img" aria-label="工序与不良项交叉热力图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">🏆 TOP不良项排名变化</div>
+            <div class="chart-box" id="rankChart" role="img" aria-label="TOP不良项排名变化图"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">🧩 产出分段(组装/测试/包装)</div>
+            <div class="chart-box" id="stageChart" role="img" aria-label="产出分段柱图,组装测试包装的不良与直通率"></div>
+        </div>
+        <div class="chart-panel is-anchor" id="spcPanel">
+            <div class="chart-panel-title">📏 SPC控制图 (P-Chart) <span class="badge-new">NEW</span></div>
+            <div class="chart-box" id="spcChart" role="img" aria-label="SPC控制图P图,不良率与控制限"></div>
+            <div id="spcViolations" style="padding:8px 0;"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">🧠 智能诊断建议 <span class="badge-new">NEW</span></div>
+            <div id="aiInsightsPanel"><div style="color:var(--text-muted);font-size:var(--fs-sm);">加载中...</div></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-title">🔗 关联分析 <span class="badge-new">NEW</span></div>
+            <div id="correlationPanel"><div style="color:var(--text-muted);font-size:var(--fs-sm);">加载中...</div></div>
+        </div>
+    </div>
+
+    <!-- Compare Panel (环比对比, summary 到达后渲染) -->
+    <div class="chart-panel" id="comparePanel" style="margin-bottom:var(--module-gap)">
+        <div class="chart-panel-title">📊 环比对比 <span style="font-size:var(--fs-2xs);color:var(--text-muted);font-weight:400;margin-left:6px">·vs 前一等长周期</span></div>
+        <div id="compareContent" style="padding:8px 4px;"><div style="color:var(--text-muted);font-size:var(--fs-sm);">环比数据加载中...</div></div>
+    </div>
+
+    <!-- Detail Table -->
+    <div id="tableSection" style="padding:0 0 24px">
+        <div class="chart-panel">
+            <div class="chart-panel-title" style="justify-content:space-between">
+                <span>📋 不良明细</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span id="tableInfo" style="font-size:var(--fs-xs);color:var(--text-muted)"></span>
+                    <select id="pageSizeSelect" onchange="changePageSize()" style="padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-1);color:var(--text-secondary);font-size:var(--fs-xs);">
+                        <option value="20">20条/页</option>
+                        <option value="50" selected>50条/页</option>
+                        <option value="100">100条/页</option>
+                    </select>
+                    <button class="refresh-btn" onclick="BadTable.exportCSV()">⬇ 导出CSV</button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);margin-top:6px;">
+                <table class="sn-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('barcode')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('barcode')}">条码</th>
+                            <th onclick="sortTable('lineName')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('lineName')}">线体</th>
+                            <th onclick="sortTable('productModel')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('productModel')}">型号</th>
+                            <th onclick="sortTable('workOprationName')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('workOprationName')}">工序</th>
+                            <th onclick="sortTable('badItems')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('badItems')}">不良项</th>
+                            <th onclick="sortTable('categoryName')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('categoryName')}">不良类别</th>
+                            <th onclick="sortTable('contentName')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('contentName')}">维修内容</th>
+                            <th onclick="sortTable('causesName')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('causesName')}">原因</th>
+                            <th onclick="sortTable('repairMan')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('repairMan')}">维修人</th>
+                            <th onclick="sortTable('moLotNo')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('moLotNo')}">批次号</th>
+                            <th onclick="sortTable('repairStateCode')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('repairStateCode')}">状态</th>
+                            <th onclick="sortTable('testTime')" role="button" tabindex="0" aria-sort="none" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sortTable('testTime')}">时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailBody">
+                        <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:30px;">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    </div><!-- .wip-page -->
+
+    <!-- Drawer (WipUI) -->
+    <div class="drawer-mask" id="drawerMask"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <h3 id="drawerTitle">--</h3>
+            <div style="display:flex;gap:8px">
+                <button class="refresh-btn" id="drawerExport">⬇ 导出</button>
+                <button class="drawer-close" id="drawerCloseBtn">×</button>
+            </div>
+        </div>
+        <div class="drawer-body">
+            <div class="drawer-stats" id="drawerStats"></div>
+            <div id="drawerContent"></div>
+        </div>
+    </div>
+
+<!-- Modular JS -->
+<script src="bad-core.js"></script>
+<script src="chart-theme.js"></script>
+<script src="bad-charts.js"></script>
+<script src="bad-table.js"></script>
+<script src="bad-spc.js"></script>
+<script src="bad-ai.js"></script>
+<script src="wip-ui.js"></script>
+<script>
+/* ========== 全局状态 ========== */
+var _currentRange = { dateFrom: '', dateTo: '', label: '实时' };
+var _currentPeriod = 'realtime';
+
+/* ========== QuickQuery 筛选状态 ========== */
+/* filter 由 QuickQuery 项 apply 设置;_doApplyFilters 内据其过滤 badItems。
+ * 字段:
+ *   topN=1         仅保留 TOP1 不良项
+ *   onlyOpen=true  仅未闭环(repairStateCode !== 20)
+ *   onlyRepeat=true 仅重复 NG(同不良项出现 >=2 次)
+ *   onlySpcViol=true 仅 SPC 越界日(基于 spcData violations)
+ *   onlyMisTest=true 仅误测/NTF
+ */
+var filter = {};
+var _stageChartInstance = null;
+var _badLoadSeq = 0;
+/* 返工功能开关: 当前无真实返工数据(ai_repair_report 的 repair_total 全=1, 返工率恒 0%), 先隐藏返工 KPI 卡 +
+   返工图表面板 + 焦点 trust 返工标签; 有返工数据后改 true 即恢复(renderReworkChart/resize/drillKPI 自动生效)。 */
+var REWORK_ENABLED = false;
+(function(){
+    if (REWORK_ENABLED) return;
+    var _rwVal = document.getElementById('kpiRework');
+    if (_rwVal) { var _c = _rwVal.closest('.kpi-card'); if (_c) _c.style.setProperty('display','none','important'); }
+    var _rwPanel = document.getElementById('reworkPanel');
+    if (_rwPanel) _rwPanel.style.setProperty('display','none','important'); // .chart-panel 有 display:flex!important, 需 important 覆盖
+})();
+// localDate 收口到 common.js (window.localDate), 本页不再单独定义
+
+/* ========== FilterBar (线体/工序/型号/搜索;日期由周期条管理) ========== */
+var _filter = new FilterBar('#filterContainer', {
+    fields: ['line', 'workOperation', 'product', 'search'],
+    fieldOptions: {
+        line: { placeholder: '全部线体' },
+        workOperation: { label: '工序', placeholder: '全部工序', autoLoad: false },
+        product: { label: '型号', placeholder: '全部型号', autoLoad: false },
+        search: { placeholder: '搜索...' }
+    },
+    apiBase: BadCore.getAPI(),
+    storageKey: '_bad_filters',
+    rememberSelection: true,
+    cascade: {
+        line: ['workOperation', 'product'],
+        workOperation: ['product']
+        // product 不再反向级联 workOperation: 确立 line > stage > 工序 > 型号 单向主次
+    },
+    onCascade: function(source, value, params) {
+        repopulateFilters(source);        // 主级(line)/工序变 → 重算次级选项(按 line+stage 收窄)
+        setTimeout(applyFilters, 10);
+        return {};                        // 选项已由 repopulateFilters 直接 setOptions, 返回空避免 FilterBar 重复处理
+    },
+    onQuery: function() { loadData(); }
+});
+
+/* 线体切换 → 全量重取(/api/bad/fast 带 lineName, 产量/不良/分段/SPC/AI 全部按新线体作用域)。
+   仅客户端过滤不良会让产量停在旧值 → FPY 口径错乱(产量=全厂, 不良=单线)。
+   'cascade' 事件只在用户主动改下拉时触发(setOptions 程序化赋值不发 change), 不会被 populateFactors 误触发。
+   proc/product/search 后端不接受, 仍走客户端过滤(在当前线体作用域内再钻取)。 */
+_filter.on('cascade', function(data) {
+    if (data.source === 'line') loadData();
+});
+
+var _searchTimer = null;
+(function(){
+    // 在筛选栏末尾插入"工艺段" + "不良类型"两个下拉框(二维分类筛选)
+    var fc = document.getElementById('filterContainer');
+    if (fc) {
+        var queryBtn = fc.querySelector('button') || fc.lastElementChild;
+        var selStyle = 'padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-1);color:var(--text-primary);font-size:var(--fs-sm);cursor:pointer;margin-left:6px;';
+
+        var stageSel = document.createElement('select');
+        stageSel.id = 'stageSelect';
+        stageSel.style.cssText = selStyle;
+        stageSel.innerHTML = '<option value="all">全部工艺段</option><option value="assembly">组装</option><option value="test">测试</option><option value="packaging">包装</option>';
+        stageSel.addEventListener('change', function() {
+            BadCore.setStageFilter(this.value);
+            repopulateFilters('stage');   // 工艺段是工序的上级, stage 变 → 工序/型号选项收窄到该工艺段
+            applyFilters();
+            refreshAdvanced();
+        });
+        if (queryBtn) fc.insertBefore(stageSel, queryBtn); else fc.appendChild(stageSel);
+
+        var typeSel = document.createElement('select');
+        typeSel.id = 'viewModeSelect';
+        typeSel.style.cssText = selStyle;
+        typeSel.innerHTML = '<option value="all">全部类型</option><option value="real">真不良</option><option value="abnormal">测试异常</option><option value="mistest">误测/NTF</option>';
+        typeSel.value = 'real'; // 默认"真不良"视角, 与 BadCore.state.typeFilter 同步(?view= 下钻与用户切换会覆盖)
+        typeSel.addEventListener('change', function() {
+            BadCore.setTypeFilter(this.value);
+            applyFilters();
+            refreshAdvanced();
+        });
+        if (queryBtn) fc.insertBefore(typeSel, queryBtn); else fc.appendChild(typeSel);
+    }
+    var searchEl = _filter.getFieldElement('search');
+    if (searchEl) searchEl.addEventListener('input', function(){ clearTimeout(_searchTimer); _searchTimer = setTimeout(applyFilters, 300); });
+    // 型号是最次级, 不反向重算工序(单向主次); 仅触发数据过滤
+    var prodFilterEl = document.getElementById('productFilter');
+    if (prodFilterEl) prodFilterEl.addEventListener('change', function(){ applyFilters(); });
+})();
+
+/* ========== 筛选主次联动 ==========
+   层级: period > line > stage > 工序 > 型号; type/search 正交(不参与选项级联)。
+   主级(line/stage)变 → 工序+型号选项都按 line+stage 收窄重算;
+   工序变 → 仅型号按 line+stage+工序 重算; 型号变 → 不反向(单向主次, 仅 applyFilters 过滤数据)。 */
+function repopulateFilters(source) {
+    var state = BadCore.getState();
+    if (!state.origBadItems || !state.origBadItems.length) return;
+
+    var lineEl = document.getElementById('lineFilter');
+    var procEl = document.getElementById('workOpFilter');
+    var lineName = lineEl && lineEl.value && lineEl.selectedOptions[0] ? lineEl.selectedOptions[0].textContent : '';
+    var procVal = procEl ? procEl.value : '';
+    var stage = BadCore.getStageFilter();
+
+    // 基础集逐级收窄: 主(line) → 次(stage)
+    var items = state.origBadItems;
+    if (lineName) items = items.filter(function(i) { return i.lineName === lineName; });
+    if (stage && stage !== 'all') items = items.filter(function(i) { return BadCore.stageOfOperation(i.workOprationName) === stage; });
+
+    if (source === 'line' || source === 'stage') {
+        var procs = new Set(), prods = new Set();
+        items.forEach(function(i) { if (i.workOprationName) procs.add(i.workOprationName); if (i.productModel) prods.add(i.productModel); });
+        _filter.setOptions('workOperation', Array.from(procs).sort());
+        _filter.setOptions('product', Array.from(prods).sort());
+    } else if (source === 'workOperation') {
+        var filtered = procVal ? items.filter(function(i) { return i.workOprationName === procVal; }) : items;
+        var prods2 = new Set();
+        filtered.forEach(function(i) { if (i.productModel) prods2.add(i.productModel); });
+        _filter.setOptions('product', Array.from(prods2).sort());
+    }
+    // source === 'product' → 不反向重算工序(单向主次), 仅 onCascade 末尾的 applyFilters 过滤数据
+}
+
+function populateFilters() {
+    // loadData 后按当前 line+stage 重建工序/型号选项(主次联动)
+    repopulateFilters('line');
+}
+
+function sortTable(col) { BadTable.sort(col); BadTable.render(BadCore.getState().badItems); }
+function changePageSize() { BadTable.setPageSize(parseInt(document.getElementById('pageSizeSelect').value)); BadTable.render(BadCore.getState().badItems); }
+
+/* ========== Apply Filters (debounced) ========== */
+var _applyTimer = null;
+function applyFilters() {
+    clearTimeout(_applyTimer);
+    _applyTimer = setTimeout(_doApplyFilters, 30);
+}
+function _doApplyFilters() {
+    var procVal = document.getElementById('workOpFilter') ? document.getElementById('workOpFilter').value : '';
+    var prodVal = document.getElementById('productFilter') ? document.getElementById('productFilter').value : '';
+    var keyword = (document.getElementById('globalSearch') ? document.getElementById('globalSearch').value : '').trim().toLowerCase();
+
+    var lineEl = document.getElementById('lineFilter');
+    var lineName = lineEl && lineEl.value && lineEl.selectedOptions[0] ? lineEl.selectedOptions[0].textContent : '';
+
+    var result = BadCore.applyClientFilters(procVal, prodVal, keyword, false, lineName);
+
+    // QuickQuery filter 联动:在已有客户端筛选结果上再过滤
+    applyQuickQueryFilter();
+
+    var misceInfo = document.getElementById('misceInfo');
+    if (misceInfo) {
+        var sf = BadCore.getStageFilter();
+        var tf = BadCore.getTypeFilter();
+        var stageLabel = { assembly: '组装', test: '测试', packaging: '包装' }[sf];
+        // 三段式 chip: 真不良 N | 测试异常 N | 误测 N; 可点击切换 typeFilter, 选中段用中性 --brand 高亮(语义色留给告警)
+        var seg = function(label, count, active, typeVal) {
+            var cls = active ? 'misce-seg active' : 'misce-seg';
+            var style = active ? ' style="color:var(--brand);font-weight:600"' : '';
+            var click = ' onclick="setTypeFromMisce(\'' + typeVal + '\')" role="button" tabindex="0" aria-label="切换到' + label + '视角" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();setTypeFromMisce(\'' + typeVal + '\')}"';
+            return '<span class="' + cls + '"' + style + click + '>' + label + ' <b>' + count + '</b></span>';
+        };
+        var html = '';
+        if (stageLabel) html += '<span style="color:var(--text-muted)">' + stageLabel + ' ·</span> ';
+        html += seg('真不良', result.realTotal, tf === 'real', 'real');
+        html += '<span style="color:var(--text-muted)">|</span>';
+        html += seg('测试异常', result.abnormalTotal, tf === 'abnormal', 'abnormal');
+        html += '<span style="color:var(--text-muted)">|</span>';
+        html += seg('误测', result.mistestTotal, tf === 'mistest', 'mistest');
+        misceInfo.innerHTML = html;
+    }
+    renderAll();
+}
+
+/* 三分类 chip 点击 → 切 typeFilter (与 viewModeSelect 双向联动) */
+function setTypeFromMisce(type) {
+    var sel = document.getElementById('viewModeSelect');
+    if (sel) sel.value = type;
+    BadCore.setTypeFilter(type);
+    applyFilters();
+    refreshAdvanced();
+}
+
+/* ========== QuickQuery filter 应用(在 client filter 之后) ========== */
+function applyQuickQueryFilter() {
+    var state = BadCore.getState();
+    var items = state.badItems.slice();
+
+    if (filter.onlyMisTest) {
+        items = items.filter(function(i) { return BadCore.isMistest(i); });
+    }
+    if (filter.onlyOpen) {
+        items = items.filter(function(i) { return (parseInt(i.repairStateCode) || 0) !== 20; });
+    }
+    if (filter.onlyRepeat) {
+        // 同条码重复维修: 统计每个 barcode 出现次数(含不同不良项), 仅保留 >=2 的记录
+        // 这是可靠性信号(同台机器反复维修), 而非旧逻辑的"同不良项重复"(与帕累托重复无新信息)
+        var snCount = {};
+        items.forEach(function(i) { if (i.barcode) snCount[i.barcode] = (snCount[i.barcode] || 0) + 1; });
+        items = items.filter(function(i) { return i.barcode && snCount[i.barcode] >= 2; });
+    }
+    if (filter.topN === 1) {
+        // 仅保留 TOP1 不良项(state.badByDefect 已按 client filter 重算)
+        var defs = state.badByDefect || [];
+        if (defs.length) {
+            var topDef = defs[0].defect;
+            items = items.filter(function(i) { return i.badItems === topDef; });
+        } else {
+            items = [];
+        }
+    }
+    if (filter.onlySpcViol) {
+        // 仅保留 SPC 越界日的不良记录
+        var violDates = getSPCViolationDates();
+        if (violDates.size) {
+            items = items.filter(function(i) {
+                if (!i.testTime) return false;
+                var dt = new Date(i.testTime);
+                if (isNaN(dt.getTime())) return false;
+                return violDates.has(localDate(dt));
+            });
+        } else {
+            items = [];
+        }
+    }
+
+    state.badItems = items;
+    var uniqueSNs = new Set();
+    items.forEach(function(i) { if (i.barcode) uniqueSNs.add(i.barcode); });
+    state.badTotal = uniqueSNs.size || items.length;
+    // 去冗余: applyClientFilters 已对同批 items 调过 recalcAggregates;
+    // 仅当 QuickQuery 真正过滤(列表变了)时才重算。无 QuickQuery 过滤时跳过, 同批只算一次。
+    var _hasQuickFilter = filter.onlyMisTest || filter.onlyOpen || filter.onlyRepeat || filter.topN === 1 || filter.onlySpcViol;
+    if (_hasQuickFilter) BadCore.recalcAggregates(items);
+}
+
+/* 从 SPC P-chart 数据中提取越界日集合 */
+function getSPCViolationDates() {
+    var spc = BadCore.getState().spcData;
+    var set = new Set();
+    if (!spc) return set;
+    var viol = spc.violations || spc.outOfControlPoints || [];
+    if (Array.isArray(viol)) {
+        viol.forEach(function(v) {
+            var d = v.date || v.day || (v.point && v.point.date);
+            if (d) set.add(d);
+        });
+    }
+    // 兜底:遍历 points 找超出 UCL/LCL 的点
+    if (!set.size && Array.isArray(spc.points)) {
+        var ucl = spc.ucl, lcl = spc.lcl;
+        spc.points.forEach(function(p) {
+            if (ucl != null && p.value != null && p.value > ucl && p.date) set.add(p.date);
+            if (lcl != null && p.value != null && p.value < lcl && p.date) set.add(p.date);
+        });
+    }
+    return set;
+}
+
+/* 焦点壳数据到达闪烁 — 一次性提示新数据已刷新 */
+function flashFocusShell() {
+    var shell = document.getElementById('focusShell');
+    if (!shell) return;
+    shell.classList.remove('data-flash');
+    void shell.offsetWidth; // reflow 重启 animation
+    shell.classList.add('data-flash');
+    setTimeout(function() { shell.classList.remove('data-flash'); }, 1300);
+}
+
+/* ========== KPI Render ========== */
+/* 数字滚动跳变 — 统一由 ATTN.liveNum 接管 (v4.1) */
+function animateNumber(el, to, opts) {
+    if (!el) return;
+    if (to == null || to === '' || to === '--') { el.textContent = '--'; return; }
+    opts = opts || {};
+    var suffix = opts.suffix || '';
+    var decimals = opts.decimals != null ? opts.decimals : 0;
+    if (opts.format) return ATTN.liveNum(el, to, { format: opts.format, dur: opts.duration || 700 });
+    return ATTN.liveNum(el, to, { suffix: suffix, decimals: decimals, dur: opts.duration || 700 });
+}
+/* KPI 卡三态呼吸 — 统一走 ATTN.setFocusState(sev-*), state-* 作 legacy alias 由 CSS 兼容 */
+function setKpiState(card, state) {
+    if (!card) return;
+    var sev = state === 'danger' ? 'danger' : state === 'warn' ? 'warn' : (state === 'good' ? 'normal' : null);
+    if (sev && window.ATTN && ATTN.setFocusState) ATTN.setFocusState(card, sev);
+    else { card.classList.remove('sev-danger','sev-warn','sev-normal','state-good','state-warn','state-danger'); if (sev) card.classList.add('sev-' + sev); }
+}
+function renderKPI() {
+    var state = BadCore.getState();
+    var bad = state.badTotal;
+    var _sf = state.stageFilter;
+    var total = (_sf && _sf !== 'all') ? (state.stageOutput[_sf] || 0) : state.productionTotal;
+    var good = total - bad;
+    var hasProd = total > 0;
+    var rate = hasProd ? +((good / total) * 100).toFixed(2) : null;
+    var badRate = hasProd ? +((bad / total) * 100).toFixed(2) : null;
+    var ppm = hasProd ? Math.round(bad / total * 1000000) : null;
+    var days = state.prodByDay.length || 1;
+    var dailyAvg = Math.round(bad / days);
+    var defs = state.badByDefect || [];
+    var closedCount = new Set(state.badItems.filter(function(i) { return (parseInt(i.repairStateCode) || 0) === 20; }).map(function(i) { return i.barcode; }).filter(Boolean)).size;
+    var clientClosureRate = bad > 0 ? +(closedCount / bad * 100).toFixed(1) : null;
+
+    var cmp = state.summary && state.summary.compare ? state.summary.compare : null;
+
+    document.getElementById('kpiRate').textContent = rate == null ? '--' : rate + '%';
+    document.getElementById('kpiRate').style.color = rate == null ? 'var(--text-muted)' : BadCharts.rateColor(rate);
+    document.getElementById('kpiRateSub').innerHTML = hasProd ? ('产量 ' + total.toLocaleString() + (cmp && cmp.fpyDelta != null ? ' <span class="kpi-delta ' + (cmp.fpyDelta >= 0 ? 'down' : 'up') + '">vs前期 ' + (cmp.fpyDelta >= 0 ? '↑' : '↓') + Math.abs(cmp.fpyDelta).toFixed(2) + '</span>' : '')) : '暂无真实过站数据';
+
+    document.getElementById('kpiBadTotal').textContent = bad.toLocaleString();
+    document.getElementById('kpiBadTotalSub').innerHTML = '产量 ' + total.toLocaleString() + (cmp ? ' <span class="kpi-delta ' + (cmp.prevBadTotal < bad ? 'up' : 'down') + '">vs前期 ' + (bad > cmp.prevBadTotal ? '↑' : '↓') + Math.abs(bad - cmp.prevBadTotal) + '</span>' : '');
+
+    /* 英雄卡: 不良率 — 滚动跳变 + 三态呼吸 */
+    var badRateEl = document.getElementById('kpiBadRate');
+    animateNumber(badRateEl, badRate == null ? null : badRate, { suffix: '%', decimals: 2 });
+    badRateEl.style.color = badRate == null ? 'var(--text-muted)' : (badRate > 5 ? 'var(--danger)' : badRate > 2 ? 'var(--warning)' : 'var(--success)');
+    document.getElementById('kpiBadRateSub').innerHTML = '目标 < 5%' + (cmp && cmp.badRateDelta != null ? ' <span class="kpi-delta ' + (cmp.badRateDelta > 0 ? 'up' : 'down') + '">' + (cmp.badRateDelta > 0 ? '↑' : '↓') + Math.abs(cmp.badRateDelta).toFixed(2) + '</span>' : '');
+    setKpiState(badRateEl.closest('.kpi-card'), badRate == null ? '' : (badRate > 5 ? 'danger' : badRate > 2 ? 'warn' : 'good'));
+
+    document.getElementById('kpiPpm').textContent = ppm == null ? '--' : ppm.toLocaleString();
+    document.getElementById('kpiPpm').style.color = ppm == null ? 'var(--text-muted)' : (ppm > 5000 ? 'var(--danger)' : ppm > 2000 ? 'var(--warning)' : 'var(--success)');
+    /* PPM 环比: prevPpm 用 prevBadTotal/当期产量×1e6 近似(等长周期产量相近, 与 badRate delta 口径一致); bad=0/无 cmp 时只显目标 */
+    var _prevPpm = (cmp && cmp.prevBadTotal != null && hasProd) ? Math.round(cmp.prevBadTotal / total * 1000000) : null;
+    document.getElementById('kpiPpmSub').innerHTML = '目标 < 5000' + (_prevPpm != null ? ' <span class="kpi-delta ' + (ppm > _prevPpm ? 'up' : 'down') + '">vs前期 ' + (ppm > _prevPpm ? '↑' : '↓') + Math.abs(ppm - _prevPpm).toLocaleString() + '</span>' : '');
+
+    /* 闭环率统一用后端 summary.closureRate(unique-SN 口径), 与对比卡/AI 同源; summary 未到时用客户端估算; bad=0 显 -- */
+    var sSum = state.summary || {};
+    var closureRate = (bad > 0 && sSum.closureRate != null) ? +(+sSum.closureRate).toFixed(1) : clientClosureRate;
+    var kpiClosureEl = document.getElementById('kpiClosure');
+    kpiClosureEl.textContent = closureRate == null ? '--' : closureRate + '%';
+    kpiClosureEl.style.color = closureRate == null ? 'var(--text-muted)' : (closureRate >= 80 ? 'var(--success)' : closureRate >= 50 ? 'var(--warning)' : 'var(--danger)');
+    /* 闭环率副信息: 已闭环数 + 闭环时长(均/P90, 来自后端 summary) — 时长比 99% 闭环率更有行动价值。
+       闭环数优先用 summary 的 unique-SN(与 closureRate 同口径), fallback 客户端 closedCount/bad */
+    var closureTimeStr = '';
+    if (sSum.closureAvgHours != null) {
+        closureTimeStr = ' · 均' + sSum.closureAvgHours + 'h';
+        if (sSum.closureP90Hours != null) closureTimeStr += ' P90 ' + sSum.closureP90Hours + 'h';
+    }
+    var _closedUnique = sSum.closed_unique != null ? sSum.closed_unique : closedCount;
+    var _badUnique = sSum.bad_unique != null ? sSum.bad_unique : bad;
+    document.getElementById('kpiClosureSub').textContent = (closureRate == null ? '暂无不良' : (_closedUnique + '/' + _badUnique + ' 已闭环')) + closureTimeStr;
+
+    // 进阶版:null-guard(HTML 无 kpiDailyAvg 卡片,潜伏 ReferenceError,避免阻断 renderKPI 后续渲染)
+    var _dailyAvgEl = document.getElementById('kpiDailyAvg');
+    if (_dailyAvgEl) _dailyAvgEl.textContent = dailyAvg.toLocaleString();
+    var _dailyAvgSubEl = document.getElementById('kpiDailyAvgSub');
+    if (_dailyAvgSubEl) _dailyAvgSubEl.textContent = days + ' 天';
+
+    // 返工率 (来自 ai_repair_report, summary.rework)
+    var rework = state.summary && state.summary.rework;
+    var reworkRate = rework ? rework.rate : null;
+    var reworkEl = document.getElementById('kpiRework');
+    reworkEl.textContent = reworkRate != null ? reworkRate + '%' : '--';
+    reworkEl.style.color = reworkRate == null ? 'var(--text-muted)' : (reworkRate > 5 ? 'var(--danger)' : reworkRate > 2 ? 'var(--warning)' : 'var(--success)');
+    document.getElementById('kpiReworkSub').textContent = rework ? (rework.sn_count||0) + ' 返工SN / ' + (rework.total_sn||0) + ' 总SN' : '维修>1次的SN占比';
+
+    BadCharts.renderLiquidKPI(rate);
+}
+
+/* ========== Focus Command Panel (AI 焦点判断) ========== */
+function renderFocus() {
+    var state = BadCore.getState();
+    var bad = state.badTotal;
+    var _sf = state.stageFilter;
+    var total = (_sf && _sf !== 'all') ? (state.stageOutput[_sf] || 0) : state.productionTotal;
+    var good = total - bad;
+    var rate = total > 0 ? +((good / total) * 100).toFixed(2) : null; // 无过站→null(与KPI卡同口径), 避免误判0%为"严重低于目标"
+    var defs = state.badByDefect || [];
+    var closedCount = new Set(state.badItems.filter(function(i) { return (parseInt(i.repairStateCode) || 0) === 20; }).map(function(i) { return i.barcode; }).filter(Boolean)).size;
+    var clientClosureRate = bad > 0 ? +(closedCount / bad * 100).toFixed(1) : null;
+    /* 闭环率统一用后端 summary.closureRate(unique-SN 口径), 与 KPI/对比卡/AI 同源; bad=0 显 -- */
+    var _sSumF = state.summary || {};
+    var closureRate = (bad > 0 && _sSumF.closureRate != null) ? +(+_sSumF.closureRate).toFixed(1) : clientClosureRate;
+    var _closedUniqueF = _sSumF.closed_unique != null ? _sSumF.closed_unique : closedCount;
+    var _badUniqueF = _sSumF.bad_unique != null ? _sSumF.bad_unique : bad;
+    var openCount = bad > 0 ? (_badUniqueF - _closedUniqueF) : 0;
+
+    // TOP1 集中度
+    var top1Name = defs.length ? defs[0].defect : '--';
+    var top1Count = defs.length ? defs[0].count : 0;
+    var top1Pct = bad > 0 ? +(top1Count / bad * 100).toFixed(1) : 0;
+
+    // 重复 NG:同一不良项出现次数最高(此处即 TOP1)
+    var repeatName = top1Name;
+    var repeatCount = top1Count;
+
+    // 焦点分级:TOP1 集中度 >30% 警告 / >45% 严重;
+    // 闭环严重度改用 P90 闭环时长(闭环率恒 ~99% 无信息量): P90>48h 严重 / >24h 警告
+    var top1Severity = WipUI.Focus.severity(top1Pct, { warn: 30, danger: 45 });
+    var _p90 = state.summary && state.summary.closureP90Hours != null ? state.summary.closureP90Hours : null;
+    var _avgH = state.summary && state.summary.closureAvgHours != null ? state.summary.closureAvgHours : null;
+    var closureSeverity = _p90 == null ? 'normal' : (_p90 > 48 ? 'danger' : _p90 > 24 ? 'warn' : 'normal');
+
+    // 决定主焦点:严重度高者优先
+    var sevRank = { danger: 3, warn: 2, normal: 1 };
+    var focusKey = sevRank[top1Severity] >= sevRank[closureSeverity] ? 'top1' : 'closure';
+
+    var titleEl = document.getElementById('focusTitle');
+    var actionEl = document.getElementById('focusAction');
+    titleEl.classList.remove('danger');
+    var danger = (top1Severity === 'danger' || closureSeverity === 'danger');
+
+    /* 焦点壳: 严重度边缘呼吸光 (压倒性焦点) — 统一走 ATTN.setFocusState */
+    var focusShell = document.getElementById('focusShell');
+    if (focusShell) {
+        var shellSev = danger ? 'danger' : ((top1Severity === 'warn' || closureSeverity === 'warn') ? 'warn' : 'normal');
+        if (window.ATTN && ATTN.setFocusState) ATTN.setFocusState(focusShell, shellSev);
+        else { focusShell.classList.remove('sev-danger','sev-warn','sev-normal'); focusShell.classList.add('sev-' + shellSev); }
+    }
+
+    if (bad === 0) {
+        /* 诚实提示: bad=0 可能是真无不良, 也可能是当前 typeFilter(real) 把测试异常/误测过滤掉了。
+           统计 origBadItems 里的测试异常/误测数, 区分两种情况, 避免误报"品质良好"。 */
+        var _abn = 0, _mis = 0;
+        (state.origBadItems || []).forEach(function(i) {
+            if (BadCore.isMistest(i)) _mis++;
+            else if (BadCore.isTestAbnormal(i)) _abn++;
+        });
+        if (_abn > 0 || _mis > 0) {
+            titleEl.innerHTML = '当前视角(真不良)无不良记录,另有测试异常 ' + _abn + ' 条 / 误测 ' + _mis + ' 条(测试线问题,非产品品质)';
+            actionEl.textContent = '切到"测试异常/误测"视角可查看被过滤记录;真不良视角下品质状态良好,继续保持现状。';
+        } else {
+            titleEl.textContent = '当前周期无不良记录,品质状态良好';
+            actionEl.textContent = '继续保持现状,关注实时 SPC 控制图是否有越界趋势。';
+        }
+    } else if (focusKey === 'top1' && top1Severity !== 'normal') {
+        titleEl.innerHTML = 'TOP1 不良「' + escInline(top1Name) + '」占比 ' + top1Pct + '%,建议专项 8D 根因分析';
+        if (danger) titleEl.classList.add('danger');
+        actionEl.textContent = top1Severity === 'danger'
+            ? '集中度过高,需立即冻结该不良项:组织 8D 小组,从人/机/料/法/环逐项排查,优先复核该工序工艺参数与来料检验记录。'
+            : '建议聚焦该不良项根因:核查 TOP1 工序参数、维修内容聚类,推动专项改善并跟踪闭环。';
+    } else if (closureSeverity !== 'normal') {
+        titleEl.innerHTML = '维修闭环偏慢,P90 闭环时长 ' + _p90 + 'h,' + openCount + ' 条未闭环';
+        if (danger) titleEl.classList.add('danger');
+        actionEl.textContent = closureSeverity === 'danger'
+            ? '严重滞后(P90>48h):立即督促维修班组优先处理超期未闭环条码,按未闭环时长排序,明确负责人与节点。'
+            : '闭环偏慢(P90>24h):建议优先处理 24h 以上未闭环记录,推动维修响应提速。';
+    } else {
+        titleEl.innerHTML = 'TOP1「' + escInline(top1Name) + '」占比 ' + top1Pct + '%,闭环 P90 ' + (_p90 != null ? _p90 + 'h' : '--') + ',整体可控';
+        actionEl.textContent = '维持现状监控,关注 SPC P-chart 是否出现异常趋势,必要时调整控制限。';
+    }
+
+    // scope(线体 + 当前三分类视角)
+    var lineEl = document.getElementById('lineFilter');
+    var lineName = lineEl && lineEl.value && lineEl.selectedOptions[0] ? lineEl.selectedOptions[0].textContent : '全部产线';
+    var _tf = BadCore.getTypeFilter();
+    var viewLabel = _tf === 'real' ? '真不良视角' : _tf === 'abnormal' ? '测试异常视角' : _tf === 'mistest' ? '误测视角' : '全部';
+    document.getElementById('focusScope').textContent = '现场关注 · ' + lineName + ' · ' + viewLabel + ' · ' + _currentRange.label;
+
+    // meta chips
+    var chips = [
+        { val: top1Name.length > 8 ? top1Name.slice(0,8) + '…' : top1Name, label: 'TOP1不良' },
+        { val: top1Pct + '%', label: '集中度' },
+        { val: openCount, label: '未闭环' }
+    ];
+    document.getElementById('focusMeta').innerHTML = WipUI.Focus.metaChips(chips);
+
+    // detail: 闭环率 + P90 时长(时长才是行动指标)
+    document.getElementById('focusClosureVal').innerHTML = (closureRate == null ? '--' : closureRate + '%') + ' <span style="font-size:var(--fs-xs);color:var(--text-muted)">' + (_p90 != null ? 'P90 ' + _p90 + 'h' : '') + '</span>';
+    document.getElementById('focusClosureSub').textContent = closureSeverity === 'danger' ? 'P90>48h 严重滞后' : closureSeverity === 'warn' ? 'P90>24h 偏慢' : (_p90 == null ? '暂无数据' : (_avgH != null ? '均' + _avgH + 'h 达标' : 'P90 达标'));
+    document.getElementById('focusRepeatVal').textContent = repeatName.length > 10 ? repeatName.slice(0,10) + '…' : repeatName;
+    document.getElementById('focusRepeatSub').textContent = repeatCount + ' 次 (重复NG最高)';
+
+    // trust
+    var _trustLabels = ['不良:MES维修', 'FPY:产出-unique'];
+    if (REWORK_ENABLED) _trustLabels.push('返工:repair_total>1');
+    _trustLabels.push('SPC:P-chart');
+    document.getElementById('focusTrust').innerHTML = WipUI.Focus.trustLabel(_trustLabels);
+
+    // side mini
+    var fpyState = rate == null ? null : WipUI.Focus.sideMiniState(95 - rate, { warnAt: 3, dangerAt: 8 }); // 偏离目标值; 无过站不评级
+    var side1 = document.getElementById('focusSide1');
+    side1.classList.remove('warn', 'danger');
+    if (fpyState) side1.classList.add(fpyState);
+    document.getElementById('focusFpy').textContent = rate != null ? rate + '%' : '--';
+    document.getElementById('focusFpyHint').textContent = rate == null ? '暂无过站数据' : (fpyState === 'danger' ? '严重低于目标' : fpyState === 'warn' ? '低于目标' : '达标');
+
+    var side2 = document.getElementById('focusSide2');
+    side2.classList.remove('warn', 'danger');
+    if (closureSeverity !== 'normal') side2.classList.add(closureSeverity);
+    document.getElementById('focusClosure').textContent = _p90 != null ? _p90 + 'h' : '--';
+    document.getElementById('focusClosureHint').textContent = closureSeverity === 'danger' ? 'P90>48h 严重滞后' : closureSeverity === 'warn' ? 'P90>24h 偏慢' : (_p90 == null ? '暂无数据' : 'P90 达标');
+}
+
+function escInline(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ========== Data Quality Pill (数据可信度四态, CR-05) ========== */
+function renderDataQualityPill() {
+    var el = document.getElementById('dataQualityPill');
+    if (!el) return;
+    var meta = BadCore.getState().fastMeta || {};
+    var dq = meta.data_quality || {};
+    var level, short, title;
+    if (dq.production === 'empty') {
+        level = 'empty'; short = '无过站数据'; title = '当前周期无 MES 过站数据,FPY/不良率不可算';
+    } else if (dq.bad === 'empty') {
+        level = 'real'; short = '过站实测·无不良'; title = 'MES 过站实测,本期无不良记录';
+    } else if (meta.cached) {
+        level = 'derived'; short = '缓存'; title = '缓存数据,非实时拉取';
+    } else {
+        level = 'real'; short = '实测'; title = 'MES 过站 + 维修实测数据';
+    }
+    el.className = 'source-pill ' + level;
+    el.textContent = short;
+    el.title = title;
+    el.style.display = 'inline-flex';
+}
+
+/* ========== AI Suggestion Bar ========== */
+function renderAISuggestBar() {
+    var bar = document.getElementById('aiSuggest');
+    var state = BadCore.getState();
+    var ai = state.aiInsights;
+    if (!ai || !ai.insights || !ai.insights.length) { bar.style.display = 'none'; return; }
+    var top = ai.insights[0];
+    if (top.level === 'info' && ai.insights.length === 1) { bar.style.display = 'none'; return; }
+    var detail = top.detail;
+    if (ai.insights.length > 1) detail += ' | ' + ai.insights.slice(1,3).map(function(i) { return i.title; }).join(' | ');
+    document.getElementById('aiSugTitle').textContent = top.title;
+    document.getElementById('aiSugDetail').textContent = detail + (top.suggestion ? ' 建议:' + top.suggestion : '');
+    bar.style.display = 'flex';
+}
+
+/* ========== Drill KPI -> WipUI Drawer ========== */
+function drillKPI(type) {
+    var state = BadCore.getState();
+    var _e = escInline;
+    var bad = state.badTotal;
+    var _sf = state.stageFilter;
+    var total = (_sf && _sf !== 'all') ? (state.stageOutput[_sf] || 0) : state.productionTotal;
+    var good = total - bad;
+    var rate = total > 0 ? +((good / total) * 100).toFixed(2) : null;
+    var badRate = total > 0 ? +((bad / total) * 100).toFixed(2) : null;
+    var ppm = total > 0 ? Math.round(bad / total * 1000000) : null;
+    var closedCount = new Set(state.badItems.filter(function(i) { return (parseInt(i.repairStateCode) || 0) === 20; }).map(function(i) { return i.barcode; }).filter(Boolean)).size;
+    var closureRate = bad > 0 ? +(closedCount / bad * 100).toFixed(1) : null;
+    var defs = state.badByDefect || [];
+    // 诚实展示兜底: 无过站/无不良时显示 '--' 而非 '0%'/'null%'
+    var _fp = function(v, dec){ return v == null ? '--' : Number(v).toFixed(dec) + '%'; };
+    var _fi = function(v){ return v == null ? '--' : Number(v).toLocaleString(); };
+    var days = state.prodByDay.length || 1;
+    var dailyAvg = Math.round(bad / days);
+
+    var title = '', stats = [], html = '', exportData = [], exportColumns = [];
+
+    function tbl(headers, rows) {
+        var h = '<table class="sn-table"><thead><tr>' + headers.map(function(x){return '<th>'+x+'</th>';}).join('') + '</tr></thead><tbody>';
+        h += rows.map(function(r){return '<tr>' + r.map(function(c){return '<td>'+c+'</td>';}).join('') + '</tr>';}).join('');
+        h += '</tbody></table>';
+        return h;
+    }
+
+    if (type === 'rate') {
+        title = 'FPY 直通率 - 按工序分解';
+        stats = [{val: _fp(rate, 2), lbl: '直通率'}, {val: total.toLocaleString(), lbl: '产量'}, {val: bad.toLocaleString(), lbl: '不良数'}];
+        var procs = state.badByProcess || [];
+        var rows = procs.map(function(p){var pct=(p.count/(bad||1)*100).toFixed(1); return [_e(p.process), p.count, pct+'%'];});
+        html = tbl(['工序','不良数','占比'], rows);
+        exportData = procs.map(function(p){return {process:p.process, count:p.count, pct:+(p.count/(bad||1)*100).toFixed(1)};});
+        exportColumns = [{key:'process',label:'工序'},{key:'count',label:'不良数'},{key:'pct',label:'占比%'}];
+    } else if (type === 'bad') {
+        title = '不良总数 - TOP15 不良项';
+        stats = [{val: bad.toLocaleString(), lbl: '不良总数'}, {val: defs.length, lbl: '不良项数'}, {val: total.toLocaleString(), lbl: '产量'}];
+        var top15 = defs.slice(0,15);
+        var rows2 = top15.map(function(d,i){var pct=(d.count/(bad||1)*100).toFixed(1); return [i+1, _e(d.defect), d.count, pct+'%'];});
+        html = tbl(['#','不良项','数量','占比'], rows2);
+        exportData = top15.map(function(d,i){return {rank:i+1, defect:d.defect, count:d.count, pct:+(d.count/(bad||1)*100).toFixed(1)};});
+        exportColumns = [{key:'rank',label:'#'},{key:'defect',label:'不良项'},{key:'count',label:'数量'},{key:'pct',label:'占比%'}];
+    } else if (type === 'badRate') {
+        title = '不良率 - 按日趋势';
+        stats = [{val: _fp(badRate, 2), lbl: '不良率'}, {val: _fi(ppm), lbl: 'PPM'}, {val: days, lbl: '天数'}];
+        var prodByDay = state.prodByDay || [], badMap = {};
+        (state.badByDay || []).forEach(function(b){badMap[b.date]=b.count;});
+        var rows3 = prodByDay.map(function(d){var b=badMap[d.date]||0;var r=d.total>0?(b/d.total*100).toFixed(2):'0'; return [d.date, d.total, b, r+'%'];});
+        html = tbl(['日期','产量','不良','不良率'], rows3);
+        exportData = rows3.map(function(r){return {date:r[0], total:r[1], bad:r[2], badRate:r[3]};});
+        exportColumns = [{key:'date',label:'日期'},{key:'total',label:'产量'},{key:'bad',label:'不良'},{key:'badRate',label:'不良率%'}];
+    } else if (type === 'ppm') {
+        title = 'PPM - 按日趋势';
+        stats = [{val: _fi(ppm), lbl: 'PPM'}, {val: bad.toLocaleString(), lbl: '不良数'}, {val: total.toLocaleString(), lbl: '产量'}];
+        var prodByDay2 = state.prodByDay || [], badMap2 = {};
+        (state.badByDay || []).forEach(function(b){badMap2[b.date]=b.count;});
+        var rows4 = prodByDay2.map(function(d){var b=badMap2[d.date]||0;var p=d.total>0?Math.round(b/d.total*1000000):0; return [d.date, d.total, b, p];});
+        html = tbl(['日期','产量','不良','PPM'], rows4);
+        exportData = rows4.map(function(r){return {date:r[0], total:r[1], bad:r[2], ppm:r[3]};});
+        exportColumns = [{key:'date',label:'日期'},{key:'total',label:'产量'},{key:'bad',label:'不良'},{key:'ppm',label:'PPM'}];
+    } else if (type === 'closure') {
+        title = '闭环率 - 未闭环明细 (Top50)';
+        stats = [{val: _fp(closureRate, 1), lbl: '闭环率'}, {val: closedCount, lbl: '已闭环'}, {val: bad - closedCount, lbl: '未闭环'}];
+        var open = state.badItems.filter(function(i){return (parseInt(i.repairStateCode)||0)!==20;}).slice(0,50);
+        var rows5 = open.map(function(i){var t=i.testTime?new Date(i.testTime).toLocaleString('zh-CN',{hour12:false}):''; return [_e(i.barcode||'-'), _e(i.lineName), _e(i.badItems), t];});
+        html = tbl(['条码','线体','不良项','时间'], rows5);
+        exportData = open.map(function(i){return {barcode:i.barcode||'', line:i.lineName||'', defect:i.badItems||'', time:i.testTime||''};});
+        exportColumns = [{key:'barcode',label:'条码'},{key:'line',label:'线体'},{key:'defect',label:'不良项'},{key:'time',label:'时间'}];
+    } else if (type === 'daily') {
+        title = '日均不良 - 按日明细';
+        stats = [{val: dailyAvg.toLocaleString(), lbl: '日均不良'}, {val: bad.toLocaleString(), lbl: '不良总数'}, {val: days, lbl: '天数'}];
+        var prodByDay3 = state.prodByDay || [], badMap3 = {};
+        (state.badByDay || []).forEach(function(b){badMap3[b.date]=b.count;});
+        var rows6 = prodByDay3.map(function(d){var b=badMap3[d.date]||0; return [d.date, b, d.total];});
+        html = tbl(['日期','不良','产量'], rows6);
+        exportData = rows6.map(function(r){return {date:r[0], bad:r[1], total:r[2]};});
+        exportColumns = [{key:'date',label:'日期'},{key:'bad',label:'不良'},{key:'total',label:'产量'}];
+    } else if (type === 'rework') {
+        title = '返工率 - 按不良分类';
+        var rw = state.summary && state.summary.rework;
+        var rwRate = rw ? rw.rate : null;
+        stats = [{val: rwRate != null ? rwRate + '%' : '--', lbl: '返工率'}, {val: rw ? (rw.sn_count||0) : '--', lbl: '返工SN'}, {val: rw ? (rw.total_sn||0) : '--', lbl: '总SN'}];
+        var rwCats = (rw && rw.by_category) ? rw.by_category.slice(0, 30) : [];
+        var maxRw = Math.max.apply(null, rwCats.map(function(c){return c.rework_sn||0;}).concat([1]));
+        html = '<div style="padding:8px 0">' + rwCats.map(function(c, i){
+            var pct = maxRw > 0 ? Math.round((c.rework_sn||0) / maxRw * 100) : 0;
+            return '<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid var(--line-faint)">' +
+                '<span style="font-size:var(--fs-base);color:var(--text-primary);width:160px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _e(c.category||'未分类') + '</span>' +
+                '<div style="flex:1;height:10px;background:rgba(255,255,255,0.04);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--purple);border-radius:5px"></div></div>' +
+                '<span style="font-size:var(--fs-base);font-family:var(--font-mono);font-weight:600;color:var(--text-primary);min-width:80px;text-align:right">' + (c.rework_sn||0) + ' SN</span>' +
+                '<span style="font-size:var(--fs-xs);color:var(--text-muted)">共' + (c.count||0) + '条</span></div>';
+        }).join('') + '</div>';
+        if (!rwCats.length) html = '<div style="color:var(--text-muted);padding:20px;text-align:center">暂无返工数据</div>';
+        exportData = rwCats.map(function(c){return {category:c.category||'未分类', rework_sn:c.rework_sn||0, total:c.count||0};});
+        exportColumns = [{key:'category',label:'不良分类'},{key:'rework_sn',label:'返工SN'},{key:'total',label:'总记录'}];
+    } else if (type === 'top1') {
+        title = 'TOP1 不良项 - 详情 (Top30)';
+        if (defs.length) {
+            var topDef = defs[0].defect;
+            var matches = state.badItems.filter(function(i){return i.badItems === topDef;}).slice(0,30);
+            stats = [{val: topDef.length>10?topDef.slice(0,10)+'…':topDef, lbl: 'TOP1不良'}, {val: defs[0].count, lbl: '数量'}, {val: +(defs[0].count/(bad||1)*100).toFixed(1)+'%', lbl: '占比'}];
+            var rows7 = matches.map(function(i){var t=i.testTime?new Date(i.testTime).toLocaleString('zh-CN',{hour12:false}):''; return [_e(i.barcode||'-'), _e(i.lineName), _e(i.workOprationName), t];});
+            html = '<p style="color:var(--text-muted);margin-bottom:10px;font-size:var(--fs-sm)">不良项: <b style="color:var(--danger)">' + _e(topDef) + '</b> (' + defs[0].count + '件)</p>' + tbl(['条码','线体','工序','时间'], rows7);
+            exportData = matches.map(function(i){return {barcode:i.barcode||'', line:i.lineName||'', op:i.workOprationName||'', time:i.testTime||''};});
+            exportColumns = [{key:'barcode',label:'条码'},{key:'line',label:'线体'},{key:'op',label:'工序'},{key:'time',label:'时间'}];
+        } else {
+            stats = [{val: '--', lbl: 'TOP1不良'}];
+            html = '<div style="color:var(--text-muted);padding:20px;text-align:center">暂无不良数据</div>';
+        }
+    }
+
+    WipUI.Drawer.open({
+        title: title,
+        stats: stats,
+        html: html,
+        exportData: exportData,
+        exportColumns: exportColumns
+    });
+}
+
+/* ========== Render All ========== */
+function renderReworkChart() {
+    if (!REWORK_ENABLED) return; // 返工功能隐藏中, 不渲染饼图
+    var state = BadCore.getState();
+    var rework = state.summary && state.summary.rework;
+    var dom = document.getElementById('reworkChart');
+    if (!dom) return;
+    var c = window._reworkChartInstance || echarts.init(dom);
+    window._reworkChartInstance = c;
+    var cats = (rework && rework.by_category) ? rework.by_category.slice(0, 12) : [];
+    if (!cats.length) { c.setOption({ title: { text: '暂无返工分类数据', left: 'center', top: 'center', textStyle: { color: CHART.emptyText, fontSize: 12 } } }, true); return; }
+    var colors = [CHART.colors.blue, CHART.colors.purple, CHART.colors.orange, CHART.colors.red, CHART.colors.cyan, CHART.colors.green];
+    c.setOption({
+        tooltip: Object.assign(CHART.tooltip(), { trigger: 'item', formatter: function(p) { return p.name + '<br/>返工SN: ' + p.value + (p.data && p.data.total ? '<br/>总记录: ' + p.data.total : ''); } }),
+        legend: { type: 'scroll', orient: 'vertical', right: 8, top: 'middle', textStyle: { color: CHART.legendText, fontSize: 10 } },
+        series: [{
+            type: 'pie', radius: ['45%', '70%'], center: ['38%', '50%'],
+            data: cats.map(function(cat, i) { return { name: cat.category || '未分类', value: cat.rework_sn || 0, total: cat.count || 0, itemStyle: { color: colors[i % colors.length] } }; }),
+            label: { show: true, formatter: '{b}\n{c}', color: CHART.legendText, fontSize: 10 },
+            itemStyle: { borderColor: CHART.bg, borderWidth: 2 }, emphasis: { scaleSize: 4 }
+        }]
+    }, true);
+}
+function renderAll() {
+    var state = BadCore.getState();
+    renderKPI();
+    renderFocus();
+    renderAISuggestBar();
+    renderDataQualityPill();
+    BadCharts.renderTrend(state.prodByDay, state.badByDay, BadCore.getTarget());
+    BadCharts.renderPareto(state.badByDefect);
+    BadCharts.renderProcess(state.badByProcess);
+    BadCharts.renderLine(state.badItems);
+    BadCharts.renderModel(state.badItems);
+    BadCharts.renderTopTrend(state.badItems);
+    BadCharts.renderHeatmap(state.badItems);
+    BadCharts.renderRank(state.badItems);
+    BadCharts.bindAllDrill();
+    renderReworkChart();
+    BadSPC.render(state.spcData);
+    BadSPC.renderViolations(state.spcData);
+    BadAI.renderInsights(state.aiInsights);
+    BadAI.renderCorrelation(state.correlation);
+    BadTable.setPage(1);
+    BadTable.render(state.badItems);
+}
+function renderAdvancedPanels() {
+    var state = BadCore.getState();
+    renderAISuggestBar();
+    BadSPC.render(state.spcData);
+    BadSPC.renderViolations(state.spcData);
+    BadAI.renderInsights(state.aiInsights);
+    BadAI.renderCorrelation(state.correlation);
+    BadAI.renderCompare(state.summary); // 环比对比卡(summary.compare 到达后渲染)
+    renderReworkChart(); // 返工饼图依赖 summary.rework
+    // summary 到达后重算 KPI/焦点(取闭环时长等后端统计)
+    renderKPI();
+    renderFocus();
+}
+function setAdvancedLoading() {
+    var ai = document.getElementById('aiInsightsPanel');
+    var corr = document.getElementById('correlationPanel');
+    var vio = document.getElementById('spcViolations');
+    if (ai) ai.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-sm);padding:10px;">规则分析后台加载中...</div>';
+    if (corr) corr.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-sm);padding:10px;">关联分析后台加载中...</div>';
+    if (vio) vio.innerHTML = '<span style="color:var(--text-muted);font-size:var(--fs-sm);">SPC 后台加载中...</span>';
+}
+
+/* 工艺段/类型切换后,重新拉取高级分析(SPC/AI/关联) — 这些走后端聚合,需重算 */
+var _advTimer = null;
+function refreshAdvanced() {
+    clearTimeout(_advTimer);
+    _advTimer = setTimeout(function() {
+        var df = _currentRange.dateFrom, dt = _currentRange.dateTo;
+        var lineId = document.getElementById('lineFilter') ? document.getElementById('lineFilter').value : '';
+        // 秒开: 有缓存则即时渲染高级分析, 跳过 setAdvancedLoading
+        var _advPeeked = false;
+        try { _advPeeked = BadCore.peekAdvancedData(df, dt, lineId); } catch(e) {}
+        if (_advPeeked) { try { renderAdvancedPanels(); } catch(e) {} }
+        else setAdvancedLoading();
+        BadCore.fetchAdvancedData(df, dt, lineId).then(function() {
+            renderAdvancedPanels();
+        }).catch(function(err) {
+            console.error('高级分析刷新失败', err);
+            renderAdvancedPanels();
+        });
+    }, 350);
+}
+
+/* ========== Stage Chart (产出分段:组装/测试/包装) ========== */
+function renderStageChart(stageData) {
+    var el = document.getElementById('stageChart');
+    if (!el) return;
+    if (!_stageChartInstance) _stageChartInstance = echarts.init(el);
+
+    var stages = (stageData && stageData.stages) || [];
+    if (!stages.length) {
+        _stageChartInstance.setOption({
+            title: { text: '暂无分段数据', left: 'center', top: 'center', textStyle: { color: CHART.emptyText, fontSize: 13 } },
+            series: []
+        }, true);
+        return;
+    }
+
+    var labels = stages.map(function(s) { return s.label || s.stage; });
+    var badCounts = stages.map(function(s) { return s.bad || 0; });
+    var fpyArr = stages.map(function(s) { return s.fpy != null ? +(+s.fpy).toFixed(2) : null; });
+    var outputs = stages.map(function(s) { return s.output || 0; });
+    var badRates = stages.map(function(s) {
+        return s.output > 0 ? +((s.bad / s.output) * 100).toFixed(2) : 0;
+    });
+
+    var palette = [CHART.colors.blue, CHART.colors.green, CHART.colors.orange];
+    _stageChartInstance.setOption({
+        backgroundColor: 'transparent',
+        tooltip: Object.assign(CHART.tooltip(), {
+            axisPointer: { type: 'shadow' },
+            formatter: function(params) {
+                var idx = params[0].dataIndex;
+                var s = stages[idx] || {};
+                var html = '<div style="font-weight:600;margin-bottom:4px">' + (s.label || s.stage) + '</div>';
+                html += '产出: ' + (s.output || 0).toLocaleString() + '<br/>';
+                html += '不良: ' + (s.bad || 0).toLocaleString() + '<br/>';
+                html += '不良率: ' + badRates[idx] + '%<br/>';
+                html += '直通率 FPY: ' + (fpyArr[idx] != null ? fpyArr[idx] + '%' : '--') + '<br/>';
+                html += '操作人数: ' + (s.ops != null ? s.ops : '--');
+                return html;
+            }
+        }),
+        legend: {
+            data: ['不良数', '产出量', '直通率FPY'],
+            textStyle: { color: CHART.legendText, fontSize: 11 },
+            top: 0
+        },
+        grid: { left: 50, right: 55, top: 40, bottom: 30 },
+        xAxis: {
+            type: 'category',
+            data: labels,
+            axisLine: { lineStyle: { color: CHART.axisLine } },
+            axisLabel: { color: CHART.axisLabel, fontSize: 12 },
+            axisTick: { show: false }
+        },
+        yAxis: [
+            {
+                type: 'value',
+                name: '数量',
+                nameTextStyle: { color: CHART.axisLabel, fontSize: 11 },
+                axisLine: { show: false },
+                axisLabel: { color: CHART.axisLabel, fontSize: 11 },
+                splitLine: { lineStyle: { color: CHART.splitLine } }
+            },
+            {
+                type: 'value',
+                name: 'FPY%',
+                min: 0, max: 100,
+                nameTextStyle: { color: CHART.axisLabel, fontSize: 11 },
+                axisLine: { show: false },
+                axisLabel: { color: CHART.axisLabel, fontSize: 11, formatter: '{value}%' },
+                splitLine: { show: false }
+            }
+        ],
+        series: [
+            {
+                name: '不良数',
+                type: 'bar',
+                data: badCounts.map(function(v, i) { return { value: v, itemStyle: { color: palette[i % palette.length] } }; }),
+                barWidth: '22%',
+                label: {
+                    show: true, position: 'top',
+                    color: CHART.tooltipText, fontSize: 12, fontWeight: 600,
+                    formatter: function(p) { return p.value.toLocaleString(); }
+                }
+            },
+            {
+                name: '产出量',
+                type: 'bar',
+                data: outputs,
+                barWidth: '22%',
+                itemStyle: { color: 'rgba(148,163,184,0.35)', borderRadius: [4,4,0,0] },
+                label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10, formatter: function(p){ return p.value.toLocaleString(); } }
+            },
+            {
+                name: '直通率FPY',
+                type: 'line',
+                yAxisIndex: 1,
+                data: fpyArr,
+                smooth: true,
+                symbol: 'circle', symbolSize: 8,
+                lineStyle: { color: CHART.colors.orange, width: 2 },
+                itemStyle: { color: CHART.colors.orange },
+                label: {
+                    show: true, position: 'top',
+                    color: CHART.colors.orange, fontSize: 11, fontWeight: 600,
+                    formatter: function(p) { return p.value != null ? p.value + '%' : ''; }
+                }
+            }
+        ]
+    }, true);
+}
+
+function resizeStageChart() {
+    if (_stageChartInstance) _stageChartInstance.resize();
+}
+
+/* ========== Load Data (周期驱动) ========== */
+async function loadData(dateFrom, dateTo) {
+    var seq = ++_badLoadSeq;
+    var mask = document.getElementById('loadingMask');
+    mask.classList.add('show');
+    document.getElementById('updateTime').textContent = '数据加载中...';
+    // 周期条提供日期;若未传则用当前 _currentRange
+    var df = dateFrom || _currentRange.dateFrom;
+    var dt = dateTo || _currentRange.dateTo;
+    try {
+        var lineId = '';
+        var lineEl = document.getElementById('lineFilter');
+        if (lineEl) lineId = lineEl.value;
+        // 线体名(供分段 API 使用)
+        var lineName = '';
+        if (lineEl && lineEl.value) {
+            var sel = lineEl.selectedOptions[0];
+            if (sel) lineName = sel.textContent || '';
+        }
+
+        var t0 = performance.now ? performance.now() : Date.now();
+        // 秒开: 用 localStorage last-known-good 预填状态并即时渲染, 消除白屏。
+        // peek 失败静默 fallback(返回 url 但不预填), 真实 fetch 后由下方 applyFilters 覆盖。
+        try {
+            var _peeked = BadCore.peekFastData(df, dt, lineId);
+            if (_peeked && BadCore.getState().badItems.length) {
+                populateFilters();
+                applyFilters();
+            }
+        } catch(e) { /* peek 静默 fallback */ }
+        var ok = await BadCore.fetchAllData(df, dt, lineId);
+        if (ok === false) { mask.classList.remove('show'); return; }
+        // 新周期/刷新: 清空已见条码集合, 确保首屏新条码仍触发 row-new 高亮
+        if (BadTable.resetSeen) BadTable.resetSeen();
+        populateFilters();
+        applyFilters();
+        // 进阶版:接收下钻 URL 参数(?view=real/abnormal/mistest),自动设置类型筛选(IA-04 下钻落点)
+        if (seq === _badLoadSeq && !window._badDrillApplied) {
+            window._badDrillApplied = true;
+            var _v = new URLSearchParams(location.search).get('view');
+            if (_v && ['real','abnormal','mistest'].indexOf(_v) >= 0) {
+                var _vs = document.getElementById('viewModeSelect');
+                if (_vs) { _vs.value = _v; BadCore.setTypeFilter(_v); applyFilters(); refreshAdvanced(); }
+            }
+        }
+        if (seq === _badLoadSeq) flashFocusShell();
+
+        // 分段 API:组装/测试/包装产出与不良
+        fetchStageData(df, dt, lineName);
+        // 秒开: 用 localStorage 缓存预填高级分析并即时渲染, 有缓存则跳过 setAdvancedLoading(避免面板闪空)。
+        var _advPeeked = false;
+        try { _advPeeked = BadCore.peekAdvancedData(df, dt, lineId); } catch(e) {}
+        if (_advPeeked && seq === _badLoadSeq) { try { renderAdvancedPanels(); } catch(e) {} }
+        else setAdvancedLoading();
+        BadCore.fetchAdvancedData(df, dt, lineId).then(function() {
+            if (seq !== _badLoadSeq) return;
+            renderAdvancedPanels();
+        }).catch(function(err) {
+            if (seq !== _badLoadSeq) return;
+            console.error('高级分析加载失败', err);
+            renderAdvancedPanels();
+        });
+
+        var elapsed = Math.round((performance.now ? performance.now() : Date.now()) - t0);
+        var meta = BadCore.getState().fastMeta || {};
+        WipUI.UpdateBar.setTime('首屏 ' + elapsed + 'ms · ' + (meta.cached ? '缓存' : '真实') + ' · ' + _currentRange.label + ' · 高级分析后台刷新');
+    } catch(e) {
+        console.error('加载数据失败', e);
+        WipUI.UpdateBar.setTime('加载失败');
+    } finally {
+        mask.classList.remove('show');
+    }
+}
+
+/* 分段数据应用(幂等): 写 stageOutput + 渲染 stageChart + 按需重算 KPI。
+   peek 秒开与真实 fetch 回调共用, 保证新数据覆盖旧 DOM。 */
+function _applyStageData(d) {
+    var st = BadCore.getState().stageOutput;
+    st.assembly = 0; st.test = 0; st.packaging = 0;
+    (d && d.stages || []).forEach(function(s) {
+        if (st[s.stage] != null) st[s.stage] = s.output || 0;
+    });
+    renderStageChart(d);
+    // 产量口径变化,若当前按工艺段筛选则 KPI 重算
+    if (BadCore.getStageFilter() !== 'all') renderKPI();
+}
+
+/* 拉取分段(组装/测试/包装)产出与不良并渲染 stageChart */
+function fetchStageData(dateFrom, dateTo, lineName) {
+    if (!dateFrom || !dateTo) { renderStageChart(null); return; }
+    var qs = 'dateFrom=' + encodeURIComponent(dateFrom) + '&dateTo=' + encodeURIComponent(dateTo);
+    if (lineName) qs += '&lineName=' + encodeURIComponent(lineName);
+    var api = BadCore.getAPI();
+    var _stageUrl = api + '/api/production-by-stage?' + qs;
+    // 秒开: 即时用上次缓存数据绘制分段图, 消除白屏
+    var _ck = window.apiFetch.peek(_stageUrl);
+    if (_ck) { try { _applyStageData(_ck.val); } catch(e){} }
+    apiFetch(_stageUrl)
+        .then(function(d) {
+            _applyStageData(d);
+        })
+        .catch(function(e) {
+            console.error('分段数据加载失败', e);
+            // 失败时不清零 stageOutput(保留上次值), 避免 KPI 分段 FPY 误归零; 按全量口径提示
+            if (window.Toast) Toast.info('分段产出加载失败,KPI 按全量口径计算');
+            renderStageChart(null);
+        });
+}
+
+/* 周期切换回调 */
+function onPeriodChange(period, range, tabEl) {
+    _currentRange = range;
+    _currentPeriod = period;
+    loadData(range.dateFrom, range.dateTo);
+}
+
+/* ========== WipUI 初始化 ========== */
+WipUI.UpdateBar.init({
+    periodTabsSelector: '#periodSelect',
+    enableCustomRange: true,
+    periodAttr: 'data-period',
+    onPeriod: onPeriodChange,
+    refreshBtnSelector: '#refreshBtn',
+    onRefresh: function() { loadData(); },
+    timeElSelector: '#updateTime',
+    liveDotSelector: '#liveDot'
+});
+
+/* ========== QuickQuery 快捷查询栏 ========== */
+WipUI.QuickQuery.init('#quickQuery', [
+    { key: 'all',      label: '全部',     icon: '⌧', apply: function() { filter = {}; } },
+    { key: 'top',      label: 'TOP不良',  icon: '🏆', apply: function() { filter = { topN: 1 }; } },
+    { key: 'open',     label: '未闭环',   icon: '🔓', apply: function() { filter = { onlyOpen: true }; } },
+    { key: 'repeat',   label: '重复维修',  icon: '🔁', apply: function() { filter = { onlyRepeat: true }; } },
+    { key: 'spc',      label: 'SPC越界',  icon: '📊', apply: function() { filter = { onlySpcViol: true }; } },
+    { key: 'misTest',  label: '误测高',   icon: '❓', apply: function() { filter = { onlyMisTest: true }; } }
+], {
+    activeKey: 'all',
+    onAfter: function(it) {
+        var r = WipUI.periodRange(_currentPeriod || 'realtime');
+        loadData(r.dateFrom, r.dateTo);
+    }
+});
+
+/* ========== Toolbar 功能键条 ========== */
+WipUI.Toolbar.init('#toolbar', {
+    buttons: ['refresh', 'exportCSV', 'fullscreen', 'bigscreen'],
+    targetSelector: '.wip-page',
+    onRefresh: function() {
+        var r = WipUI.periodRange(_currentPeriod || 'realtime');
+        loadData(r.dateFrom, r.dateTo);
+    },
+    onExportCSV: function() {
+        // 导出当前页主表(不良明细)数据为 CSV
+        var state = BadCore.getState();
+        var items = state.badItems || [];
+        if (!items.length) { if (typeof Toast !== 'undefined') Toast.info('暂无可导出数据'); return; }
+        var columns = [
+            { key: 'barcode',          label: '条码' },
+            { key: 'lineName',         label: '线体' },
+            { key: 'productModel',     label: '型号' },
+            { key: 'workOprationName', label: '工序' },
+            { key: 'badItems',         label: '不良项' },
+            { key: 'categoryName',     label: '不良类别' },
+            { key: 'contentName',      label: '维修内容' },
+            { key: 'causesName',       label: '原因' },
+            { key: 'repairMan',        label: '维修人' },
+            { key: 'moLotNo',          label: '批次号' },
+            { key: 'repairStateCode',  label: '状态码' },
+            { key: 'testTime',         label: '时间' }
+        ];
+        // 复用 WipUI.Drawer.exportCSV 的 CSV 生成逻辑:打开 Drawer 写入数据后导出
+        WipUI.Drawer.open({
+            title: '不良明细导出 (' + items.length + '条)',
+            stats: [{ val: items.length.toLocaleString(), lbl: '记录数' }],
+            html: '<div style="color:var(--text-muted);font-size:var(--fs-sm);padding:12px;">已生成 ' + items.length + ' 条记录,点击右上角"导出"按钮下载 CSV。</div>',
+            exportData: items,
+            exportColumns: columns
+        });
+        // 直接触发导出
+        WipUI.Drawer.exportCSV();
+        WipUI.Drawer.close();
+    }
+});
+
+WipUI.Subnav.init('#pageSubnav', [
+    { btn: '[data-target="focusShell"]', target: 'focusShell', active: true },
+    { btn: '[data-target="trendPanel"]', target: 'trendPanel' },
+    { btn: '[data-target="paretoPanel"]', target: 'paretoPanel' },
+    { btn: '[data-target="spcPanel"]', target: 'spcPanel' },
+    { btn: '[data-target="tableSection"]', target: 'tableSection' }
+]);
+
+// drawer 关闭按钮
+document.getElementById('drawerCloseBtn').addEventListener('click', WipUI.Drawer.close);
+
+// 导出图片
+document.getElementById('exportImgBtn').addEventListener('click', exportBadPage);
+
+// Auto refresh (preserves user selections, skips if user is interacting)
+var _lastInteraction = 0;
+document.addEventListener('mousedown', function() { _lastInteraction = Date.now(); });
+document.addEventListener('keydown', function() { _lastInteraction = Date.now(); });
+
+window.withVisibilityGuard(function() {
+    if (Date.now() - _lastInteraction < 5000) return;
+    var seq = ++_badLoadSeq;
+    if (_filter && typeof _filter.setRefreshing === 'function') _filter.setRefreshing(true);
+    var savedPage = BadTable.getPage();
+    var savedProc = document.getElementById('workOpFilter') ? document.getElementById('workOpFilter').value : '';
+    var savedProd = document.getElementById('productFilter') ? document.getElementById('productFilter').value : '';
+    var savedSearch = document.getElementById('globalSearch') ? document.getElementById('globalSearch').value : '';
+    var savedStage = document.getElementById('stageSelect') ? document.getElementById('stageSelect').value : 'all';
+    var savedType = document.getElementById('viewModeSelect') ? document.getElementById('viewModeSelect').value : 'all';
+    WipUI.UpdateBar.setTime('自动刷新中...');
+    var df = _currentRange.dateFrom, dt = _currentRange.dateTo;
+    var lineId = document.getElementById('lineFilter') ? document.getElementById('lineFilter').value : '';
+    BadCore.fetchAllData(df, dt, lineId).then(function(ok) {
+        if (!ok) { if (_filter) _filter.setRefreshing(false); return; }
+        populateFilters();
+        if (document.getElementById('workOpFilter')) document.getElementById('workOpFilter').value = savedProc;
+        if (document.getElementById('productFilter')) document.getElementById('productFilter').value = savedProd;
+        if (document.getElementById('globalSearch')) document.getElementById('globalSearch').value = savedSearch;
+        if (document.getElementById('stageSelect')) document.getElementById('stageSelect').value = savedStage;
+        if (document.getElementById('viewModeSelect')) document.getElementById('viewModeSelect').value = savedType;
+        applyFilters();
+        flashFocusShell();
+        BadTable.setPage(savedPage);
+        BadTable.render(BadCore.getState().badItems);
+        var meta = BadCore.getState().fastMeta || {};
+        WipUI.UpdateBar.setTime('自动刷新完成 · ' + (meta.cached ? '缓存' : '真实') + ' · ' + _currentRange.label);
+        BadCore.fetchAdvancedData(df, dt, lineId).then(function(){ if (seq === _badLoadSeq) renderAdvancedPanels(); }).catch(function(e){ if (seq === _badLoadSeq) console.error('自动刷新高级分析失败', e); });
+        if (_filter) _filter.setRefreshing(false);
+    }).catch(function(e) {
+        console.error('自动刷新失败', e);
+        WipUI.UpdateBar.setTime('刷新失败');
+        if (_filter) _filter.setRefreshing(false);
+    });
+}, 3 * 60 * 1000, { noImmediate: true });
+
+// Init: realtime 周期,不依赖线体
+_currentRange = WipUI.periodRange('realtime');
+loadData();
+
+if (typeof createReconnectingWS === 'function') {
+    var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    createReconnectingWS(wsProto + location.host, { onMessage: function(evt){ try{var msg=JSON.parse(evt.data); if(msg.type==='history-ready'){Toast&&Toast.success('历史数据已就绪');loadData();}}catch(e){} } });
+}
+apiFetch('/api/me').then(function(d){if(d&&d.role==='admin'){var el=document.getElementById('adminNav');if(el)el.style.display='';}}).catch(function(){});
+
+// resize 防抖: 12+ ECharts 实例, 拖窗口时每帧重排会卡顿, 包 150ms debounce
+function _resizeDebounce(fn, wait) {
+    var t = null;
+    return function() { clearTimeout(t); t = setTimeout(fn, wait); };
+}
+var _onResize = _resizeDebounce(function() {
+    BadCharts.resizeAll();
+    BadSPC.resize();
+    resizeStageChart();
+    if (REWORK_ENABLED && window._reworkChartInstance) window._reworkChartInstance.resize();
+}, 150);
+window.addEventListener('resize', _onResize);
+
+function exportBadPage() {
+    var target = document.querySelector('.wip-page');
+    if (!target) return;
+    function doShot() {
+        // 用共享件 captureDashboard: 关停 animation + 锁 chart-box 高度 + onclone canvas→img,
+        // 解决 html2canvas 不捕获 ECharts canvas(attention-hooks 动画/容器塌缩致图表空白)
+        captureDashboard(target).then(function(c) {
+            downloadCanvas(c, '不良分析_' + localDate(new Date()) + '.png');
+        }).catch(function(e) {
+            console.error('导出图片失败', e);
+            if (typeof Toast !== 'undefined') Toast.error('导出失败,请重试');
+        });
+    }
+    if (window.html2canvas) {
+        doShot();
+    } else {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        s.onload = function() { exportBadPage(); };
+        s.onerror = function() { if (typeof Toast !== 'undefined') Toast.error('导出库加载失败,请检查网络'); };
+        document.head.appendChild(s);
+    }
+}
+
+/* 打印图表已统一由 common.js autoPrintCharts + common.css @media print 处理(全站横展),
+   本页不再单独注册 beforeprint/afterprint。 */
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
+</body>
+</html>

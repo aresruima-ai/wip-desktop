@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生产线平衡看板 - AI数字化平台</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <script src="nav.js"></script>
+<script src="common.js"></script>
+    <script src="filter-bar.js"></script>
+    <script src="libs/echarts.min.js"></script>
+    <script src="libs/echarts-liquidfill.min.js"></script>
+    <script src="chart-theme.js"></script>
+    <script src="wip-ui.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0166B1">
+    <style>
+        /* KPI 局部样式 */
+        .kpi-balance-liquid { width:60px; height:60px; margin:0 auto 4px; }
+        .kpi-text-value { font-size:17px; font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-align:center; line-height:1.3; word-break:break-all; }
+        .kpi-row.wip { grid-template-columns: repeat(6, 1fr); }
+        .kpi-card { cursor:pointer; }
+        .kpi-tip { display:inline-block; width:14px; height:14px; line-height:14px; text-align:center; font-size:10px; border-radius:50%; background:var(--brand-glow); color:var(--brand); cursor:help; position:relative; margin-left:4px; vertical-align:middle; }
+        .kpi-tip::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--surface-1-hi); color:var(--text-secondary); border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:11px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity 0.2s; z-index:100; }
+        .kpi-tip:hover::after { opacity:1; }
+
+        /* 明细表 */
+        .summary-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .summary-table th { background:var(--surface-2); color:var(--text-muted); padding:10px 12px; text-align:center; border-bottom:1px solid var(--line); font-weight:500; }
+        .summary-table td { padding:10px 12px; text-align:center; border-bottom:1px solid rgba(51,65,85,0.4); color:var(--text-secondary); }
+        .summary-table tr { cursor:pointer; }
+        .summary-table tr:hover td { background:var(--brand-glow); }
+        .summary-table .cell-green { color:var(--success); font-weight:600; }
+        .summary-table .cell-yellow { color:var(--warning); font-weight:600; }
+        .summary-table .cell-red { color:var(--danger); font-weight:600; }
+        .summary-table tr.bn-row td { background:rgba(var(--danger-rgb),0.06); }
+        .summary-table tr.bn-row td:first-child { border-left:3px solid var(--danger); }
+        .summary-table .tag { display:inline-block; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:500; }
+        .summary-table .tag-ct { background:rgba(var(--danger-rgb),0.1); color:var(--danger); }
+        .summary-table .tag-wip { background:rgba(var(--warning-rgb),0.12); color:var(--warning); }
+        .summary-table .tag-none { background:rgba(71,85,105,0.18); color:var(--text-secondary); }
+
+        /* Loading */
+        .loading-mask { position:fixed; inset:0; background:rgba(10,16,37,0.6); z-index:9999; display:none; align-items:center; justify-content:center; }
+        .loading-mask.show { display:flex; }
+        .loading-spinner { width:40px; height:40px; border:3px solid var(--brand-border); border-top-color:var(--brand); border-radius:50%; animation:spin 0.8s linear infinite; }
+
+        /* ============================================================
+           注意力钩子 — line-balance 展示型克制配 (Phase 4)
+           心法: 减权→衬托焦点→活起来; 全程 prefers-reduced-motion 守护
+           primary: ①焦点高光晕 ②瓶颈旋转光环+流光 ③LiveNum数字滚动
+           secondary: ④卡片错峰级联 ⑤光标跟随光晕 ⑥状态切换光流
+           常驻呼吸 ≤3; 一屏动画 ≤5-6
+           ============================================================ */
+
+        /* === 钩子动效 Token (本地, 不污染 common.css) === */
+        :root {
+            --lb-dur-enter: 280ms;
+            --lb-dur-breath: 2.8s;
+            --lb-dur-hit: 150ms;
+            --lb-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --lb-ease-hit: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* === ① 焦点单点高光晕 — focus-card danger 态升 focal, 兄弟 focus-side 压暗 === */
+        .focus-shell.lb-focal-active .focus-card[data-focal="true"] {
+            box-shadow: var(--light-depth-1), var(--glow-danger) !important;
+            transform: translateY(-2px);
+            border-left-color: var(--danger) !important;
+        }
+        .focus-shell.lb-focal-active .focus-card[data-focal="true"]::before {
+            background: radial-gradient(120% 80% at 18% 0%, rgba(var(--danger-rgb),0.16) 0%, transparent 55%) !important;
+            opacity: 1 !important;
+            animation: lb-focal-breath var(--lb-dur-breath) ease-in-out infinite;
+        }
+        .focus-shell.lb-focal-active .focus-side {
+            filter: var(--focal-dim);
+            transition: filter var(--lb-dur-enter) var(--lb-ease-expo);
+        }
+        @keyframes lb-focal-breath {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
+        }
+
+        /* === ② 瓶颈旋转光环 — flow-card.level-3 conic 旋转环 + 流光加速 === */
+        .flow-card.level-3 { position: relative; }
+        .flow-card.level-3::before {
+            content: ''; position: absolute; inset: -2px;
+            border-radius: inherit;
+            padding: 2px;
+            background: conic-gradient(from 0deg, transparent 0deg, var(--danger) 60deg, transparent 120deg, transparent 360deg);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+            animation: lb-ring-spin 3.6s linear infinite;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+        @keyframes lb-ring-spin {
+            to { transform: rotate(360deg); }
+        }
+        /* 堆积瓶颈(level-2) 轻琥珀描边脉冲 — 弱于 level-3, 维持强调色稀缺 */
+        .flow-card.level-2::before {
+            content: ''; position: absolute; inset: 0;
+            border-radius: inherit;
+            box-shadow: inset 0 0 0 1px var(--warning-border);
+            animation: lb-amber-pulse var(--lb-dur-breath) ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes lb-amber-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        /* 瓶颈下游 flow-arrow 流光加速: 粒子频率加快 + 染红 */
+        .flow-arrow.lb-downstream .particle {
+            background: var(--danger);
+            animation-duration: 0.9s !important;
+            opacity: 0.85;
+        }
+        .flow-arrow.lb-downstream .particle:nth-child(2) { opacity: 0.6; }
+        .flow-arrow.lb-downstream .particle:nth-child(3) { opacity: 0.35; }
+
+        /* === ③ LiveNum 数字滚动 — 仅 easeOutExpo 透明替换, 无样式入侵 === */
+        .lb-num { display: inline-block; }
+
+        /* === ④ 卡片错峰级联入场 (进阶版:迁移 ATTN.revealCascade,删除本地 opacity:0 起手态) ===
+           起手态由 ATTN.revealCascade 注入 .attn-reveal(JS 注入,避免 CSS 写死致永久不可见)。
+           保留 .lb-reveal 类名兼容(revealCascade selector 命中) + .lb-revealed legacy 兜底。 */
+        .lb-reveal {
+            transition-delay: var(--lb-reveal-delay, 0ms);
+        }
+        .lb-reveal.lb-revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* === ⑤ 光标跟随光晕 — 仅 KPI 卡 (flow-card 已有 ::after 装饰, 不冲突) === */
+        .kpi-card {
+            position: relative;
+        }
+        .kpi-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%),
+                        rgba(var(--brand-rgb),0.10) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity var(--lb-dur-hit) var(--lb-ease-hit);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .kpi-card:hover::after { opacity: 1; }
+        /* 瓶颈卡光晕用危险色 */
+        .kpi-card.alert::after {
+            background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%),
+                        rgba(var(--danger-rgb),0.14) 0%, transparent 60%);
+        }
+        /* KPI 内容层级置于光晕之上 */
+        .kpi-card > * { position: relative; z-index: 1; }
+
+        /* === ⑥ 状态切换光流 — Subnav/QuickQuery 切换顶部品牌色光条横扫 === */
+        .lb-sweep {
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--brand) 50%, transparent 100%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+        }
+        .lb-sweep.lb-sweeping {
+            animation: lb-sweep-anim 520ms var(--lb-ease-expo);
+        }
+        @keyframes lb-sweep-anim {
+            0% { opacity: 0; transform: translateX(-100%); }
+            30% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(100%); }
+        }
+
+        /* === KPI 卡景深层级 — 焦点(瓶颈/平衡率) z-focal, 余 z-data === */
+        .kpi-card.lb-z-focal { box-shadow: var(--light-depth-1) !important; }
+        .kpi-card.lb-z-data { box-shadow: var(--shadow-2) !important; }
+
+        /* === prefers-reduced-motion 全程守护 — 降级为静态色变 === */
+        @media (prefers-reduced-motion: reduce) {
+            .focus-shell.lb-focal-active .focus-card[data-focal="true"]::before,
+            .flow-card.level-3::before,
+            .flow-card.level-2::before,
+            .flow-arrow .particle,
+            .lb-sweep.lb-sweeping {
+                animation: none !important;
+            }
+            .lb-reveal {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+            }
+            .focus-shell.lb-focal-active .focus-side { filter: none; }
+            .loading-spinner { animation: none !important; }
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div class="loading-mask" id="loadingMask"><div class="loading-spinner"></div></div>
+
+    <!-- Top Bar — 单层顶栏(状态|筛选+快捷|导航|操作) 5栏合一 -->
+    <div class="top-bar">
+        <div class="tb-seg tb-seg-status">
+            <div class="live-dot" id="liveDot"></div>
+            <span class="time" id="updateTime">加载中...</span>
+            <span class="nav-trust-text" id="navDataTrust">节拍:UPH反推 · WIP:过站聚合 · 标准:product_config</span>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-seg tb-seg-filter">
+            <div id="filterContainer"></div>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-seg tb-seg-action">
+            <select class="period-select" id="periodSelect">
+              <option value="realtime">实时</option>
+              <option value="week">本周</option>
+              <option value="month">本月</option>
+              <option value="quarter">本季</option>
+              <option value="half">半年</option>
+              <option value="year">年度</option>
+              <option value="all">全部</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div id="toolbar"></div>
+        </div>
+    </div>
+    <!-- 第二行: subnav 导航 + quickQuery 快捷 -->
+    <div class="subnav-row">
+        <div class="wip-subnav-inner" id="pageSubnav">
+            <button class="active" data-target="focusShell">现场关注</button>
+            <button data-target="flowPanel">工艺流</button>
+            <button data-target="ctPanel">工站节拍</button>
+            <button data-target="wipPanel">WIP分布</button>
+            <button data-target="tableSection">工站明细</button>
+        </div>
+        <div class="qq-row" id="quickQuery"></div>
+    </div>
+
+<div class="wip-page">
+  <!-- 状态切换光流条 (钩子⑥) -->
+  <div class="lb-sweep" id="lbSweep"></div>
+
+  <!-- Focus Command Panel -->
+  <div class="focus-shell" id="focusShell">
+    <div class="focus-card">
+      <div class="focus-content">
+        <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">现场关注 · 生产线平衡</span></div>
+        <div class="focus-title" id="focusTitle">正在读取线平衡状态...</div>
+        <div class="focus-action" id="focusAction">系统会优先指出当前节拍瓶颈与堆积异常,并给出优化建议。</div>
+        <div class="focus-meta" id="focusMeta"></div>
+        <div class="focus-detail" id="focusDetail"></div>
+        <div class="focus-actions" id="focusActions">
+          <button onclick="scrollToPanel('flowPanel')">查看工艺流</button>
+          <button onclick="scrollToPanel('tableSection')">查看工站明细</button>
+          <button onclick="refreshCurrent()">刷新数据</button>
+        </div>
+        <div class="focus-trust" id="focusTrust"></div>
+      </div>
+    </div>
+    <div class="focus-side">
+      <div class="focus-mini" id="focusSide1"><div class="label">平衡率</div><div class="value">--</div><div class="hint">≥70% 正常 / &lt;50% 危险</div></div>
+      <div class="focus-mini" id="focusSide2"><div class="label">平衡损失率</div><div class="value">--</div><div class="hint">越低越好</div></div>
+    </div>
+  </div>
+
+  <div class="kpi-section-title"><span>核心指标</span><span>点击查看明细</span></div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row wip">
+    <div class="kpi-card" id="kpiBalance" style="--kpi-color:var(--success);" onclick="showStationsDrawer('balance')">
+        <div class="kpi-label">平衡率 <span class="kpi-tip" data-tip="平衡率 = 各工站节拍之和 / (工站数 × 最大节拍)">?</span></div>
+        <div class="kpi-balance-liquid" id="lbBalanceLiquid"></div>
+        <div class="kpi-value" id="kpiBalanceVal" style="text-align:center;">--</div>
+    </div>
+    <div class="kpi-card" id="kpiLoss" style="--kpi-color:var(--warning);" onclick="showStationsDrawer('loss')">
+        <div class="kpi-label">平衡损失率 <span class="kpi-tip" data-tip="损失率 = 1 - 平衡率">?</span></div>
+        <div class="kpi-value" id="kpiLossVal">--</div>
+        <div class="mini-bar"><div class="mini-bar-fill" id="kpiLossBar" style="width:0%;background:var(--warning);"></div></div>
+    </div>
+    <div class="kpi-card" id="kpiBottleneck" style="--kpi-color:var(--danger);" onclick="showStationsDrawer('bottleneck')">
+        <div class="kpi-label">瓶颈工站 <span class="kpi-tip" data-tip="节拍最长的工站">?</span></div>
+        <div class="kpi-text-value" id="kpiBottleneckVal">--</div>
+        <div class="kpi-sub" id="kpiBottleneckSub">--</div>
+    </div>
+    <div class="kpi-card" id="kpiStd" style="--kpi-color:var(--brand);" onclick="showStationsDrawer('std')">
+        <div class="kpi-label">标准节拍(秒) <span class="kpi-tip" data-tip="线体标准节拍 cycle_time_std">?</span></div>
+        <div class="kpi-value" id="kpiStdVal">--</div>
+        <div class="kpi-sub" id="kpiStdSub">--</div>
+    </div>
+    <div class="kpi-card" id="kpiUpn" style="--kpi-color:var(--brand);" onclick="showStationsDrawer('uph')">
+        <div class="kpi-label">线体 UPH <span class="kpi-tip" data-tip="每小时产出">?</span></div>
+        <div class="kpi-value" id="kpiUpnVal">--</div>
+        <div class="kpi-sub" id="kpiUpnSub">--</div>
+    </div>
+    <div class="kpi-card" id="kpiStations" style="--kpi-color:var(--brand);" onclick="showStationsDrawer('stations')">
+        <div class="kpi-label">工站数</div>
+        <div class="kpi-value" id="kpiStationsVal">--</div>
+        <div class="kpi-sub" id="kpiStationsSub">--</div>
+    </div>
+  </div>
+
+  <!-- AI Suggestion -->
+  <div class="ai-suggest" id="aiSuggest" style="display:none">
+    <div class="icon">💡</div>
+    <div class="content"><div class="title" id="aiSugTitle">线平衡优化建议</div><div class="detail" id="aiSugDetail"></div></div>
+  </div>
+
+  <!-- Flow Panel -->
+  <div class="flow-panel" id="flowPanel">
+    <div class="flow-header">
+      <h3>工艺流 · 工站节拍与堆积分布</h3>
+    </div>
+    <div class="process-flow" id="processFlow"></div>
+  </div>
+
+  <!-- Charts — 全宽堆叠 -->
+  <div class="full-stack" id="chartGrid">
+    <div class="chart-panel" id="ctPanel">
+      <div class="chart-panel-title">📊 工站节拍分布 (瓶颈红色 · 标准节拍虚线)</div>
+      <div class="chart-box chart-box-lg" id="ctChart"></div>
+    </div>
+    <div class="chart-panel" id="wipPanel">
+      <div class="chart-panel-title">📦 工站 WIP 分布 (堆积橙色)</div>
+      <div class="chart-box" id="wipChart"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">🎯 平衡率仪表盘</div>
+      <div class="chart-box" id="gaugeChart"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">🚀 工站 UPH 对比</div>
+      <div class="chart-box chart-box-lg" id="uphChart"></div>
+    </div>
+  </div>
+
+  <!-- Summary Table -->
+  <div id="detailSection" style="padding:0 0 24px">
+    <div class="chart-panel" id="tableSection">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📋 工站明细</span>
+        <span style="font-size:11px;color:var(--text-muted)">点击行查看工站明细</span>
+      </div>
+      <div style="overflow-x:auto;margin-top:8px">
+        <table class="summary-table" id="summaryTable">
+          <thead>
+            <tr>
+              <th>工站代码</th>
+              <th>中文名</th>
+              <th>WIP</th>
+              <th>UPH</th>
+              <th>节拍(秒)</th>
+              <th>标记</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-mask" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header"><h3 id="drawerTitle">--</h3><div style="display:flex;gap:8px"><button class="refresh-btn" id="drawerExport">⬇ 导出</button><button class="drawer-close" id="drawerCloseBtn">×</button></div></div>
+  <div class="drawer-body"><div class="drawer-stats" id="drawerStats"></div><div id="drawerContent"></div></div>
+</div>
+
+<script>
+
+/* ========== 全局状态 ========== */
+let currentData = null;       // 最近一次加载的完整数据(过滤前的完整快照,供抽屉/详情用)
+let currentFilteredData = null; // 过滤后用于渲染的数据
+let currentRange = { dateFrom: '', dateTo: '', label: '实时' };
+let currentPeriod = 'realtime';
+let filter = {};              // QuickQuery 联动筛选: onlyBottleneck / onlyWipBottleneck / maxBalance
+
+/* ========== Init FilterBar (仅线体筛选,日期由周期条管) ========== */
+const _filter = new FilterBar('#filterContainer', {
+    fields: ['line'],
+    fieldOptions: {
+        line: { placeholder: '全部线体' }
+    },
+    apiBase: '',
+    storageKey: '_lb_filters',
+    rememberSelection: true,
+    onQuery: () => loadData(currentRange.dateFrom, currentRange.dateTo)
+});
+
+/* ========== Color / Format Helpers ========== */
+function rateColor(v) { return v >= 85 ? CHART.colors.green : v >= 70 ? CHART.colors.warn : CHART.colors.red; }
+// 无数据(null)态液态图灰色 — echarts 需具体颜色不能传 var(), 用 CHART.axisLabel(textMuted) 单一真值源
+const NULL_LIQUID = CHART.axisLabel;
+function fmt(v, dec=1) { return v == null ? '--' : Number(v).toFixed(dec); }
+// escHtml 收口到 common.js (window.escHtml), 本页不再单独定义
+
+/* ========== Focus Panel (AI 焦点) ========== */
+function renderFocus(data) {
+    const scopeEl = document.getElementById('focusScope');
+    const titleEl = document.getElementById('focusTitle');
+    const actionEl = document.getElementById('focusAction');
+    const metaEl = document.getElementById('focusMeta');
+    const detailEl = document.getElementById('focusDetail');
+    const trustEl = document.getElementById('focusTrust');
+    const side1 = document.getElementById('focusSide1');
+    const side2 = document.getElementById('focusSide2');
+
+    const lineName = data.line_display || data.line || '';
+    const lineSel = document.getElementById('lineFilter');
+    const hasLine = (lineName && lineName !== '全部线体') || (lineSel && lineSel.value);
+
+    scopeEl.textContent = '现场关注 · ' + (lineName || (hasLine ? '' : '请选择线体'));
+
+    // 未选线体
+    if (!hasLine) {
+        titleEl.textContent = '请选择线体查看线平衡';
+        titleEl.classList.remove('danger');
+        actionEl.textContent = '在上方筛选器中选择目标产线,系统将自动计算节拍瓶颈与堆积异常,并给出优化建议。';
+        metaEl.innerHTML = WipUI.Focus.metaChips([
+            { val: '--', label: '瓶颈工站' },
+            { val: '--', label: '瓶颈节拍' },
+            { val: '--', label: '工站数' }
+        ]);
+        detailEl.innerHTML = '';
+        side1.className = 'focus-mini';
+        side1.querySelector('.value').textContent = '--';
+        side2.className = 'focus-mini';
+        side2.querySelector('.value').textContent = '--';
+        trustEl.innerHTML = WipUI.Focus.trustLabel(['节拍:UPH反推', 'WIP:过站聚合', '标准:product_config']);
+        hideAiSuggest();
+        return;
+    }
+
+    const balanceRate = data.balance_rate == null ? null : +data.balance_rate;
+    const lossRate = data.loss_rate == null ? null : +data.loss_rate;
+    const stations = data.stations || [];
+    const bnName = data.bottleneck_op_name || data.bottleneck_op || '--';
+    const bnCt = +data.bottleneck_ct || 0;
+    const stdCt = +data.cycle_time_std || 0;
+    const ctBn = stations.filter(s => s.is_ct_bottleneck).length;
+    const wipBn = stations.filter(s => s.is_wip_bottleneck).length;
+
+    // 焦点标题 + 严重度
+    // bottleneck_ct 高于标准节拍1.3倍 或 平衡率<70 视为 danger
+    const ctDanger = stdCt > 0 && bnCt > stdCt * 1.3;
+    const hasBalance = balanceRate != null;
+    const balanceDanger = hasBalance && balanceRate < 70;
+    const isDanger = ctDanger || balanceDanger;
+    const isWarn = !isDanger && ((hasBalance && balanceRate < 85) || wipBn > 0);
+
+    titleEl.innerHTML = bnName + ' 为节拍瓶颈' +
+        (bnCt > 0 ? '(' + fmt(bnCt, 0) + '秒)' : '') +
+        ',平衡率 ' + (hasBalance ? fmt(balanceRate) + '%' : '--');
+    titleEl.classList.toggle('danger', isDanger);
+
+    // 行动建议
+    let action = '';
+    if (isDanger) {
+        if (ctDanger) {
+            action = '建议优化瓶颈工位 ' + bnName + ' 节拍:可考虑增加人员配置、拆分工序或并行作业,使节拍向标准 ' + fmt(stdCt, 0) + '秒靠拢。';
+        } else {
+            action = '平衡率偏低(' + fmt(balanceRate) + '%),线体产能损失明显。建议重新排布工序,将瓶颈工位作业向前后富余工位分流。';
+        }
+    } else if (isWarn) {
+        if (wipBn > 0) {
+            const wipBnSt = stations.find(s => s.is_wip_bottleneck);
+            action = '关注堆积瓶颈' + (wipBnSt ? (' ' + (wipBnSt.operation_name || wipBnSt.operation)) : '') + ',物料在制堆积可能导致节拍波动,建议核查上工序投料节奏与节拍匹配。';
+        } else {
+            action = '平衡率处于观察区间(' + fmt(balanceRate) + '%),建议持续监控瓶颈工位节拍稳定性,预防产能损失扩大。';
+        }
+    } else {
+        action = hasBalance ? ('线体平衡状态良好,平衡率 ' + fmt(balanceRate) + '% 达标。建议维持当前工序配置,定期复核瓶颈工位节拍。') : '当前为跨线混合数据,仅展示工站清单。请选择单条线体后查看真实平衡率。';
+    }
+    actionEl.textContent = action;
+
+    // Meta chips
+    metaEl.innerHTML = WipUI.Focus.metaChips([
+        { val: bnName, label: '瓶颈工位' },
+        { val: bnCt > 0 ? fmt(bnCt, 0) + 's' : '--', label: '瓶颈节拍' },
+        { val: stations.length, label: '工站数' }
+    ]);
+
+    // Detail blocks
+    detailEl.innerHTML =
+        '<div class="focus-detail-block"><div class="label">节拍瓶颈</div><div class="value">' + escHtml(bnName) + (bnCt>0 ? ' · ' + fmt(bnCt,0) + 's' : '') + '</div><div class="sub">' + (stdCt>0 ? '标准 ' + fmt(stdCt,0) + 's · 差 ' + fmt(Math.max(bnCt-stdCt,0),0) + 's' : '暂无标准') + '</div></div>' +
+        '<div class="focus-detail-block"><div class="label">瓶颈计数</div><div class="value">节拍 ' + ctBn + ' · 堆积 ' + wipBn + '</div><div class="sub">基于工站节拍/WIP 标记</div></div>';
+
+    // Side mini: 平衡率 / 损失率
+    // 平衡率: sideMiniState 用"低即危险"语义——这里用 100-rate 转换为"损失"判断
+    const balanceState = hasBalance ? WipUI.Focus.sideMiniState(100 - balanceRate, { warnAt: 30, dangerAt: 50 }) : '';
+    side1.className = 'focus-mini' + (balanceState ? ' ' + balanceState : '');
+    side1.querySelector('.value').textContent = fmt(balanceRate) + '%';
+    const lossState = lossRate != null ? WipUI.Focus.sideMiniState(lossRate, { warnAt: 15, dangerAt: 30 }) : '';
+    side2.className = 'focus-mini' + (lossState ? ' ' + lossState : '');
+    side2.querySelector('.value').textContent = fmt(lossRate) + '%';
+
+    // Trust
+    trustEl.innerHTML = WipUI.Focus.trustLabel(['节拍:UPH反推', 'WIP:过站聚合', '标准:product_config']);
+
+    // AI Suggest
+    renderAiSuggest(data, { isDanger, isWarn, ctDanger, balanceDanger, bnName, bnCt, stdCt, balanceRate, wipBn });
+}
+
+/* ========== AI Suggestion ========== */
+function renderAiSuggest(data, ctx) {
+    const box = document.getElementById('aiSuggest');
+    const titleEl = document.getElementById('aiSugTitle');
+    const detailEl = document.getElementById('aiSugDetail');
+    const tips = [];
+    if (ctx.balanceDanger) {
+        tips.push('平衡率仅 ' + fmt(ctx.balanceRate) + '%,低于 70% 警戒线,线体存在显著产能损失');
+    }
+    if (ctx.ctDanger && ctx.stdCt > 0) {
+        tips.push('瓶颈 ' + ctx.bnName + ' 节拍 ' + fmt(ctx.bnCt,0) + 's 远超标准 ' + fmt(ctx.stdCt,0) + 's,建议优先优化该工位');
+    }
+    if (ctx.wipBn > 0) {
+        tips.push('检测到 ' + ctx.wipBn + ' 个堆积瓶颈工位,需关注物料流转节奏');
+    }
+    if (!tips.length) { hideAiSuggest(); return; }
+    titleEl.textContent = '线平衡优化建议';
+    detailEl.innerHTML = tips.map(t => '<div style="margin-bottom:4px">• ' + escHtml(t) + '</div>').join('');
+    box.style.display = '';
+}
+function hideAiSuggest() { document.getElementById('aiSuggest').style.display = 'none'; }
+
+/* ========== Flow Panel (工艺流节点) ========== */
+function renderFlow(data) {
+    const wrap = document.getElementById('processFlow');
+    const stations = (data.stations || []).slice().sort((a,b) => (+a.sort_no||0) - (+b.sort_no||0));
+    if (!stations.length) { wrap.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:20px 0">暂无工站数据</div>'; return; }
+    const stdCt = +data.cycle_time_std || 0;
+    let html = '';
+    stations.forEach((s, i) => {
+        const op = s.operation_name || s.operation || '--';
+        const ct = s.ct_seconds;
+        const wip = +(s.wip_count || 0);
+        let level = 'level-1';
+        let countCls = 'c-default';
+        let statusTxt = '正常';
+        if (s.is_ct_bottleneck) { level = 'level-3'; countCls = 'c-red'; statusTxt = '节拍瓶颈'; }
+        else if (s.is_wip_bottleneck) { level = 'level-2'; countCls = 'c-orange'; statusTxt = '堆积瓶颈'; }
+        const ctTxt = ct != null ? fmt(ct, 0) + 's' : (s.ct_sample_insufficient ? '样本少' : '--');
+        const opCount = ct != null ? fmt(ct, 0) : '--';
+        // dwell_seconds(单台停留P25,含等待):>CT 的3倍 = 堆积风险,展示给用户辅助判断
+        const dwellTxt = s.dwell_seconds != null ? Math.round(s.dwell_seconds/60)+'min' : '';
+        html += '<div class="flow-node" onclick="showStationDrawer(\'' + escAttr(s.operation) + '\')">' +
+            '<div class="flow-card ' + level + '">' +
+                '<span class="op-sort">#' + (+s.sort_no || (i+1)) + '</span>' +
+                '<span class="op-name">' + escHtml(op) + '</span>' +
+                '<span class="op-count ' + countCls + '">' + opCount + '</span>' +
+                '<span class="op-status">' + statusTxt + '</span>' +
+                '<div class="op-mix"><span>CT ' + ctTxt + '</span><span>WIP ' + wip + (dwellTxt ? '</span><span title="单台停留(含等待)">滞留 '+dwellTxt : '') + '</span></div>' +
+            '</div>' +
+        '</div>';
+        if (i < stations.length - 1) {
+            html += '<div class="flow-arrow"><span class="particle"></span><span class="particle"></span><span class="particle"></span></div>';
+        }
+    });
+    wrap.innerHTML = html;
+}
+function escAttr(s){ return String(s==null?'':s).replace(/'/g, "\\'"); }
+
+/* ========== KPI ========== */
+let liquidChart = null;
+function renderKPI(data) {
+    const balanceRate = data.balance_rate == null ? null : +data.balance_rate;
+    const lossRate = data.loss_rate == null ? null : +data.loss_rate;
+    const stations = data.stations || [];
+
+    document.getElementById('kpiBalanceVal').textContent = fmt(balanceRate) + '%';
+    document.getElementById('kpiBalanceVal').style.color = balanceRate == null ? 'var(--text-muted)' : rateColor(balanceRate);
+    const el = document.getElementById('lbBalanceLiquid');
+    if (!liquidChart) liquidChart = echarts.init(el);
+    const v = balanceRate == null ? 0 : Math.min(Math.max(balanceRate / 100, 0), 1);
+    liquidChart.setOption({
+        series: [{
+            type: 'liquidFill',
+            data: [v, v * 0.9, v * 0.8],
+            radius: '90%',
+            color: [balanceRate == null ? NULL_LIQUID : rateColor(balanceRate), balanceRate == null ? NULL_LIQUID : rateColor(balanceRate), balanceRate == null ? NULL_LIQUID : rateColor(balanceRate)],
+            backgroundStyle: { color: CHART.bg },
+            outline: { borderDistance: 2, itemStyle: { borderWidth: 2, borderColor: balanceRate == null ? NULL_LIQUID : rateColor(balanceRate) } },
+            label: { show: false }
+        }]
+    }, true);
+
+    document.getElementById('kpiLossVal').textContent = lossRate == null ? '--' : fmt(lossRate) + '%';
+    document.getElementById('kpiLossVal').style.color = lossRate == null ? 'var(--text-muted)' : (lossRate >= 30 ? CHART.colors.red : lossRate >= 15 ? CHART.colors.warn : CHART.colors.green);
+    document.getElementById('kpiLossBar').style.width = lossRate == null ? '0%' : Math.min(lossRate, 100) + '%';
+    document.getElementById('kpiLossBar').style.background = lossRate == null ? NULL_LIQUID : rateColor(100 - lossRate);
+
+    const bnName = data.bottleneck_op_name || data.bottleneck_op || '--';
+    document.getElementById('kpiBottleneckVal').textContent = bnName;
+    document.getElementById('kpiBottleneckSub').textContent = data.bottleneck_op ? ('代码 ' + data.bottleneck_op + (data.bottleneck_ct ? ' · ' + fmt(data.bottleneck_ct, 0) + '秒' : '')) : '暂无数据';
+
+    document.getElementById('kpiStdVal').textContent = data.cycle_time_std != null ? fmt(data.cycle_time_std, 0) : '--';
+    document.getElementById('kpiStdSub').textContent = '线体标准节拍';
+
+    document.getElementById('kpiUpnVal').textContent = data.line_uph != null ? (+data.line_uph).toLocaleString() : '--';
+    document.getElementById('kpiUpnSub').textContent = (data.line_display || data.line || '--');
+
+    document.getElementById('kpiStationsVal').textContent = stations.length;
+    const ctBn = stations.filter(s => s.is_ct_bottleneck).length;
+    const wipBn = stations.filter(s => s.is_wip_bottleneck).length;
+    document.getElementById('kpiStationsSub').textContent = '节拍瓶颈 ' + ctBn + ' · 堆积瓶颈 ' + wipBn;
+
+    // alert 闪烁:瓶颈卡
+    document.getElementById('kpiBottleneck').classList.toggle('alert', stations.some(s => s.is_ct_bottleneck));
+}
+
+/* ========== CT Chart ========== */
+let chartCT = null;
+function renderCTChart(data) {
+    if (!chartCT) chartCT = echarts.init(document.getElementById('ctChart'));
+    const stations = data.stations || [];
+    if (!stations.length) {
+        chartCT.setOption(CHART.emptyState('暂无数据'), true);
+        return;
+    }
+    const cats = stations.map(s => s.operation_name || s.operation);
+    const stdCT = +data.cycle_time_std || 0;
+    chartCT.setOption({
+        tooltip: Object.assign(CHART.tooltip(), { formatter: function(params) {
+            let html = '<div style="font-weight:600;margin-bottom:6px">' + params[0].axisValue + '</div>';
+            params.forEach(p => {
+                if (p.componentType === 'markLine') return;
+                html += '<div style="display:flex;align-items:center;gap:6px;margin:3px 0">';
+                html += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + p.color + '"></span>';
+                html += '<span>' + p.seriesName + '</span>';
+                html += '<span style="margin-left:auto;font-weight:600">' + (p.value != null ? (+p.value).toFixed(1) + ' 秒' : '样本不足') + '</span>';
+                html += '</div>';
+            });
+            if (stdCT > 0) html += '<div style="margin-top:4px;color:' + CHART.colors.red + '">标准节拍 ' + stdCT + ' 秒</div>';
+            return html;
+        }}),
+        grid: { top: 30, bottom: 60, left: 50, right: 20 },
+        xAxis: { type: 'category', data: cats, axisLabel: { color: CHART.axisLabel, fontSize: 10, interval: 0, rotate: cats.length > 8 ? 35 : 0 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: '秒', nameTextStyle: { color: CHART.legendText, fontSize: 10 }, axisLabel: { color: CHART.axisLabel, fontSize: 10 }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [{
+            name: '工站节拍', type: 'bar', barMaxWidth: 36,
+            data: stations.map(s => ({
+                value: (s.ct_seconds == null ? null : +s.ct_seconds),
+                itemStyle: { color: s.is_ct_bottleneck ? CHART.colors.red : CHART.colors.blue, borderRadius: [2,2,0,0] }
+            })),
+            label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10, formatter: function(p) { return p.value != null ? (+p.value).toFixed(1) + 's' : ''; } },
+            markLine: stdCT > 0 ? {
+                symbol: 'none', silent: true,
+                lineStyle: { type: 'dashed', color: CHART.colors.red, width: 1.5 },
+                label: { formatter: '标准 {c}s', color: CHART.colors.red, fontSize: 10 },
+                data: [{ yAxis: stdCT }]
+            } : undefined
+        }]
+    }, true);
+    chartCT._drillDim = stations.map(function (s) { return s.operation; });
+}
+
+/* ========== WIP Chart ========== */
+let chartWIP = null;
+function renderWIPChart(data) {
+    if (!chartWIP) chartWIP = echarts.init(document.getElementById('wipChart'));
+    const stations = data.stations || [];
+    if (!stations.length) {
+        chartWIP.setOption(CHART.emptyState('暂无数据'), true);
+        return;
+    }
+    const cats = stations.map(s => s.operation_name || s.operation);
+    chartWIP.setOption({
+        tooltip: Object.assign(CHART.tooltip(), { formatter: function(params) {
+            const p = params[0];
+            const idx = p.dataIndex;
+            const s = stations[idx];
+            let html = '<div style="font-weight:600;margin-bottom:6px">' + p.axisValue + '</div>';
+            html += '<div>WIP: <span style="font-weight:600;color:' + (s.is_wip_bottleneck ? CHART.colors.orange : CHART.colors.blue) + '">' + (s.wip_count || 0) + '</span></div>';
+            if (s.is_wip_bottleneck) html += '<div style="color:' + CHART.colors.orange + ';font-size:11px;margin-top:2px">堆积瓶颈</div>';
+            return html;
+        }}),
+        grid: { top: 30, bottom: 60, left: 50, right: 20 },
+        xAxis: { type: 'category', data: cats, axisLabel: { color: CHART.axisLabel, fontSize: 10, interval: 0, rotate: cats.length > 8 ? 35 : 0 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: 'WIP', nameTextStyle: { color: CHART.legendText, fontSize: 10 }, axisLabel: { color: CHART.axisLabel, fontSize: 10 }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [{
+            name: 'WIP', type: 'bar', barMaxWidth: 36,
+            data: stations.map(s => ({
+                value: +(s.wip_count || 0),
+                itemStyle: { color: s.is_wip_bottleneck ? CHART.colors.orange : CHART.colors.blue, borderRadius: [2,2,0,0] }
+            })),
+            label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10 }
+        }]
+    }, true);
+    chartWIP._drillDim = stations.map(function (s) { return s.operation; });
+}
+
+/* ========== Gauge Chart ========== */
+let chartGauge = null;
+function renderGaugeChart(data) {
+    if (!chartGauge) chartGauge = echarts.init(document.getElementById('gaugeChart'));
+    const rate = data.balance_rate == null ? null : +data.balance_rate;
+    if (rate == null) {
+        chartGauge.setOption({ title:{text:'请选择单线查看平衡率',left:'center',top:'center',textStyle:{color:CHART.legendText,fontSize:13}} }, true);
+        return;
+    }
+    const color = rateColor(rate);
+    chartGauge.setOption({
+        tooltip: Object.assign(CHART.tooltip(), { trigger: 'item', formatter: '平衡率: ' + fmt(rate) + '%' }),
+        series: [{
+            type: 'gauge', min: 0, max: 100,
+            progress: { show: true, width: 14, itemStyle: { color: color } },
+            axisLine: { lineStyle: { width: 14, color: [[0.7, CHART.colors.red], [0.85, CHART.colors.warn], [1, CHART.colors.green]] } },
+            pointer: { itemStyle: { color: color }, length: '60%', width: 4 },
+            axisTick: { distance: -14, length: 4, lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+            splitLine: { distance: -14, length: 8, lineStyle: { color: 'rgba(255,255,255,0.3)' } },
+            axisLabel: { color: CHART.axisLabel, fontSize: 9, distance: 22 },
+            anchor: { show: true, size: 10, itemStyle: { color: color } },
+            detail: { valueAnimation: true, formatter: '{value}%', color: color, fontSize: 22, fontWeight: 700, offsetCenter: [0, '40%'] },
+            title: { offsetCenter: [0, '70%'], color: CHART.legendText, fontSize: 11 },
+            data: [{ value: +rate.toFixed(1), name: '平衡率' }]
+        }]
+    }, true);
+}
+
+/* ========== UPH Chart ========== */
+let chartUPH = null;
+function renderUPHChart(data) {
+    if (!chartUPH) chartUPH = echarts.init(document.getElementById('uphChart'));
+    const stations = data.stations || [];
+    if (!stations.length) {
+        chartUPH.setOption(CHART.emptyState('暂无数据'), true);
+        return;
+    }
+    const cats = stations.map(s => s.operation_name || s.operation);
+    chartUPH.setOption({
+        tooltip: Object.assign(CHART.tooltip(), { formatter: function(params) {
+            const p = params[0];
+            return '<div style="font-weight:600;margin-bottom:4px">' + p.axisValue + '</div>UPH: <span style="font-weight:600;color:' + CHART.colors.green + '">' + (p.value != null ? (+p.value).toLocaleString() : '样本不足') + '</span>';
+        }}),
+        grid: { top: 30, bottom: 60, left: 60, right: 20 },
+        xAxis: { type: 'category', data: cats, axisLabel: { color: CHART.axisLabel, fontSize: 10, interval: 0, rotate: cats.length > 8 ? 35 : 0 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: 'UPH', nameTextStyle: { color: CHART.legendText, fontSize: 10 }, axisLabel: { color: CHART.axisLabel, fontSize: 10 }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [{
+            name: 'UPH', type: 'bar', barMaxWidth: 36,
+            data: stations.map(s => ({
+                value: (s.uph == null ? null : +s.uph),
+                itemStyle: {
+                    color: CHART.gradientBar(echarts, CHART.colors.green),
+                    borderRadius: [2, 2, 0, 0]
+                }
+            })),
+            label: { show: true, position: 'top', color: CHART.legendText, fontSize: 10, formatter: function(p){ return (+p.value).toLocaleString(); } }
+        }]
+    }, true);
+    chartUPH._drillDim = stations.map(function (s) { return s.operation; });
+}
+
+/* ========== Summary Table ========== */
+function renderSummaryTable(data) {
+    const stations = data.stations || [];
+    const tbody = document.getElementById('summaryBody');
+    if (!stations.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);padding:24px;">暂无数据</td></tr>'; return; }
+    tbody.innerHTML = stations.map(s => {
+        const isBn = s.is_ct_bottleneck || s.is_wip_bottleneck;
+        const tags = [];
+        if (s.is_ct_bottleneck) tags.push('<span class="tag tag-ct">节拍瓶颈</span>');
+        if (s.is_wip_bottleneck) tags.push('<span class="tag tag-wip">堆积瓶颈</span>');
+        if (!tags.length) tags.push('<span class="tag tag-none">正常</span>');
+        const ctCls = s.is_ct_bottleneck ? 'cell-red' : '';
+        const wipCls = s.is_wip_bottleneck ? 'cell-yellow' : '';
+        return '<tr class="' + (isBn ? 'bn-row' : '') + '" onclick="showStationDrawer(\'' + escAttr(s.operation) + '\')">' +
+            '<td style="font-family:var(--font-mono);color:var(--brand);">' + escHtml(s.operation) + '</td>' +
+            '<td style="color:var(--text-primary);font-weight:600;">' + escHtml(s.operation_name || s.operation) + '</td>' +
+            '<td class="' + wipCls + '">' + (s.wip_count || 0) + '</td>' +
+            '<td>' + (s.uph != null ? (+s.uph).toLocaleString() : '--') + '</td>' +
+            '<td class="' + ctCls + '">' + (s.ct_seconds != null ? fmt(s.ct_seconds, 1) : '--') + '</td>' +
+            '<td>' + tags.join(' ') + '</td>' +
+        '</tr>';
+    }).join('');
+}
+
+/* ========== Drawer (工站明细 / KPI 明细) ========== */
+function stationRow(s) {
+    const tags = [];
+    if (s.is_ct_bottleneck) tags.push('<span class="wait-tag critical">节拍瓶颈</span>');
+    if (s.is_wip_bottleneck) tags.push('<span class="wait-tag warn">堆积瓶颈</span>');
+    if (!tags.length) tags.push('<span class="wait-tag normal">正常</span>');
+    return '<tr>' +
+        '<td style="font-family:var(--font-mono);color:var(--brand)">' + escHtml(s.operation) + '</td>' +
+        '<td style="color:var(--text-primary);font-weight:600">' + escHtml(s.operation_name || s.operation) + '</td>' +
+        '<td>' + (+s.sort_no || '--') + '</td>' +
+        '<td>' + (s.wip_count || 0) + '</td>' +
+        '<td>' + (s.uph != null ? (+s.uph).toLocaleString() : '--') + '</td>' +
+        '<td style="font-weight:600;color:' + (s.is_ct_bottleneck ? 'var(--danger)' : 'var(--text-primary)') + '">' + (s.ct_seconds != null ? fmt(s.ct_seconds, 1) : '--') + '</td>' +
+        '<td>' + tags.join(' ') + '</td>' +
+    '</tr>';
+}
+function stationsTableHtml(stations) {
+    if (!stations.length) return '<div style="color:var(--text-muted);padding:20px;text-align:center">暂无工站数据</div>';
+    return '<div style="max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius)">' +
+        '<table class="sn-table"><thead><tr><th>工站代码</th><th>中文名</th><th>序号</th><th>WIP</th><th>UPH</th><th>节拍(s)</th><th>标记</th></tr></thead><tbody>' +
+        stations.map(stationRow).join('') +
+        '</tbody></table></div>';
+}
+function stationExportColumns() {
+    return [
+        { key: 'operation', label: '工站代码' },
+        { key: 'operation_name', label: '中文名' },
+        { key: 'sort_no', label: '序号' },
+        { key: 'wip_count', label: 'WIP' },
+        { key: 'uph', label: 'UPH' },
+        { key: 'ct_seconds', label: '节拍(秒)' },
+        { key: 'is_ct_bottleneck', label: '节拍瓶颈' },
+        { key: 'is_wip_bottleneck', label: '堆积瓶颈' }
+    ];
+}
+
+/* 单工站明细 */
+function showStationDrawer(op) {
+    if (!currentData) return;
+    const stations = currentData.stations || [];
+    const s = stations.find(x => String(x.operation) === String(op));
+    if (!s) return;
+    const name = s.operation_name || s.operation;
+    const tags = [];
+    if (s.is_ct_bottleneck) tags.push('节拍瓶颈');
+    if (s.is_wip_bottleneck) tags.push('堆积瓶颈');
+    const stats = [
+        { val: fmt(s.ct_seconds, 1) + 's', lbl: '节拍' },
+        { val: (s.wip_count || 0), lbl: 'WIP' },
+        { val: s.uph != null ? (+s.uph).toLocaleString() : '--', lbl: 'UPH' }
+    ];
+    const html = '<div style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;line-height:1.7">' +
+        '<div>工站代码: <span style="font-family:var(--font-mono);color:var(--brand)">' + escHtml(s.operation) + '</span></div>' +
+        '<div>中文名: <strong style="color:var(--text-primary)">' + escHtml(name) + '</strong></div>' +
+        '<div>序号: ' + (+s.sort_no || '--') + '</div>' +
+        '<div>标记: ' + (tags.length ? tags.join(' · ') : '正常') + '</div>' +
+        '</div>' + stationsTableHtml([s]);
+    WipUI.Drawer.open({
+        title: '工站明细 · ' + name,
+        stats: stats,
+        html: html,
+        exportData: [s],
+        exportColumns: stationExportColumns(),
+        showExport: true
+    });
+}
+
+/* KPI 卡抽屉:按类型展示工站明细 */
+function showStationsDrawer(kind) {
+    if (!currentData) return;
+    const d = currentData;
+    const stations = d.stations || [];
+    const balanceRate = d.balance_rate == null ? null : +d.balance_rate;
+    const lossRate = d.loss_rate == null ? null : +d.loss_rate;
+    let title, stats, html, sorted;
+    switch (kind) {
+        case 'balance':
+            title = '线体平衡率明细';
+            stats = [
+                { val: fmt(balanceRate) + '%', lbl: '平衡率' },
+                { val: fmt(lossRate) + '%', lbl: '损失率' },
+                { val: stations.length, lbl: '工站数' }
+            ];
+            // 分段平衡率(段内比,排除跨段产能差异失真)
+            const segRow = ['assembly','test','packaging'].map(st => {
+                const v = d['balance_'+st];
+                return v==null ? null : '<span style="margin-right:14px">'+({assembly:'组装',test:'测试',packaging:'包装'}[st])+' <strong style="color:'+rateColor(v)+'">'+fmt(v)+'%</strong></span>';
+            }).filter(Boolean).join('');
+            html = '<div style="margin-bottom:8px;color:var(--text-secondary);font-size:13px;line-height:1.7">' +
+                '瓶颈: <strong style="color:var(--danger)">' + escHtml(d.bottleneck_op_name || d.bottleneck_op || '--') + '</strong>' +
+                (d.bottleneck_ct ? ' (' + fmt(d.bottleneck_ct,0) + 's)' : '') +
+                (d.cycle_time_std ? ' · 标准 ' + fmt(d.cycle_time_std,0) + 's' : '') + '</div>' +
+                (segRow ? '<div style="margin-bottom:12px;color:var(--text-muted);font-size:12px">分段平衡率(段内比,更准): '+segRow+'</div>' : '') +
+                stationsTableHtml(stations);
+            break;
+        case 'loss':
+            title = '平衡损失率明细';
+            stats = [
+                { val: fmt(lossRate) + '%', lbl: '损失率' },
+                { val: fmt(balanceRate) + '%', lbl: '平衡率' },
+                { val: stations.length, lbl: '工站数' }
+            ];
+            html = '<div style="margin-bottom:12px;color:var(--text-muted);font-size:12px">损失率 = 1 - 平衡率。瓶颈工位节拍与平均节拍差距越大,损失越高。</div>' +
+                stationsTableHtml(stations);
+            break;
+        case 'bottleneck':
+            sorted = stations.slice().sort((a,b) => (+b.ct_seconds||0) - (+a.ct_seconds||0));
+            title = '瓶颈工站明细';
+            stats = [
+                { val: escHtml(d.bottleneck_op_name || d.bottleneck_op || '--'), lbl: '瓶颈工站' },
+                { val: d.bottleneck_ct ? fmt(d.bottleneck_ct,0)+'s' : '--', lbl: '瓶颈节拍' },
+                { val: stations.filter(s=>s.is_ct_bottleneck).length, lbl: '节拍瓶颈数' }
+            ];
+            html = '<div style="margin-bottom:12px;color:var(--text-secondary);font-size:13px">按节拍从高到低排序,红色为节拍瓶颈工站。</div>' +
+                stationsTableHtml(sorted);
+            break;
+        case 'std':
+            title = '标准节拍明细';
+            stats = [
+                { val: d.cycle_time_std != null ? fmt(d.cycle_time_std,0)+'s' : '--', lbl: '标准节拍' },
+                { val: d.bottleneck_ct ? fmt(d.bottleneck_ct,0)+'s' : '--', lbl: '瓶颈节拍' },
+                { val: stations.length, lbl: '工站数' }
+            ];
+            html = '<div style="margin-bottom:12px;color:var(--text-muted);font-size:12px">标准节拍来源于 product_config 配置,作为工站节拍合理性基准。</div>' +
+                stationsTableHtml(stations);
+            break;
+        case 'uph':
+            sorted = stations.slice().sort((a,b) => (+b.uph||0) - (+a.uph||0));
+            title = '线体 UPH 明细';
+            stats = [
+                { val: d.line_uph != null ? (+d.line_uph).toLocaleString() : '--', lbl: '线体UPH' },
+                { val: stations.length, lbl: '工站数' },
+                { val: escHtml(d.line_display || d.line || '--'), lbl: '线体' }
+            ];
+            html = '<div style="margin-bottom:12px;color:var(--text-secondary);font-size:13px">按 UPH 从高到低排序。</div>' +
+                stationsTableHtml(sorted);
+            break;
+        case 'stations':
+        default:
+            title = '工站列表';
+            stats = [
+                { val: stations.length, lbl: '工站数' },
+                { val: stations.filter(s=>s.is_ct_bottleneck).length, lbl: '节拍瓶颈' },
+                { val: stations.filter(s=>s.is_wip_bottleneck).length, lbl: '堆积瓶颈' }
+            ];
+            html = stationsTableHtml(stations);
+            break;
+    }
+    WipUI.Drawer.open({
+        title: title,
+        stats: stats,
+        html: html,
+        exportData: stations,
+        exportColumns: stationExportColumns(),
+        showExport: true
+    });
+}
+
+/* ========== Subnav scroll ========== */
+function scrollToPanel(id) {
+    WipUI.Subnav.scrollTo(id);
+}
+
+/* ========== QuickQuery 联动:据 filter 过滤工站 ========== */
+/* filter: { onlyBottleneck, onlyWipBottleneck, maxBalance }
+   - onlyBottleneck: 仅节拍瓶颈工站(is_ct_bottleneck)
+   - onlyWipBottleneck: 仅堆积瓶颈工站(is_wip_bottleneck)
+   - maxBalance: 此页无意义(平衡率为线体级,非工站级),保留占位不影响
+   返回过滤后的 data 副本(stations 被过滤;线体级指标 balance_rate/loss_rate/bottleneck 等保留原值) */
+function applyFilter(data) {
+    if (!data || !data.stations) return data;
+    let stations = data.stations.slice();
+    if (filter.onlyBottleneck) stations = stations.filter(s => s.is_ct_bottleneck);
+    if (filter.onlyWipBottleneck) stations = stations.filter(s => s.is_wip_bottleneck);
+    // maxBalance/低平衡率: 此页平衡率为线体级单一值,工站级无对应字段;
+    // 为保留语义,低平衡率=整线平衡率<阈值时显示全部(标记),否则过滤后无工站会回到空态——故仅在线体平衡率不达标时提示,不过滤工站。
+    // (避免空态误导,此分支不动 stations。)
+    return Object.assign({}, data, { stations: stations });
+}
+
+/* ========== Load Data ========== */
+// 3 级下钻 L2:工位柱图 click → 先开 Drawer 分组视图(L2, 该工站在制 SN 列表) → 点 SN 行再跳 L3
+var LB_DRILL = {
+    ctChart:  {
+        dimension: 'operation', source: 'wip-sn', title: '工站在制 SN 明细',
+        pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; },
+        // 点某工位 → 返回该工位在制 SN 分组(优先用 /api/wip/detail 缓存的 items; 无缓存则用 stations.wip_count 汇总单行)
+        buildGroups: function (params, chart) {
+            var opCode = (chart && chart._drillDim && chart._drillDim[params.dataIndex]) || params.name;
+            if (!opCode) return null;
+            var lineName = (document.getElementById('lineFilter') || {}).value || '';
+            // 优先用已缓存的 /api/wip/detail items(秒开缓存可能命中); dateFrom/dateTo 用当前筛选周期 currentRange
+            var df = (currentRange && currentRange.dateFrom) || '';
+            var dt = (currentRange && currentRange.dateTo) || '';
+            var cacheUrl = '/api/wip/detail?dateFrom=' + df + '&dateTo=' + dt + '&operation=' + encodeURIComponent(opCode) + (lineName ? '&lineName=' + encodeURIComponent(lineName) : '');
+            var cached = window.apiFetch && window.apiFetch.peek ? window.apiFetch.peek(cacheUrl) : null;
+            var detail = cached && cached.val ? cached.val : null;
+            if (detail && Array.isArray(detail.items) && detail.items.length) {
+                return detail.items.slice(0, 20).map(function (sn) {
+                    return { name: sn.barcode || '未知SN', value: (sn.wait_minutes != null ? sn.wait_minutes + 'min' : '-'), sub: sn.product_model || sn.line_name || opCode };
+                });
+            }
+            // 无缓存: 用 stations 中的 wip_count 汇总(单行, 点击行 → onItem → openL3 拉全量 SN)
+            var st = currentData && (currentData.stations || []).find(function (s) { return String(s.operation) === String(opCode); });
+            var wip = st ? (st.wip_count || 0) : 0;
+            if (wip <= 0) return null;
+            return [{ name: opCode, value: wip + ' 在制', sub: '点击查看 SN 明细', _isOpSummary: true }];
+        },
+        // L2 分组项点击: SN 行 → 跳 sn-trace(barcode); 工位汇总行 → 默认 openL3(wip-sn, operation=opCode)
+        onItem: function (item) {
+            if (!window.DrillLink || !item) return;
+            if (item._isOpSummary) {
+                // 工位汇总行: 走默认 wip-sn L3(operation 维度)
+                DrillLink.openL3('wip-sn', item.name, null, { dimension: 'operation', chart: 'ctChart' });
+            } else if (item.name && item.name !== '未知SN') {
+                // SN 行: 跳 sn-trace(barcode 维度)
+                DrillLink.openL3('sn-trace', item.name, null, { dimension: 'barcode', chart: 'ctChart' });
+            }
+        }
+    },
+    wipChart: { dimension: 'operation', source: 'wip-sn', title: '工站在制 SN 明细', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+    uphChart: { dimension: 'operation', source: 'wip-sn', title: '工站在制 SN 明细', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } }
+};
+function bindAllDrillLB() {
+    if (!window.DrillLink) return;
+    Object.keys(LB_DRILL).forEach(function (id) {
+        var el = document.getElementById(id);
+        var chart = window.echarts && el ? echarts.getInstanceByDom(el) : null;
+        if (chart) DrillLink.bindChart(chart, Object.assign({ chartId: id }, LB_DRILL[id]));
+    });
+}
+
+async function loadData(dateFrom, dateTo) {
+    if (!dateFrom || !dateTo) {
+        const r = WipUI.periodRange(currentPeriod);
+        dateFrom = r.dateFrom; dateTo = r.dateTo;
+    }
+    currentRange = { dateFrom, dateTo, label: WipUI.periodRange(currentPeriod).label };
+
+    const lineEl = document.getElementById('lineFilter');
+    const lineName = lineEl ? lineEl.value : '';
+    const qs = new URLSearchParams({ dateFrom, dateTo });
+    if (lineName) qs.set('lineName', lineName);
+    if (typeof FilterState !== 'undefined') FilterState.save({ dateFrom, dateTo, lineId: lineName });
+
+    const mask = document.getElementById('loadingMask');
+    mask.classList.add('show');
+    try {
+        const data = await apiFetch('/api/line-balance?' + qs);
+        if (!data || !data.success) { console.warn('LineBalance API error', data); WipUI.UpdateBar.setTime('暂无数据'); return; }
+        // 完整快照(供抽屉/单工站详情查全量)
+        currentData = data;
+        // 应用 QuickQuery filter 过滤工站(onlyBottleneck/onlyWipBottleneck)
+        // 注:未选线时 filter 已被 QuickQuery.apply 拦截并提示,此处不再重复
+        currentFilteredData = applyFilter(data);
+        const view = currentFilteredData;
+        renderKPI(view);
+        renderFocus(view);
+        renderFlow(view);
+        renderCTChart(view);
+        renderWIPChart(view);
+        renderGaugeChart(view);
+        renderUPHChart(view);
+        bindAllDrillLB();
+        renderSummaryTable(view);
+        // 钩子: 数据到达后刷新焦点高光/下游流光/LiveNum数字滚动
+        if (window.__lbAfterRender) window.__lbAfterRender(view);
+        // 时间条
+        const now2 = new Date();
+        const ts = String(now2.getHours()).padStart(2,'0') + ':' + String(now2.getMinutes()).padStart(2,'0') + ':' + String(now2.getSeconds()).padStart(2,'0');
+        const lineTxt = data.line_display || data.line || (lineName || '全部线体');
+        WipUI.UpdateBar.setTime((data.warning ? data.warning : (lineTxt + ' · ' + currentRange.label)) + ' · 更新于 ' + ts);
+    } catch(e) {
+        console.error('加载线平衡数据失败', e);
+        WipUI.UpdateBar.setTime('加载失败');
+    } finally {
+        mask.classList.remove('show');
+    }
+}
+
+function refreshCurrent() {
+    loadData(currentRange.dateFrom, currentRange.dateTo);
+}
+
+/* ========== Resize ========== */
+window.addEventListener('resize', () => {
+    [liquidChart, chartCT, chartWIP, chartGauge, chartUPH].forEach(c => { if (c) c.resize(); });
+});
+
+/* ========== Init ========== */
+// Subnav 绑定
+(function initSubnav(){
+    const btns = document.querySelectorAll('#pageSubnav .left button[data-target]');
+    btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            WipUI.Subnav.scrollTo(btn.getAttribute('data-target'));
+        });
+    });
+})();
+
+// UpdateBar 周期切换 + 刷新
+WipUI.UpdateBar.init({
+    periodTabsSelector: '#periodSelect',
+    enableCustomRange: true,
+    onPeriod: function(period, range, tabEl) {
+        currentPeriod = period;
+        loadData(range.dateFrom, range.dateTo);
+    },
+    refreshBtnSelector: '#refreshBtn',
+    onRefresh: function() { refreshCurrent(); },
+    timeElSelector: '#updateTime',
+    liveDotSelector: '#liveDot'
+});
+
+/* ========== QuickQuery 快捷查询栏(需选线后生效) ========== */
+// 未选线提示(轻量 toast,wip-ui 未导出 toast,本地实现)
+function lbToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'wipui-toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 1800);
+}
+function lbHasLineSelected() {
+    var lineEl = document.getElementById('lineFilter');
+    if (lineEl && lineEl.value) return true;
+    if (currentData && currentData.line_display && currentData.line_display !== '全部线体') return true;
+    return false;
+}
+WipUI.QuickQuery.init('#quickQuery', [
+    { key:'all', label:'全部工站', icon:'⌧',
+      apply: function(){ filter = {}; return true; } },
+    { key:'bn', label:'瓶颈工站', icon:'🔴',
+      apply: function(){
+          if (!lbHasLineSelected()) { filter = {}; lbToast('请先选择线体'); return false; }
+          filter = { onlyBottleneck: true };
+          return true;
+      } },
+    { key:'lowRate', label:'低平衡率', icon:'📉',
+      apply: function(){
+          if (!lbHasLineSelected()) { filter = {}; lbToast('请先选择线体'); return false; }
+          // 平衡率为线体级:标记低平衡率观察(不过滤工站,仅在焦点面板提示)
+          filter = { maxBalance: 70 };
+          return true;
+      } },
+    { key:'wip', label:'堆积异常', icon:'📦',
+      apply: function(){
+          if (!lbHasLineSelected()) { filter = {}; lbToast('请先选择线体'); return false; }
+          filter = { onlyWipBottleneck: true };
+          return true;
+      } }
+], {
+    activeKey: 'all',
+    onAfter: function(it) {
+        var r = WipUI.periodRange(currentPeriod || 'realtime');
+        loadData(r.dateFrom, r.dateTo);
+    }
+});
+
+/* ========== Toolbar 功能键条 ========== */
+WipUI.Toolbar.init('#toolbar', {
+    buttons: ['refresh', 'exportCSV', 'fullscreen', 'bigscreen'],
+    onRefresh: function() {
+        var r = WipUI.periodRange(currentPeriod || 'realtime');
+        loadData(r.dateFrom, r.dateTo);
+    },
+    onExportCSV: function() {
+        // 导出当前页主表(工站明细)数据 CSV,导出当前过滤后视图
+        var data = (currentFilteredData && currentFilteredData.stations) || (currentData && currentData.stations) || [];
+        if (!data.length) { lbToast('暂无数据可导出'); return; }
+        var cols = stationExportColumns();
+        function csvCell(v) {
+            if (v == null) return '';
+            var s = String(v);
+            return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        }
+        var header = cols.map(function(c){ return csvCell(c.label); }).join(',');
+        var rows = data.map(function(r){
+            return cols.map(function(c){ return csvCell(r[c.key]); }).join(',');
+        });
+        var csv = '﻿' + header + '\n' + rows.join('\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '线平衡工站明细_' + currentRange.label + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        lbToast('已导出 ' + data.length + ' 条工站数据');
+    },
+    targetSelector: '.wip-page'
+});
+
+// Drawer 关闭绑定
+document.getElementById('drawerMask').addEventListener('click', () => WipUI.Drawer.close());
+document.getElementById('drawerCloseBtn').addEventListener('click', () => WipUI.Drawer.close());
+
+/* ============================================================
+   注意力钩子逻辑 — line-balance 展示型克制配 (Phase 4)
+   全程检测 prefers-reduced-motion, 降级跳过动效
+   ============================================================ */
+(function lbHooks() {
+    'use strict';
+    // 进阶版:reduced-motion 单一真源查 ATTN.REDUCED
+    var prefersReduced = (window.ATTN && ATTN.REDUCED) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    /* === ③ LiveNum 数字滚动 (进阶版:薄alias透传 ATTN.liveNum,删除本地 RAF/easeOutExpo 实现) === */
+    function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+    function formatNum(v, d, locale) {
+        if (v == null || isNaN(v)) return '--';
+        var n = Number(v);
+        return locale ? n.toLocaleString(undefined, {maximumFractionDigits: d, minimumFractionDigits: d})
+                      : n.toFixed(d);
+    }
+    function LiveNum(el, targetVal, opts) {
+        if (!el) return;
+        opts = opts || {};
+        var dec = opts.dec != null ? opts.dec : 1;
+        var suffix = opts.suffix || '';
+        var prefix = opts.prefix || '';
+        var useLocale = !!opts.locale;
+        if (window.ATTN && ATTN.liveNum) {
+            // 透传 ATTN.liveNum,format 回调保留本页 dec/suffix/prefix/locale 语义
+            ATTN.liveNum(el, targetVal, {
+                dur: opts.dur || 850,
+                format: function(v) {
+                    if (v == null || isNaN(v)) return prefix + '--' + suffix;
+                    return prefix + formatNum(v, dec, useLocale) + suffix;
+                }
+            });
+            return;
+        }
+        // 兜底(ATTN 不可用时):直接赋值
+        el.textContent = prefix + formatNum(targetVal, dec, useLocale) + suffix;
+    }
+
+    /* === ① 焦点单点高光晕 — danger 态激活 focal, 兄弟压暗 (进阶版:透传 ATTN.enforceFocal 统一压暗) === */
+    function applyFocal(isDanger) {
+        var shell = document.querySelector('.focus-shell');
+        if (!shell) return;
+        var card = shell.querySelector('.focus-card');
+        if (!card) return;
+        if (isDanger) {
+            card.setAttribute('data-focal', 'true');
+            shell.classList.add('lb-focal-active');
+        } else {
+            card.removeAttribute('data-focal');
+            shell.classList.remove('lb-focal-active');
+        }
+        // 透传统一 focal 机制(ATTN.enforceFocal 认 data-focal=true,给父加 attn-focal-active)
+        if (window.ATTN && ATTN.enforceFocal) { try { ATTN.enforceFocal(shell); } catch(e){} }
+    }
+
+    /* === ② 瓶颈下游 flow-arrow 流光加速 — 标记瓶颈节点后第一个箭头 === */
+    function markDownstreamArrows() {
+        var arrows = document.querySelectorAll('#processFlow .flow-arrow');
+        arrows.forEach(function(a){ a.classList.remove('lb-downstream'); });
+        var nodes = document.querySelectorAll('#processFlow .flow-node');
+        var bnIdx = -1;
+        nodes.forEach(function(n, i){
+            var card = n.querySelector('.flow-card.level-3');
+            if (card && bnIdx === -1) bnIdx = i; // 首个节拍瓶颈
+        });
+        if (bnIdx >= 0 && bnIdx < arrows.length) {
+            // 瓶颈下游 1-2 个箭头加速(物料从瓶颈流出受限,堆积在下游)
+            if (arrows[bnIdx]) arrows[bnIdx].classList.add('lb-downstream');
+            if (arrows[bnIdx + 1]) arrows[bnIdx + 1].classList.add('lb-downstream');
+        }
+    }
+
+    /* === KPI 卡景深层级 — 平衡率/瓶颈卡升 focal, 余 data === */
+    function applyKpiStrata() {
+        var cards = document.querySelectorAll('.kpi-row .kpi-card');
+        cards.forEach(function(c){
+            c.classList.remove('lb-z-focal', 'lb-z-data');
+            if (c.id === 'kpiBalance' || c.id === 'kpiBottleneck') c.classList.add('lb-z-focal');
+            else c.classList.add('lb-z-data');
+        });
+    }
+
+    /* === 暴露给渲染流程: 数据到达后调一次 === */
+    window.__lbAfterRender = function(view) {
+        try {
+            // ① 焦点高光: 据 focus-title.danger 判定
+            var titleEl = document.getElementById('focusTitle');
+            var isDanger = titleEl && titleEl.classList.contains('danger');
+            applyFocal(isDanger);
+
+            // ② 下游箭头流光
+            markDownstreamArrows();
+
+            // 景深
+            applyKpiStrata();
+
+            // ③ LiveNum 数字滚动 (平衡率/损失率/标准节拍/UPH/工站数/瓶颈节拍)
+            var balanceRate = view.balance_rate == null ? null : +view.balance_rate;
+            var lossRate = view.loss_rate == null ? null : +view.loss_rate;
+            if (balanceRate != null) {
+                LiveNum(document.getElementById('kpiBalanceVal'), balanceRate, {dec: 1, suffix: '%'});
+            } else {
+                document.getElementById('kpiBalanceVal').textContent = '--';
+            }
+            if (lossRate != null) {
+                LiveNum(document.getElementById('kpiLossVal'), lossRate, {dec: 1, suffix: '%'});
+            }
+            // 标准节拍/UPH/工站数(整数)
+            if (view.cycle_time_std != null) {
+                LiveNum(document.getElementById('kpiStdVal'), +view.cycle_time_std, {dec: 0});
+            }
+            if (view.line_uph != null) {
+                LiveNum(document.getElementById('kpiUpnVal'), +view.line_uph, {dec: 0, locale: true});
+            }
+            var stations = view.stations || [];
+            LiveNum(document.getElementById('kpiStationsVal'), stations.length, {dec: 0});
+            // 焦点侧栏平衡率/损失率
+            var s1 = document.querySelector('#focusSide1 .value');
+            var s2 = document.querySelector('#focusSide2 .value');
+            if (s1 && balanceRate != null) LiveNum(s1, balanceRate, {dec: 1, suffix: '%'});
+            if (s2 && lossRate != null) LiveNum(s2, lossRate, {dec: 1, suffix: '%'});
+        } catch(e) { console.warn('lb hooks afterRender', e); }
+    };
+
+    /* === ④ 卡片错峰级联入场 (进阶版:迁移 ATTN.revealCascade,删除本地 IO + .lb-reveal/.lb-revealed) === */
+    var revealEls = [];
+    function setupReveal() {
+        if (window.ATTN && ATTN.revealCascade) {
+            try {
+                ATTN.revealCascade('.kpi-row .kpi-card, .full-stack .chart-panel, #flowPanel, #tableSection, .ai-suggest', { step: 40, cap: 200 });
+            } catch(e){}
+        }
+    }
+
+    /* === ⑤ 光标跟随光晕 — 仅 KPI 卡 mousemove 写 --mx/--my === */
+    function setupCursorGlow() {
+        if (prefersReduced) return;
+        function bind(sel) {
+            document.querySelectorAll(sel).forEach(function(el){
+                if (el.__lbGlow) return;
+                el.__lbGlow = true;
+                el.addEventListener('mousemove', function(e){
+                    var r = el.getBoundingClientRect();
+                    el.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+                    el.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+                });
+            });
+        }
+        bind('.kpi-row .kpi-card');
+    }
+
+    /* === ⑥ 状态切换光流 — Subnav/QuickQuery 切换触发 === */
+    function setupSweep() {
+        var sweep = document.getElementById('lbSweep');
+        if (!sweep) return;
+        var timer = null;
+        function trigger() {
+            if (prefersReduced) return;
+            sweep.classList.remove('lb-sweeping');
+            // 强制 reflow 重启动画
+            void sweep.offsetWidth;
+            sweep.classList.add('lb-sweeping');
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function(){ sweep.classList.remove('lb-sweeping'); }, 560);
+        }
+        // Subnav 按钮
+        document.querySelectorAll('#pageSubnav .left button[data-target]').forEach(function(btn){
+            btn.addEventListener('click', trigger);
+        });
+        // QuickQuery 切换: WipUI.QuickQuery 按钮在 #quickQuery
+        var qq = document.getElementById('quickQuery');
+        if (qq) {
+            qq.addEventListener('click', function(e){
+                if (e.target.closest('button')) trigger();
+            }, true);
+        }
+        // 周期切换/刷新
+        var periodSel = document.getElementById('periodSelect');
+        if (periodSel) periodSel.addEventListener('change', trigger);
+        var refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) refreshBtn.addEventListener('click', trigger);
+    }
+
+    /* === 初始化 === */
+    function init() {
+        setupReveal();
+        setupCursorGlow();
+        setupSweep();
+        applyKpiStrata();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
+// 首次加载(realtime,不依赖线体)
+loadData(WipUI.periodRange('realtime').dateFrom, WipUI.periodRange('realtime').dateTo);
+
+apiFetch('/api/me').then(d=>{if(d.role==='admin'){const el=document.getElementById('adminNav');if(el)el.style.display='';}}).catch(()=>{});
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+</body>
+</html>

@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPH产出统计 - AI数字化平台</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <script src="nav.js"></script>
+    <script src="common.js"></script>
+    <script src="filter-bar.js"></script>
+    <script src="libs/echarts.min.js"></script>
+    <script src="chart-theme.js"></script>
+    <script src="wip-ui.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0166B1">
+    <style>
+        /* 多粒度累计卡行 */
+        .uph-granular { display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; margin:0 0 16px; }
+        .uph-granular-card { background:var(--surface-1); border:1px solid var(--border); border-radius:var(--radius); padding:14px 14px 12px; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; }
+        .uph-granular-card:hover { border-color:var(--brand-border); transform:translateY(-2px); }
+        .uph-granular-card.active { border-color:var(--brand); box-shadow:0 0 0 1px var(--brand), 0 8px 24px rgba(0,0,0,.45); background:var(--surface-1-hi, var(--surface-1)); }
+        .uph-granular-card.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--brand); }
+        .ug-label { font-size:12px; color:var(--text-muted); margin-bottom:6px; }
+        .ug-value { font-size:24px; font-weight:700; color:var(--text-primary); font-family:var(--font-mono); line-height:1.1; }
+        .ug-mom { font-size:11px; margin-top:6px; color:var(--text-muted); }
+        .ug-mom.up { color:var(--success); }
+        .ug-mom.down { color:var(--danger); }
+        .ug-range { font-size:10px; color:var(--text-muted); margin-top:3px; opacity:.7; }
+
+        /* 机型/工序 自定义筛选行 */
+        .uph-filters-row { display:flex; gap:12px; align-items:center; padding:10px 0 4px; flex-wrap:wrap; }
+        .uph-filters-row .uf-group { display:flex; align-items:center; gap:6px; }
+        .uph-filters-row .uf-label { font-size:12px; color:var(--text-muted); }
+        .uph-filters-row select { background:var(--surface-2); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; min-width:180px; max-width:300px; cursor:pointer; }
+        .uph-filters-row select:focus { outline:none; border-color:var(--brand); }
+        .uf-clear { font-size:11px; color:var(--text-muted); cursor:pointer; padding:4px 8px; border:1px solid var(--border); border-radius:6px; }
+        .uf-clear:hover { color:var(--text-primary); border-color:var(--brand-border); }
+
+        /* 焦点标题数值高亮 */
+        .focus-title strong { color:var(--brand); font-family:var(--font-mono); font-weight:700; }
+        .focus-title .up { color:var(--success); }
+        .focus-title .down { color:var(--danger); }
+        .focus-title.danger strong { color:var(--danger); }
+
+        /* KPI 行用6列 */
+        .kpi-row.uph { grid-template-columns: repeat(6, 1fr); }
+        .kpi-card { cursor:default; }
+        .kpi-value { font-family:var(--font-mono); }
+
+        /* 明细表 */
+        .summary-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .summary-table th { background:var(--surface-2); color:var(--text-muted); padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); font-weight:500; }
+        .summary-table td { padding:9px 12px; text-align:left; border-bottom:1px solid rgba(51,65,85,0.4); color:var(--text-secondary); }
+        .summary-table tr:hover td { background:var(--brand-glow); }
+        .summary-table .mono { font-family:var(--font-mono); color:var(--brand); }
+        .summary-table .cell-strong { color:var(--text-primary); font-weight:600; }
+        .stage-tag { display:inline-block; padding:2px 8px; border-radius:8px; font-size:11px; }
+        .stage-assembly { background:rgba(var(--brand-rgb),.14); color:var(--brand); }
+        .stage-test { background:rgba(34,197,94,.14); color:var(--success); }
+        .stage-packaging { background:rgba(var(--warning-rgb),.14); color:var(--warning); }
+
+        /* 数据起点提示 */
+        .data-start-hint { font-size:11px; color:var(--text-muted); padding:4px 10px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; display:inline-flex; align-items:center; gap:6px; }
+        .data-start-hint.warn { color:var(--warning); border-color:var(--warning-border); }
+
+        /* Loading */
+        .loading-mask { position:fixed; inset:0; background:rgba(10,16,37,0.6); z-index:9999; display:none; align-items:center; justify-content:center; }
+        .loading-mask.show { display:flex; }
+        .loading-spinner { width:40px; height:40px; border:3px solid var(--brand-border); border-top-color:var(--brand); border-radius:50%; animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* 图表网格: 2列 */
+        .full-stack { display:grid; grid-template-columns: repeat(2, 1fr); gap:14px; }
+        .full-stack .chart-panel.full { grid-column:1/-1; }
+        .chart-box { min-height:280px; }
+        .chart-box-lg { min-height:320px; }
+        @media (max-width:1100px){ .full-stack { grid-template-columns:1fr; } .uph-granular { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width:640px){ .uph-granular { grid-template-columns: repeat(2, 1fr); } .kpi-row.uph { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div class="loading-mask" id="loadingMask"><div class="loading-spinner"></div></div>
+
+    <!-- Top Bar — 单层顶栏(状态|筛选|操作) 无quickQuery/subnav -->
+    <div class="top-bar">
+        <div class="tb-seg tb-seg-status">
+            <div class="live-dot" id="liveDot"></div>
+            <span class="time" id="updateTime">加载中...</span>
+            <span class="data-start-hint" id="dataStartHint" style="display:none">数据起点 --</span>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-seg tb-seg-filter">
+            <div id="filterContainer"></div>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-seg tb-seg-action">
+            <select class="period-select" id="periodSelect">
+              <option value="realtime">实时</option>
+              <option value="week">本周</option>
+              <option value="month">本月</option>
+              <option value="quarter">本季</option>
+              <option value="half">半年</option>
+              <option value="year">年度</option>
+              <option value="all">全部</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div id="toolbar"></div>
+        </div>
+    </div>
+
+<div class="wip-page">
+  <!-- 筛选下拉(线体/工序/机型)由 FilterBar 在 #filterContainer 统一渲染, 同 bad 页多下拉模式 -->
+
+
+  <!-- Focus Command Panel -->
+  <div class="focus-shell" id="focusShell">
+    <div class="focus-card">
+      <div class="focus-content">
+        <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">UPH产出焦点</span></div>
+        <div class="focus-title" id="focusTitle">正在读取产出数据...</div>
+        <div class="focus-action" id="focusAction">按机型/线体/工序维度,统计小时/日/月/季/半年/年多粒度产出。</div>
+        <div class="focus-meta" id="focusMeta"></div>
+        <div class="focus-detail" id="focusDetail"></div>
+        <div class="focus-actions" id="focusActions">
+          <button onclick="scrollToPanel('chartGrid')">查看产出图表</button>
+          <button onclick="scrollToPanel('tableSection')">查看明细</button>
+          <button onclick="refreshCurrent()">刷新数据</button>
+        </div>
+        <div class="focus-trust" id="focusTrust"></div>
+      </div>
+    </div>
+    <div class="focus-side">
+      <div class="focus-mini" id="focusSide1"><div class="label">整机UPH</div><div class="value">--</div><div class="hint">周期总产出/运行小时</div></div>
+      <div class="focus-mini" id="focusSide2"><div class="label">实际运行(T5)</div><div class="value">--</div><div class="hint">扣休息+交接+停机+间隙</div></div>
+    </div>
+  </div>
+
+  <!-- 多粒度累计卡(点击切换主周期) -->
+  <div class="kpi-section-title"><span>多粒度累计产出</span><span>点击卡片切换主周期</span></div>
+  <div class="uph-granular" id="uphGranular"></div>
+
+  <div class="kpi-section-title"><span>核心指标 · 当前周期</span><span id="kpiRangeLabel">--</span></div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row uph">
+    <div class="kpi-card" style="--kpi-color:var(--brand);">
+      <div class="kpi-label">周期产出(去重SN)</div>
+      <div class="kpi-value" id="kpiTotal">--</div>
+      <div class="kpi-sub" id="kpiTotalSub">--</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--success);">
+      <div class="kpi-label">平均UPH</div>
+      <div class="kpi-value" id="kpiUph">--</div>
+      <div class="kpi-sub" id="kpiUphSub">台/小时</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--brand);">
+      <div class="kpi-label">目标UPH</div>
+      <div class="kpi-value" id="kpiTargetUph">--</div>
+      <div class="kpi-sub" id="kpiTargetUphSub">3600/节拍 · 选机型生效</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--success);">
+      <div class="kpi-label">达成率</div>
+      <div class="kpi-value" id="kpiAchieve">--</div>
+      <div class="kpi-sub" id="kpiAchieveSub">实际UPH/目标UPH</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--warning);">
+      <div class="kpi-label">实际节拍CT(秒)</div>
+      <div class="kpi-value" id="kpiCt">--</div>
+      <div class="kpi-sub">3600/UPH · 含estimated偏差</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--brand);">
+      <div class="kpi-label">环比</div>
+      <div class="kpi-value" id="kpiMom">--</div>
+      <div class="kpi-sub" id="kpiMomSub">vs 上一周期</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="full-stack" id="chartGrid">
+    <div class="chart-panel full">
+      <div class="chart-panel-title">📈 日产出趋势 (去重SN · 当日过站产品数)</div>
+      <div class="chart-box chart-box-lg" id="dayChart"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">⏰ 小时段产出分布 (末道下线 · 对比全工序活跃 · 0-23时)</div>
+      <div class="chart-box" id="hourChart"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">🎯 三段末道产出 UPH (组装/测试/包装)</div>
+      <div class="chart-box" id="stageChart"></div>
+    </div>
+    <div class="chart-panel full">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📊 维度产出对比 (Top15 · 切换分组维度)</span>
+        <select id="dimSelect" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer">
+          <option value="model">按机型</option>
+          <option value="line">按线体</option>
+          <option value="operation">按工序</option>
+          <option value="stage">按工艺段</option>
+        </select>
+      </div>
+      <div class="chart-box chart-box-lg" id="dimChart"></div>
+    </div>
+    <div class="chart-panel full">
+      <div class="chart-panel-title">🔥 分工位小时产出热力图 (工位×小时, 去重SN · Top20工位)</div>
+      <div class="chart-box chart-box-lg" id="opHourChart" style="min-height:380px"></div>
+    </div>
+  </div>
+
+  <!-- Summary Table -->
+  <div id="detailSection" style="padding:0 0 24px">
+    <div class="chart-panel" id="tableSection">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📋 工序产出明细</span>
+        <span style="font-size:11px;color:var(--text-muted)"><span id="tableInfo">共 0 工序</span> · 按产出降序 · 可导出CSV</span>
+      </div>
+      <div style="overflow-x:auto;margin-top:8px">
+        <table class="summary-table" id="summaryTable">
+          <thead>
+            <tr>
+              <th>工序代码</th><th>工序名称</th><th>工艺段</th><th>产出(去重SN)</th><th>占比</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- 交叉产出矩阵 (维度透视) -->
+  <div id="matrixSection" style="padding:0 0 24px">
+    <div class="chart-panel" id="matrixPanel">
+      <div class="chart-panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span>🔀 交叉产出矩阵 (行×列二维去重SN · 任意切片看各个数据)</span>
+        <div style="display:flex;gap:6px;align-items:center;font-size:12px">
+          <span style="color:var(--text-muted)">行</span>
+          <select id="matrixRowDim" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer">
+            <option value="model">机型</option><option value="line">线体</option><option value="operation">工序</option><option value="hour">小时</option><option value="day">日</option>
+          </select>
+          <span style="color:var(--text-muted)">× 列</span>
+          <select id="matrixColDim" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer">
+            <option value="line">线体</option><option value="model">机型</option><option value="operation">工序</option><option value="hour">小时</option><option value="day">日</option>
+          </select>
+          <button class="refresh-btn" id="matrixExport" style="padding:4px 10px">⬇ 导出</button>
+        </div>
+      </div>
+      <div style="overflow:auto;margin-top:8px;max-height:480px">
+        <table class="summary-table" id="matrixTable"><thead><tr id="matrixHead"></tr></thead><tbody id="matrixBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-mask" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header"><h3 id="drawerTitle">--</h3><div style="display:flex;gap:8px"><button class="refresh-btn" id="drawerExport">⬇ 导出</button><button class="drawer-close" id="drawerCloseBtn">×</button></div></div>
+  <div class="drawer-body"><div class="drawer-stats" id="drawerStats"></div><div id="drawerContent"></div></div>
+</div>
+
+<script>
+/* ========== 全局状态 ========== */
+let currentData = null;
+let currentPeriod = 'realtime';
+let currentRange = { dateFrom:'', dateTo:'', label:'今日' };
+let selModel = '', selOp = '';
+let filterOpts = { models:[], operations:[], lines:[] };
+
+/* ========== Helpers ========== */
+function fmt(v, dec=1){ return v==null?'--':Number(v).toFixed(dec); }
+// escHtml 收口到 common.js (window.escHtml), 本页不再单独定义
+function escAttr(s){ return String(s==null?'':s).replace(/'/g,"\\'"); }
+function stageOf(name){
+  if(!name) return 'assembly';
+  if(/包装|下料|贴标|封箱|装箱/.test(name)) return 'packaging';
+  if(/测试|检测|EOL|ATE|振动|震动|老化|噪音|异响|目检|PIN|静置|GP12/.test(name)) return 'test';
+  return 'assembly';
+}
+const STAGE_LABEL = { assembly:'组装', test:'测试', packaging:'包装' };
+const STAGE_CLS = { assembly:'stage-assembly', test:'stage-test', packaging:'stage-packaging' };
+
+/* ========== Init FilterBar (线体/工序/机型 — 同 bad 页多下拉模式) ==========
+   bad 页靠客户端 origBadItems 级联收窄选项; uph 是服务端聚合(每次筛选重查MongoDB),
+   故下拉 change 即重查, 不做客户端级联收窄 — 任意组合服务端返回正确结果(可能0)。
+   机型下拉用"实际有产出"的机型(/api/uph-filters distinct), 非product_config全集(覆盖率仅50%)。 */
+const _filter = new FilterBar('#filterContainer', {
+  fields: ['line', 'workOperation', 'product'],
+  fieldOptions: {
+    line: { placeholder: '全部线体' },
+    workOperation: { label: '工序', placeholder: '全部工序', autoLoad: false },
+    product: { label: '机型', placeholder: '全部机型', autoLoad: false }
+  },
+  apiBase: '',
+  storageKey: '_uph_filters',
+  rememberSelection: true,
+  cascade: { line: ['workOperation', 'product'] },   // 选线体 → 工序/机型按该线实际产出收窄(同 bad 级联)
+  onCascade: function(source, value, params) {
+    if (source === 'line') repopulateByLine(value).then(() => loadData(WipUI.periodRange(currentPeriod)));
+    return {};
+  },
+  onQuery: () => loadData(WipUI.periodRange(currentPeriod))
+});
+// 工序/机型变化 → 直接重查(选项已由 line 级联收窄到实际有产出)
+_filter.onFieldChange('workOperation', () => loadData(WipUI.periodRange(currentPeriod)));
+_filter.onFieldChange('product', () => loadData(WipUI.periodRange(currentPeriod)));
+
+/* 工艺段/班次 下拉(仿 bad 手动插入 FilterBar 末尾, 正交筛选维度) */
+(function(){
+  const fc = document.getElementById('filterContainer');
+  if (!fc) return;
+  const queryBtn = fc.querySelector('button') || fc.lastElementChild;
+  const selStyle = 'padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-1);color:var(--text-primary);font-size:var(--fs-sm);cursor:pointer;margin-left:6px;';
+  const stageSel = document.createElement('select');
+  stageSel.id = 'stageFilter'; stageSel.style.cssText = selStyle;
+  stageSel.innerHTML = '<option value="">全部工艺段</option><option value="assembly">组装</option><option value="test">测试</option><option value="packaging">包装</option>';
+  stageSel.addEventListener('change', function(){ loadData(WipUI.periodRange(currentPeriod)); });
+  if (queryBtn) fc.insertBefore(stageSel, queryBtn); else fc.appendChild(stageSel);
+  const shiftSel = document.createElement('select');
+  shiftSel.id = 'shiftFilter'; shiftSel.style.cssText = selStyle;
+  shiftSel.innerHTML = '<option value="">全部班次</option><option value="day">白班</option><option value="night">夜班</option>';
+  shiftSel.addEventListener('change', function(){ loadData(WipUI.periodRange(currentPeriod)); });
+  if (queryBtn) fc.insertBefore(shiftSel, queryBtn); else fc.appendChild(shiftSel);
+})();
+/* 维度切换对比图: 切换分组维度(机型/线体/工序/工艺段) */
+document.getElementById('dimSelect').addEventListener('change', function(){
+  currentDim = this.value;
+  if (currentData) renderDimChart(currentDim, currentData);
+});
+
+/* 按线体收窄工序/机型选项: 无line→全部实际有产出; 有line→该线实际有产出(同 bad 按实际数据收窄, 非全集421) */
+async function repopulateByLine(lineCode){
+  try {
+    const r = await apiFetch('/api/uph-filters' + (lineCode ? ('?lineName=' + encodeURIComponent(lineCode)) : ''));
+    if (r && r.success) {
+      filterOpts.models = r.models || [];
+      filterOpts.operations = r.operations || [];
+      filterOpts.lines = r.lines || [];
+      _filter.setOptions('workOperation', r.operations, 'code', 'name');
+      _filter.setOptions('product', r.models);
+    }
+  } catch(e){ console.warn('repopulateByLine', e); }
+}
+/* ========== Load 工序/机型 下拉选项(初始按当前线体收窄) ========== */
+async function loadFilterOpts(){
+  const fp = _filter.getParams();
+  await repopulateByLine(fp.lineName || fp.lineId || '');
+}
+
+/* ========== 交叉产出矩阵 (行×列二维去重SN, 任意切片) ========== */
+async function loadMatrix(){
+  if (!currentRange.dateFrom) return;
+  const fp = _filter.getParams();
+  const lineName = fp.lineName || fp.lineId || '';
+  const rowDim = document.getElementById('matrixRowDim').value;
+  const colDim = document.getElementById('matrixColDim').value;
+  const qs = new URLSearchParams({ dateFrom:currentRange.dateFrom, dateTo:currentRange.dateTo, rowDim, colDim });
+  if (lineName) qs.set('lineName', lineName);
+  if (selModel) qs.set('model', selModel);
+  if (selOp) qs.set('op', selOp);
+  const stage = document.getElementById('stageFilter') ? document.getElementById('stageFilter').value : '';
+  const shift = document.getElementById('shiftFilter') ? document.getElementById('shiftFilter').value : '';
+  if (stage) qs.set('stage', stage);
+  if (shift) qs.set('shift', shift);
+  try {
+    const r = await apiFetch('/api/uph-matrix?' + qs);
+    if (r && r.success) { matrixData = r; renderMatrix(r); }
+  } catch(e){ console.warn('loadMatrix', e); }
+}
+function _matrixLabel(dim, val, opMap, lineMap){
+  if (val==null||val==='') return '(空)';
+  if (dim==='operation') return opMap[val]||val;
+  if (dim==='line') return lineMap[val]||val;
+  if (dim==='hour') return val+'时';
+  return String(val);
+}
+function renderMatrix(r){
+  if (!r || !r.rows || !r.rows.length) {
+    document.getElementById('matrixHead').innerHTML = '';
+    document.getElementById('matrixBody').innerHTML = '<tr><td style="color:var(--text-muted);padding:20px;text-align:center">暂无交叉数据</td></tr>';
+    return;
+  }
+  const opMap = r.opMap||{}, lineMap = r.lineMap||{};
+  const colSet = new Set(), rowTotals = {};
+  r.rows.forEach(x => { colSet.add(x.col); rowTotals[x.row] = (rowTotals[x.row]||0) + x.total; });
+  const cols = Array.from(colSet).sort((a,b)=>(a==null?'':a)<(b==null?'':b)?-1:1);
+  const rows = Object.keys(rowTotals).sort((a,b)=>rowTotals[b]-rowTotals[a]);
+  const cellMap = {}; r.rows.forEach(x => { cellMap[x.row+'|'+x.col] = x.total; });
+  document.getElementById('matrixHead').innerHTML = '<th>'+r.rowDim+' \\ '+r.colDim+'</th>' + cols.map(c=>'<th>'+escHtml(_matrixLabel(r.colDim,c,opMap,lineMap))+'</th>').join('') + '<th>合计</th>';
+  let body = '';
+  rows.forEach(rv => {
+    let rowSum = 0;
+    const cells = cols.map(cv => { const v = cellMap[rv+'|'+cv]||0; rowSum += v; return '<td>'+(v>0?v.toLocaleString():'<span style="color:var(--text-muted)">·</span>')+'</td>'; }).join('');
+    body += '<tr><td class="cell-strong">'+escHtml(_matrixLabel(r.rowDim,rv,opMap,lineMap))+'</td>'+cells+'<td class="cell-strong">'+rowSum.toLocaleString()+'</td></tr>';
+  });
+  document.getElementById('matrixBody').innerHTML = body;
+}
+document.getElementById('matrixRowDim').addEventListener('change', loadMatrix);
+document.getElementById('matrixColDim').addEventListener('change', loadMatrix);
+document.getElementById('matrixExport').addEventListener('click', function(){
+  if (!matrixData || !matrixData.rows || !matrixData.rows.length) return;
+  const opMap = matrixData.opMap||{}, lineMap = matrixData.lineMap||{};
+  function csvCell(v){ if(v==null)return''; var s=String(v); return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+  const colSet=new Set(), rowTotals={};
+  matrixData.rows.forEach(x=>{colSet.add(x.col); rowTotals[x.row]=(rowTotals[x.row]||0)+x.total;});
+  const cols=Array.from(colSet).sort((a,b)=>(a==null?'':a)<(b==null?'':b)?-1:1);
+  const rows=Object.keys(rowTotals).sort((a,b)=>rowTotals[b]-rowTotals[a]);
+  const cellMap={}; matrixData.rows.forEach(x=>{cellMap[x.row+'|'+x.col]=x.total;});
+  const header=[matrixData.rowDim+'\\'+matrixData.colDim].concat(cols.map(c=>_matrixLabel(matrixData.colDim,c,opMap,lineMap))).concat(['合计']).map(csvCell).join(',');
+  const body=rows.map(rv=>{let s=0;const cells=cols.map(cv=>{const v=cellMap[rv+'|'+cv]||0;s+=v;return v;});return [_matrixLabel(matrixData.rowDim,rv,opMap,lineMap)].concat(cells).concat([s]).map(csvCell).join(',');}).join('\n');
+  const blob=new Blob(['﻿'+header+'\n'+body],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='UPH交叉矩阵_'+matrixData.rowDim+'x'+matrixData.colDim+'_'+currentRange.label+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
+});
+
+/* ========== 周期切换 ========== */
+function syncGranularActive(p){
+  document.querySelectorAll('.uph-granular-card').forEach(c => c.classList.toggle('active', c.dataset.period===p));
+}
+function granularClick(p){
+  const sel = document.getElementById('periodSelect');
+  if (sel && sel.value !== p) { sel.value = p; sel.dispatchEvent(new Event('change')); }
+  else applyPeriod(p, WipUI.periodRange(p));
+}
+function applyPeriod(p, range){
+  if (!range) return;
+  currentPeriod = p;
+  currentRange = { dateFrom:range.dateFrom, dateTo:range.dateTo, label:range.label||p };
+  syncGranularActive(p);
+  loadData(range);
+}
+function refreshCurrent(){ loadData(WipUI.periodRange(currentPeriod)); }
+
+/* ========== Load Data ========== */
+async function loadData(range){
+  if (!range) range = WipUI.periodRange(currentPeriod);
+  currentRange = { dateFrom:range.dateFrom, dateTo:range.dateTo, label:range.label||currentPeriod };
+  const fp = _filter.getParams();
+  const lineName = fp.lineName || fp.lineId || '';
+  selModel = fp.productModel || '';
+  selOp = fp.workOperationId || '';
+  const qs = new URLSearchParams({ dateFrom:range.dateFrom, dateTo:range.dateTo });
+  if (range.prevFrom) qs.set('prevFrom', range.prevFrom);
+  if (range.prevTo) qs.set('prevTo', range.prevTo);
+  if (lineName) qs.set('lineName', lineName);
+  if (selModel) qs.set('model', selModel);
+  if (selOp) qs.set('op', selOp);
+  const stageEl = document.getElementById('stageFilter');
+  const shiftEl = document.getElementById('shiftFilter');
+  const stage = stageEl ? stageEl.value : '';
+  const shift = shiftEl ? shiftEl.value : '';
+  if (stage) qs.set('stage', stage);
+  if (shift) qs.set('shift', shift);
+  if (typeof FilterState !== 'undefined') FilterState.save({ dateFrom:range.dateFrom, dateTo:range.dateTo, lineId:lineName });
+
+  const mask = document.getElementById('loadingMask');
+  mask.classList.add('show');
+  try {
+    const data = await apiFetch('/api/uph-stats?' + qs);
+    if (!data || !data.success) { console.warn('UPH API error', data); WipUI.UpdateBar.setTime('暂无数据'); return; }
+    currentData = data;
+    renderAll(data);
+    loadMatrix();
+    const now2 = new Date();
+    const ts = String(now2.getHours()).padStart(2,'0')+':'+String(now2.getMinutes()).padStart(2,'0')+':'+String(now2.getSeconds()).padStart(2,'0');
+    const scopeTxt = (data.filters.line_display || '全厂') + (selModel?(' · '+selModel):'') + (selOp?(' · '+(data.filters.op_display||selOp)):'');
+    WipUI.UpdateBar.setTime(scopeTxt + ' · ' + currentRange.label + ' · 更新于 ' + ts + (data.cached?' (缓存)':''));
+  } catch(e){
+    console.error('加载UPH数据失败', e);
+    WipUI.UpdateBar.setTime('加载失败');
+  } finally {
+    mask.classList.remove('show');
+  }
+}
+
+/* ========== Render All ========== */
+function renderAll(d){
+  renderGranular(d.granular, d.stageEnd);
+  renderFocus(d);
+  renderKPI(d);
+  renderHourChart(d.hourlyEnd, d.hourly);
+  renderDayChart(d.daily);
+  renderStageChart(d.stageEnd);
+  renderDimChart(currentDim, d);
+  renderOpHourChart(d.byOperationHour, d.opMap);
+  renderTable(d);
+  renderDataStart(d.dataStart, d.range);
+}
+
+/* 数据起点提示 */
+function renderDataStart(dataStart, range){
+  const el = document.getElementById('dataStartHint');
+  if (!dataStart) { el.style.display='none'; return; }
+  el.style.display='';
+  el.textContent = '数据起点 ' + dataStart;
+  // 长周期若 dateFrom 早于数据起点 → 警示
+  if (range && range.dateFrom && range.dateFrom < dataStart) {
+    el.classList.add('warn');
+    el.textContent = '⚠ 数据起点 ' + dataStart + ' (所选范围早于此,长周期产出可能不全)';
+  } else {
+    el.classList.remove('warn');
+  }
+}
+
+/* 多粒度累计卡 */
+function renderGranular(granular, stageEnd){
+  const order = ['realtime','week','month','quarter','half','year'];
+  const labels = { realtime:'今日', week:'本周', month:'本月', quarter:'本季', half:'半年', year:'年度' };
+  // 目标UPH(选机型时从stageEnd取, 跨粒度一致; 标准非实测)
+  const stages = (stageEnd && stageEnd.stages) || [];
+  const tgtStage = stages.find(x=>x.target_uph!=null);
+  const targetUph = tgtStage ? tgtStage.target_uph : null;
+  const wrap = document.getElementById('uphGranular');
+  wrap.innerHTML = order.map(k => {
+    const g = (granular && granular[k]) || {};
+    const total = g.total || 0;
+    const mom = g.mom;
+    const momCls = mom==null ? '' : (mom>=0?'up':'down');
+    const momTxt = mom==null ? '--' : ((mom>=0?'+':'')+mom+'%');
+    const uph = g.uph;
+    const runH = g.run_hours;
+    const achieve = (uph!=null && targetUph) ? +(uph/targetUph*100).toFixed(0) : null;
+    const subParts = [];
+    if (uph!=null) subParts.push('UPH '+uph);
+    if (runH!=null) subParts.push(fmt(runH,0)+'h'+(g.run_source==='mes'?'·MES':''));
+    if (achieve!=null) subParts.push(achieve+'%');
+    const sub = subParts.length ? subParts.join(' · ') : '无班次配置';
+    return '<div class="uph-granular-card'+(k===currentPeriod?' active':'')+'" data-period="'+k+'" onclick="granularClick(\''+k+'\')">' +
+      '<div class="ug-label">'+labels[k]+'</div>' +
+      '<div class="ug-value">'+total.toLocaleString()+'</div>' +
+      '<div class="ug-sub" style="font-size:11px;color:var(--text-muted);margin:2px 0 4px">'+sub+'</div>' +
+      '<div class="ug-mom '+momCls+'">环比 '+momTxt+'</div>' +
+      '<div class="ug-range">'+(g.dateFrom||'')+' ~ '+(g.dateTo||'')+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* Focus */
+function renderFocus(d){
+  const s = d.summary || {};
+  const line = d.filters.line_display || '全厂';
+  const extra = (selModel?(' · '+selModel):'') + (selOp?(' · '+(d.filters.op_display||selOp)):'');
+  document.getElementById('focusScope').textContent = 'UPH产出焦点 · ' + line + extra + ' · ' + currentRange.label;
+  const momHtml = s.mom!=null ? (' · 环比 <span class="'+(s.mom>=0?'up':'down')+'">'+(s.mom>=0?'+':'')+s.mom+'%</span>') : '';
+  document.getElementById('focusTitle').innerHTML = '周期产出 <strong>'+(s.total||0).toLocaleString()+'</strong> 台 · UPH <strong>'+(s.uph!=null?s.uph:'--')+'</strong>'+momHtml;
+
+  // 行动建议
+  let action = '';
+  const stages = (d.stageEnd && d.stageEnd.stages) || [];
+  const packOut = (stages.find(x=>x.stage==='packaging')||{}).output || 0;
+  const testOut = (stages.find(x=>x.stage==='test')||{}).output || 0;
+  if (s.total===0) action = '当前周期暂无产出数据,请确认筛选条件或数据同步状态。';
+  else if (s.mom!=null && s.mom < -10) action = '产出环比下降 '+Math.abs(s.mom)+'%,建议核查产线异常停机、缺料或瓶颈工位节拍。';
+  else if (testOut > 0 && packOut > 0 && testOut > packOut * 1.15) action = '测试段产出('+testOut+')明显高于包装段('+packOut+'),可能存在包装段堆积或下线滞后,建议关注包装工位产能。';
+  else action = '当前产出稳定。可切换上方多粒度卡查看今日/月/季/年累计,或按机型/工序下钻定位瓶颈。';
+  document.getElementById('focusAction').textContent = action;
+
+  // Meta chips
+  const metaItems = [
+    { val:(s.active_models||0)+'', label:'活跃机型' },
+    { val:(s.active_lines||0)+'', label:'活跃线体' },
+    { val:(s.active_ops||0)+'', label:'活跃工序' }
+  ];
+  document.getElementById('focusMeta').innerHTML = WipUI.Focus.metaChips(metaItems);
+
+  // Detail: 三段产出
+  document.getElementById('focusDetail').innerHTML = stages.map(st => {
+    return '<div class="focus-detail-block"><div class="label">'+st.label+'段(末道工位)</div>' +
+      '<div class="value">'+(st.output||0).toLocaleString()+' 台</div>' +
+      '<div class="sub">UPH '+(st.uph!=null?st.uph:'--')+(st.target_uph!=null?(' · 目标 '+st.target_uph):' · 目标--')+'</div></div>';
+  }).join('');
+
+  // Side mini
+  const s1 = document.getElementById('focusSide1');
+  const s2 = document.getElementById('focusSide2');
+  s1.querySelector('.value').textContent = s.uph!=null ? s.uph : '--';
+  const runSrc = s.run_source || (d.stageEnd&&d.stageEnd.run_source) || 'estimated';
+  s2.querySelector('.value').textContent = s.run_hours!=null ? fmt(s.run_hours,0)+'h' : '--';
+  s2.querySelector('.hint').textContent = runSrc==='mes' ? 'MES真实净工时(已扣休息)' : 'T5 estimated(待切实测)';
+
+  document.getElementById('focusTrust').innerHTML = WipUI.Focus.trustLabel(['产出:去重SN', '段产出:末道工位', '运行:'+(runSrc==='mes'?'MES真实工时':'T5 estimated'), '目标:capacity工序级(标准非实测)']);
+}
+
+/* KPI */
+function renderKPI(d){
+  const s = d.summary || {};
+  document.getElementById('kpiTotal').textContent = (s.total||0).toLocaleString();
+  document.getElementById('kpiTotalSub').textContent = '上期 '+(s.prev_total!=null?s.prev_total.toLocaleString():'--');
+  document.getElementById('kpiUph').textContent = s.uph!=null?s.uph:'--';
+  document.getElementById('kpiUphSub').textContent = (s.run_hours!=null)?('实际运行'+fmt(s.run_hours,0)+'h·'+(s.run_source==='mes'?'MES真实':'T5 estimated')):'无班次配置';
+  // 目标UPH/达成率: 从 stageEnd 取(选机型时该机型cycle_time反推); CT=3600/实际UPH
+  const stages = (d.stageEnd && d.stageEnd.stages) || [];
+  const tgtStage = stages.find(x=>x.target_uph!=null) || null;
+  const targetUph = tgtStage ? tgtStage.target_uph : null;
+  const ctStd = tgtStage ? tgtStage.ct_seconds : null;
+  document.getElementById('kpiTargetUph').textContent = targetUph!=null?targetUph:'--';
+  const tgtSrc = tgtStage ? tgtStage.target_source : null;
+  const srcLabel = tgtSrc==='capacity_op' ? '工序级' : tgtSrc==='capacity_model' ? '机型级' : '';
+  document.getElementById('kpiTargetUphSub').textContent = targetUph!=null ? ('标准CT '+ctStd+'s · '+(srcLabel?srcLabel+'·':'')+(selModel||'混合机型')+' · 非实测') : '选机型查看目标';
+  const achieveEl = document.getElementById('kpiAchieve');
+  if (s.uph!=null && targetUph!=null) {
+    const rate = +(s.uph/targetUph*100).toFixed(1);
+    achieveEl.textContent = rate+'%';
+    achieveEl.style.color = rate>=100 ? 'var(--success)' : rate>=85 ? 'var(--warning)' : 'var(--danger)';
+  } else { achieveEl.textContent='--'; achieveEl.style.color='var(--text-muted)'; }
+  document.getElementById('kpiAchieveSub').textContent = (s.uph!=null&&targetUph!=null) ? (s.uph+'/'+targetUph+' · 整机vs工序近似') : '需选机型';
+  // 实际节拍CT = 3600/实际UPH
+  document.getElementById('kpiCt').textContent = s.uph!=null&&s.uph>0 ? fmt(3600/s.uph,1) : '--';
+  const momEl = document.getElementById('kpiMom');
+  momEl.textContent = s.mom!=null ? ((s.mom>=0?'+':'')+s.mom+'%') : '--';
+  momEl.style.color = s.mom==null ? 'var(--text-muted)' : (s.mom>=0?'var(--success)':'var(--danger)');
+  document.getElementById('kpiMomSub').textContent = s.prev_total!=null ? ('上期 '+s.prev_total.toLocaleString()) : '无环比';
+  document.getElementById('kpiRangeLabel').textContent = currentRange.dateFrom + ' ~ ' + currentRange.dateTo;
+}
+
+/* ========== Charts ========== */
+let chartHour=null, chartDay=null, chartStage=null, chartDim=null, chartOpHour=null;
+let currentDim = 'model';        // 维度切换对比图当前分组维度
+let matrixData = null;           // 交叉矩阵最近一次数据
+const TT = CHART.tooltip();
+
+function renderHourChart(endData, allData){
+  if(!chartHour) chartHour = echarts.init(document.getElementById('hourChart'));
+  const endRows = (endData||[]).slice().sort((a,b)=>a.key-b.key);
+  const allRows = (allData||[]).slice().sort((a,b)=>a.key-b.key);
+  const endMap = {}; endRows.forEach(r=>endMap[r.key]=r.total);
+  const allMap = {}; allRows.forEach(r=>allMap[r.key]=r.total);
+  const cats = []; const endVals = []; const allVals = [];
+  for(let h=0; h<24; h++){ cats.push(h+'时'); endVals.push(endMap[h]||0); allVals.push(allMap[h]||0); }
+  const hasAll = !!(allData && allData.length);
+  chartHour.setOption({
+    tooltip: Object.assign({trigger:'axis',formatter:function(ps){let h='<div style="font-weight:600;margin-bottom:4px">'+ps[0].axisValue+'</div>';ps.forEach(p=>{if(p.value!=null)h+='<div>'+p.marker+' '+p.seriesName+': <b>'+p.value+'</b></div>';});return h;}}, TT),
+    legend:{show:hasAll,data:['末道下线','全工序活跃'],textStyle:{color:CHART.legendText,fontSize:10},top:0},
+    grid:{top:hasAll?36:24,bottom:50,left:50,right:20},
+    xAxis:{type:'category',data:cats,axisLabel:{color:CHART.axisLabel,fontSize:9,interval:0},axisLine:{lineStyle:{color:CHART.axisLine}}},
+    yAxis:{type:'value',name:'产出',nameTextStyle:{color:CHART.legendText,fontSize:10},axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:CHART.splitLine}}},
+    series:[
+      {name:'末道下线',type:'bar',barMaxWidth:24,data:endVals.map(v=>({value:v,itemStyle:{color:CHART.gradientBar(echarts,CHART.colors.blue),borderRadius:[2,2,0,0]}})),label:{show:true,position:'top',color:CHART.legendText,fontSize:9,formatter:p=>p.value>0?p.value:''}},
+      ...(hasAll?[{name:'全工序活跃',type:'line',smooth:true,symbol:'none',data:allVals,lineStyle:{color:CHART.colors.purple||CHART.colors.blue,width:1.5,opacity:0.55},itemStyle:{color:CHART.colors.purple||CHART.colors.blue,opacity:0.55}}]:[])
+    ]
+  }, true);
+}
+
+function renderDayChart(daily){
+  if(!chartDay) chartDay = echarts.init(document.getElementById('dayChart'));
+  const rows = (daily||[]).slice().sort((a,b)=>a.key<b.key?-1:1);
+  if(!rows.length){ chartDay.setOption(CHART.emptyState('当前周期无日产出数据'), true); return; }
+  const cats = rows.map(r=>r.key.slice(5));
+  const vals = rows.map(r=>r.total);
+  chartDay.setOption({
+    tooltip: Object.assign({trigger:'axis'}, TT),
+    grid:{top:30,bottom:50,left:50,right:20},
+    xAxis:{type:'category',data:cats,axisLabel:{color:CHART.axisLabel,fontSize:10,rotate:cats.length>10?35:0},axisLine:{lineStyle:{color:CHART.axisLine}}},
+    yAxis:{type:'value',name:'去重SN产出',nameTextStyle:{color:CHART.legendText,fontSize:10},axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:CHART.splitLine}}},
+    series:[{name:'日产出',type:'line',smooth:true,symbol:'circle',symbolSize:6,data:vals,lineStyle:{color:CHART.colors.blue,width:2},itemStyle:{color:CHART.colors.blue},areaStyle:{color:CHART.colors.blue,opacity:0.15},label:{show:true,position:'top',color:CHART.legendText,fontSize:10}}]
+  }, true);
+}
+
+function renderStageChart(stageEnd){
+  if(!chartStage) chartStage = echarts.init(document.getElementById('stageChart'));
+  const stages = (stageEnd && stageEnd.stages) || [];
+  if(!stages.length){ chartStage.setOption(CHART.emptyState('无段产出数据'), true); return; }
+  const cats = stages.map(s=>s.label);
+  const uphVals = stages.map(s=>s.uph);
+  const targetVals = stages.map(s=>s.target_uph);
+  const outputVals = stages.map(s=>s.output);
+  const series = [{
+    name:'段UPH', type:'bar', barMaxWidth:48,
+    data: stages.map(s=>({value:s.uph,itemStyle:{color:s.stage==='packaging'?CHART.colors.orange:s.stage==='test'?CHART.colors.green:CHART.colors.blue,borderRadius:[2,2,0,0]}})),
+    label:{show:true,position:'top',color:CHART.legendText,fontSize:10,formatter:p=>p.value!=null?p.value:''}
+  }];
+  // 目标UPH markLine (仅当有值)
+  const hasTarget = targetVals.some(v=>v!=null);
+  chartStage.setOption({
+    tooltip: Object.assign({trigger:'axis',formatter:function(ps){
+      const idx=ps[0].dataIndex, s=stages[idx];
+      let h='<div style="font-weight:600;margin-bottom:4px">'+s.label+'段(末道工位)</div>';
+      h+='<div>产出: <b>'+s.output.toLocaleString()+'</b> 台</div>';
+      h+='<div>UPH: <b>'+((s.uph!=null)?s.uph:'--')+'</b></div>';
+      h+='<div>目标UPH: '+(s.target_uph!=null?s.target_uph:'--')+(s.ct_seconds!=null?(' (CT '+s.ct_seconds+'s)'):'')+'</div>';
+      h+='<div style="color:'+CHART.axisLabel+';font-size:10px;margin-top:2px">末道:'+escHtml(s.end_ops.join(','))+'</div>';
+      return h;
+    }}, TT),
+    legend:{show:hasTarget,data:['段UPH','目标UPH'],textStyle:{color:CHART.legendText,fontSize:10},top:0},
+    grid:{top:hasTarget?36:24,bottom:40,left:50,right:20},
+    xAxis:{type:'category',data:cats,axisLabel:{color:CHART.axisLabel,fontSize:11},axisLine:{lineStyle:{color:CHART.axisLine}}},
+    yAxis:{type:'value',name:'UPH',nameTextStyle:{color:CHART.legendText,fontSize:10},axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:CHART.splitLine}}},
+    series: series.concat(hasTarget?[{
+      name:'目标UPH', type:'line', symbol:'none', lineStyle:{type:'dashed',color:CHART.colors.red,width:1.5},
+      data: targetVals, label:{show:true,position:'top',color:CHART.colors.red,fontSize:9,formatter:p=>p.value!=null?p.value:''}
+    }]:[])
+  }, true);
+}
+
+/* 维度切换对比图 (机型/线体/工序/工艺段 4维度, Top15横向柱; line/stage带UPH副轴, model/operation带占比%) */
+function renderDimChart(dim, d){
+  if(!chartDim) chartDim = echarts.init(document.getElementById('dimChart'));
+  const opMap = (d && d.opMap) || (currentData && currentData.opMap) || {};
+  const lineMap = {}; (filterOpts.lines||[]).forEach(l=>{lineMap[l.code]=l.name;});
+  let rows = []; let color = CHART.colors.blue; let hasUph = false;
+  if (dim === 'model') { rows = ((d&&d.byModel)||[]).map(r=>({key:r.key,name:r.key,total:r.total,pct:r.pct})); color = CHART.colors.green; }
+  else if (dim === 'line') { rows = ((d&&d.byLine)||[]).map(r=>({key:r.key,name:lineMap[r.key]||r.key,total:r.total,pct:r.pct,uph:r.uph,run_hours:r.run_hours})); color = CHART.colors.blue; hasUph = rows.some(r=>r.uph!=null); }
+  else if (dim === 'operation') { rows = ((d&&d.byOperation)||[]).map(r=>({key:r.key,name:opMap[r.key]||r.key,total:r.total,pct:r.pct,stage:stageOf(opMap[r.key]||r.key)})); color = CHART.colors.purple||CHART.colors.blue; }
+  else if (dim === 'stage') {
+    const stageRows = {assembly:{key:'assembly',name:'组装',total:0,uph:null}, test:{key:'test',name:'测试',total:0,uph:null}, packaging:{key:'packaging',name:'包装',total:0,uph:null}};
+    ((d&&d.stageEnd&&d.stageEnd.stages)||[]).forEach(s=>{ if(stageRows[s.stage]){ stageRows[s.stage].total=s.output||0; stageRows[s.stage].uph=s.uph; } });
+    rows = ['assembly','test','packaging'].map(s=>stageRows[s]);
+    color = CHART.colors.orange; hasUph = rows.some(r=>r.uph!=null);
+  }
+  rows = rows.slice().sort((a,b)=>b.total-a.total).slice(0,15).reverse();
+  if(!rows.length){ chartDim.setOption(CHART.emptyState('无'+dim+'产出数据'), true); return; }
+  const barColor = (r)=> {
+    if (dim === 'operation' && r.stage) return r.stage==='packaging'?CHART.colors.orange : r.stage==='test'?CHART.colors.green : CHART.colors.blue;
+    return color;
+  };
+  const series = [{
+    name:'产出', type:'bar', barMaxWidth:18, xAxisIndex:0,
+    data: rows.map(r=>({value:r.total,itemStyle:{color:CHART.gradientBar(echarts,barColor(r)),borderRadius:[0,2,2,0]}})),
+    label:{show:true,position:'right',color:CHART.legendText,fontSize:10,formatter:p=>{const r=rows[p.dataIndex];return r.total.toLocaleString()+(r.pct!=null?(' · '+r.pct+'%'):'');}}
+  }];
+  if (hasUph) {
+    series.push({
+      name:'UPH', type:'line', xAxisIndex:1, symbol:'circle', symbolSize:6,
+      data: rows.map(r=>r.uph!=null?r.uph:null),
+      lineStyle:{color:CHART.colors.red,width:1.5}, itemStyle:{color:CHART.colors.red},
+      label:{show:true,position:'right',color:CHART.colors.red,fontSize:9,formatter:p=>p.value!=null?p.value:''}
+    });
+  }
+  chartDim.setOption({
+    tooltip: Object.assign({trigger:'axis',formatter:function(ps){const p=ps[0];const r=rows[p.dataIndex];let h='<div style="font-weight:600">'+escHtml(r.name)+'</div>'+(r.key!==r.name?'<div>代码: '+escHtml(r.key)+'</div>':'')+'<div>产出: <b>'+r.total.toLocaleString()+'</b></div>';if(r.pct!=null)h+='<div>占比: '+r.pct+'%</div>';if(r.uph!=null)h+='<div>UPH: <b>'+r.uph+'</b>'+(r.run_hours!=null?(' ('+fmt(r.run_hours,0)+'h)'):'')+'</div>';return h;}}, TT),
+    legend: hasUph ? {data:['产出','UPH'],textStyle:{color:CHART.legendText,fontSize:10},top:0} : {show:false},
+    grid:{top:hasUph?30:20,bottom:30,left:10,right:55,containLabel:true},
+    xAxis: hasUph ? [
+      {type:'value',axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:CHART.splitLine}}},
+      {type:'value',name:'UPH',nameTextStyle:{color:CHART.legendText,fontSize:10},axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{show:false}}
+    ] : {type:'value',axisLabel:{color:CHART.axisLabel,fontSize:10},splitLine:{lineStyle:{color:CHART.splitLine}}},
+    yAxis:{type:'category',data:rows.map(r=>r.name),axisLabel:{color:CHART.axisLabel,fontSize:9,width:120,overflow:'truncate'},axisLine:{lineStyle:{color:CHART.axisLine}}},
+    series: series
+  }, true);
+}
+
+/* 分工位小时产出热力图 (工位×小时, Top20工位) */
+function renderOpHourChart(byOperationHour, opMap){
+  if(!chartOpHour) chartOpHour = echarts.init(document.getElementById('opHourChart'));
+  const opMapL = opMap || (currentData && currentData.opMap) || {};
+  const rows = byOperationHour || [];
+  if(!rows.length){ chartOpHour.setOption(CHART.emptyState('无工位小时数据'), true); return; }
+  // 按 op 总产出降序, 取 Top20 工位(收窄后通常更少)
+  const opTotals = {};
+  rows.forEach(r => { opTotals[r.op] = (opTotals[r.op]||0) + r.total; });
+  let ops = Object.keys(opTotals).sort((a,b)=>opTotals[b]-opTotals[a]);
+  if (ops.length > 20) ops = ops.slice(0, 20);
+  const opSet = new Set(ops);
+  const yCats = ops.map(op => opMapL[op]||op).reverse();  // top 在上
+  const opIdx = {}; ops.forEach((op,i) => { opIdx[op] = ops.length-1-i; });
+  const data = []; let max = 0;
+  rows.forEach(r => {
+    if (!opSet.has(r.op)) return;
+    data.push([r.hour, opIdx[r.op], r.total]);
+    if (r.total > max) max = r.total;
+  });
+  const hours = []; for(let h=0; h<24; h++) hours.push(h+'时');
+  chartOpHour.setOption({
+    tooltip: Object.assign(CHART.tooltip(), { trigger:'item', position:'top', formatter: function(p){ return escHtml(yCats[p.value[1]]) + ' · ' + p.value[0] + '时<br/>产出: <b>' + p.value[2] + '</b> 台'; } }),
+    grid: { top:30, bottom:70, left:130, right:20 },
+    xAxis: { type:'category', data:hours, axisLabel:{color:CHART.axisLabel,fontSize:9}, axisLine:{lineStyle:{color:CHART.axisLine}}, splitArea:{show:false} },
+    yAxis: { type:'category', data:yCats, axisLabel:{color:CHART.axisLabel,fontSize:10,width:110,overflow:'truncate'}, axisLine:{lineStyle:{color:CHART.axisLine}}, splitArea:{show:false} },
+    visualMap: { min:0, max:max||1, calculable:true, orient:'horizontal', left:'center', bottom:10, textStyle:{color:CHART.legendText,fontSize:10},
+      inRange:{ color:[CHART.colors.blue, CHART.colors.green, CHART.colors.orange, CHART.colors.red] } },
+    series: [{ type:'heatmap', data:data, label:{show:false}, emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,0.5)'}} }]
+  }, true);
+}
+
+/* ========== 明细表 ========== */
+function renderTable(d){
+  const opMap = d.opMap || {};
+  const rows = (d.byOperation||[]).slice().sort((a,b)=>b.total-a.total);
+  const total = rows.reduce((s,r)=>s+r.total,0);
+  const tbody = document.getElementById('summaryBody');
+  const _info = document.getElementById('tableInfo');
+  if (_info) _info.textContent = '共 ' + rows.length + ' 工序';
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="5" style="color:var(--text-muted);padding:24px;">暂无数据</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r=>{
+    const name = opMap[r.key]||r.key;
+    const st = stageOf(name);
+    return '<tr onclick="showOpDrawer(\''+escAttr(r.key)+'\')">' +
+      '<td class="mono">'+escHtml(r.key)+'</td>' +
+      '<td class="cell-strong">'+escHtml(name)+'</td>' +
+      '<td><span class="stage-tag '+STAGE_CLS[st]+'">'+STAGE_LABEL[st]+'</span></td>' +
+      '<td>'+(r.total||0).toLocaleString()+'</td>' +
+      '<td>'+(total>0?(r.total/total*100).toFixed(1)+'%':'--')+'</td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ========== Drawer ========== */
+function showOpDrawer(code){
+  if(!currentData) return;
+  const opMap = currentData.opMap || {};
+  const rows = (currentData.byOperation||[]).slice().sort((a,b)=>b.total-a.total);
+  const r = rows.find(x=>String(x.key)===String(code));
+  if(!r) return;
+  const name = opMap[r.key]||r.key;
+  const st = stageOf(name);
+  const total = rows.reduce((s,x)=>s+x.total,0);
+  const stats = [
+    { val:(r.total||0).toLocaleString(), lbl:'产出' },
+    { val: total>0?(r.total/total*100).toFixed(1)+'%':'--', lbl:'占比' },
+    { val: STAGE_LABEL[st], lbl:'工艺段' }
+  ];
+  const html = '<div style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;line-height:1.7">' +
+    '<div>工序代码: <span style="font-family:var(--font-mono);color:var(--brand)">'+escHtml(r.key)+'</span></div>' +
+    '<div>中文名: <strong style="color:var(--text-primary)">'+escHtml(name)+'</strong></div>' +
+    '<div>工艺段: '+STAGE_LABEL[st]+'</div>' +
+    '<div>产出(去重SN): <strong style="color:var(--text-primary)">'+(r.total||0).toLocaleString()+'</strong></div>' +
+    '</div>';
+  WipUI.Drawer.open({
+    title:'工序产出明细 · '+name,
+    stats:stats,
+    html:html,
+    exportData:[{code:r.key,name:name,stage:STAGE_LABEL[st],output:r.total,share:total>0?(r.total/total*100).toFixed(1)+'%':'--'}],
+    exportColumns:[{key:'code',label:'工序代码'},{key:'name',label:'工序名称'},{key:'stage',label:'工艺段'},{key:'output',label:'产出'},{key:'share',label:'占比'}],
+    showExport:true
+  });
+}
+
+/* ========== Subnav scroll ========== */
+function scrollToPanel(id){ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
+
+/* ========== UpdateBar 初始化 ========== */
+WipUI.UpdateBar.init({
+  periodTabsSelector:'#periodSelect',
+  enableCustomRange:true,
+  onPeriod:function(period, range){ applyPeriod(period, range); },
+  refreshBtnSelector:'#refreshBtn',
+  onRefresh:function(){ refreshCurrent(); },
+  timeElSelector:'#updateTime',
+  liveDotSelector:'#liveDot'
+});
+
+/* ========== Toolbar ========== */
+WipUI.Toolbar.init('#toolbar', {
+  buttons:['refresh','exportCSV','fullscreen','bigscreen'],
+  onRefresh:function(){ refreshCurrent(); },
+  onExportCSV:function(){ exportAllCSV(); },
+  targetSelector:'.wip-page'
+});
+function exportAllCSV(){
+  if(!currentData){ return; }
+  const opMap = currentData.opMap||{};
+  const rows = (currentData.byOperation||[]).slice().sort((a,b)=>b.total-a.total);
+  if(!rows.length){ return; }
+  const total = rows.reduce((s,r)=>s+r.total,0);
+  function csvCell(v){ if(v==null)return''; var s=String(v); return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+  const header = ['工序代码','工序名称','工艺段','产出','占比'].map(csvCell).join(',');
+  const body = rows.map(r=>{ const name=opMap[r.key]||r.key; const st=STAGE_LABEL[stageOf(name)]; return [r.key,name,st,r.total,total>0?(r.total/total*100).toFixed(1)+'%':'--'].map(csvCell).join(','); }).join('\n');
+  const csv = '﻿'+header+'\n'+body;
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='UPH工序产出明细_'+currentRange.label+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ========== Resize ========== */
+window.addEventListener('resize', () => {
+  [chartHour,chartDay,chartStage,chartDim,chartOpHour].forEach(c=>{ if(c) c.resize(); });
+});
+
+/* ========== Init ========== */
+loadFilterOpts();
+loadData(WipUI.periodRange('realtime'));
+
+apiFetch('/api/me').then(d=>{if(d.role==='admin'){const el=document.getElementById('adminNav');if(el)el.style.display='';}}).catch(()=>{});
+
+if (window.ATTN && ATTN.autoInit) { ATTN.autoInit({ staggerStep:40, scarcityDelay:1200 }); }
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+  EventBus.on('ws:connected', function(){ if(window._setConnState) window._setConnState('live'); });
+  EventBus.on('ws:disconnected', function(){ if(window._setConnState) window._setConnState('dead'); });
+}
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+</body>
+</html>

@@ -42,6 +42,7 @@ desktop_wip/exe_console.log
 desktop_wip/pwv_test.log
 desktop_wip/screen*.png
 
-# PyInstaller 产物
-build/
-dist/
+# PyInstaller 产物(只排除 desktop_wip 下的,frontend/dist 必须进仓库)
+desktop_wip/build/
+# 强制保留前端构建产物(Mac runner 打包要用)
+!frontend/dist/

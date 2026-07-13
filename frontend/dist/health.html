@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统健康 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="libs/echarts.min.js"></script>
+<script src="chart-theme.js"></script>
+<script src="wip-ui.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0166B1">
+<style>
+/* ===== 系统健康 — BMW Shy Tech 工具型极简 =====
+   心法: 0常驻呼吸，全触发型动效，信息即焦点 */
+
+.sys-page { max-width: var(--content-width); margin: 0 auto; padding: 0 var(--page-pad-x); }
+
+/* --- 状态指示条(纯文字,无框) --- */
+.status-bar {
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  padding: 12px 0 4px; margin-bottom: 16px;
+  font-size: var(--fs-sm); color: var(--text-secondary);
+  border-bottom: 1px solid var(--line-faint);
+}
+.status-bar .sb-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; flex-shrink: 0; }
+.status-bar .sb-dot.ok { background: var(--success); }
+.status-bar .sb-dot.warn { background: var(--warning); }
+.status-bar .sb-dot.err { background: var(--danger); }
+.status-bar .sb-item { display: inline-flex; align-items: center; white-space: nowrap; }
+.status-bar .sb-item strong { font-weight: 600; color: var(--text-primary); margin: 0 3px; }
+.status-bar .sb-sep { color: var(--text-dim); font-size: 10px; }
+
+/* --- 焦点区: 结论 + 4 mini --- */
+.health-focus {
+  display: grid; grid-template-columns: 1fr 280px; gap: var(--module-gap);
+  margin-bottom: var(--module-gap);
+}
+@media (max-width: 860px) { .health-focus { grid-template-columns: 1fr; } }
+
+.focus-main {
+  background: var(--surface-focus); border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius-xl); padding: 24px 28px;
+  box-shadow: var(--shadow-2), var(--light-depth-1);
+  position: relative; overflow: hidden;
+  transition: border-color var(--dur-slow) var(--ease-out);
+}
+.focus-main::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--text-muted); border-radius: 0 2px 2px 0;
+  transition: background var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
+}
+.focus-main.state-normal::before { background: var(--text-muted); }
+.focus-main.state-warn::before { background: var(--warning); box-shadow: 0 0 8px rgba(var(--warning-rgb),0.35); }
+.focus-main.state-danger::before { background: var(--danger); box-shadow: 0 0 8px rgba(var(--danger-rgb),0.40); }
+.focus-main.state-danger { border-color: rgba(var(--danger-rgb),0.20); }
+.focus-main.state-warn { border-color: rgba(var(--warning-rgb),0.20); }
+
+.focus-main .fm-eyebrow {
+  font-size: var(--fs-xs); color: var(--text-muted); letter-spacing: 0.06em;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+/* 进阶版:fm-title 升级衬线+fs-page-title(对齐看板页 focus-title 仪式感,消除"两个产品"分裂) */
+.focus-main .fm-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-page-title); font-weight: 800; color: var(--text-primary);
+  letter-spacing: -0.025em; line-height: 1.18; margin-bottom: 8px;
+  transition: color var(--dur-slow) var(--ease-out);
+}
+.focus-main.state-warn .fm-title { color: var(--warning); }
+.focus-main.state-danger .fm-title { color: var(--danger); }
+.focus-main .fm-action {
+  font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.7;
+  margin-bottom: 16px;
+}
+.focus-main .fm-meta {
+  display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.focus-main .fm-meta span { font-size: var(--fs-xs); color: var(--text-muted); }
+.focus-main .fm-meta strong { font-weight: 600; color: var(--text-secondary); }
+.focus-main .fm-actions { display: flex; gap: 8px; }
+
+/* .btn-sys 已提到 common.css 统一一份 */
+
+/* Mini指标 2x2 */
+.health-minis {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--module-gap-sm);
+  align-content: stretch;
+}
+.health-mini {
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; flex-direction: column; justify-content: center;
+  transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  cursor: default;
+}
+.health-mini:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.health-mini .hm-label { font-size: var(--fs-xs); color: var(--text-muted); letter-spacing: 0.04em; margin-bottom: 4px; }
+.health-mini .hm-value { font-size: var(--fs-lg); font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.health-mini .hm-hint { font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 2px; }
+.health-mini.warn .hm-value { color: var(--warning); }
+.health-mini.danger .hm-value { color: var(--danger); }
+
+/* --- 图表区 --- */
+.chart-stack { display: flex; flex-direction: column; gap: var(--module-gap); margin-bottom: var(--module-gap); }
+.chart-panel { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+.chart-panel .cp-title {
+  font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+  letter-spacing: 0.04em;
+}
+.chart-panel .cp-sub { font-size: var(--fs-xs); color: var(--text-muted); font-weight: 400; }
+.chart-box { width: 100%; }
+.chart-box-sm { height: 180px; }
+.chart-box-md { height: 240px; }
+.chart-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--module-gap); }
+@media (max-width: 900px) { .chart-two-col { grid-template-columns: 1fr; } }
+
+/* --- 事件列表 --- */
+.event-section { margin-bottom: 24px; }
+.event-filter { display: flex; gap: 6px; }
+.event-filter button {
+  padding: 4px 12px; border-radius: 999px; font-size: var(--fs-xs);
+  cursor: pointer; font-family: inherit; border: 1px solid var(--line);
+  background: transparent; color: var(--text-muted);
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.event-filter button.active { background: var(--brand-glow); border-color: var(--brand-border); color: var(--brand); }
+.event-filter button:hover { border-color: var(--line-strong); color: var(--text-secondary); }
+
+.event-list { display: flex; flex-direction: column; }
+.event-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid var(--line-faint); font-size: var(--fs-sm);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.event-row:hover { background: var(--surface-1-hi); }
+.event-row .ev-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.event-row .ev-dot.ok { background: var(--success); }
+.event-row .ev-dot.err { background: var(--danger); }
+.event-row .ev-dot.warn { background: var(--warning); }
+.event-row .ev-time { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); min-width: 130px; }
+.event-row .ev-date { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); min-width: 90px; }
+.event-row .ev-msg { color: var(--text-secondary); flex: 1; }
+.event-row .ev-msg.err { color: var(--danger); }
+.event-row .ev-cnt { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--fs-xs); white-space: nowrap; }
+.event-empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: var(--fs-sm); }
+
+/* --- 骨架屏 --- */
+.skel {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-1-hi) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.8s var(--ease) infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-line { height: 12px; margin: 5px 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none !important; background: var(--surface-2); }
+  .focus-main, .health-mini { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="sys-page">
+
+<!-- Top Bar — 单层顶栏(状态|快捷|导航|操作) 5栏合一(无FilterBar) -->
+<div class="top-bar">
+  <div class="tb-seg tb-seg-status">
+    <div class="live-dot" id="liveDot"></div>
+    <span class="time" id="updateTime">数据加载中...</span>
+    <span class="nav-trust-text" id="navDataTrust">状态:/api/health · 同步:syncLog · 资源:process</span>
+  </div>
+  <div class="tb-divider"></div>
+  <div class="tb-seg tb-seg-action">
+    <select class="period-select" id="periodSelect">
+      <option value="realtime">实时</option>
+      <option value="week">本周</option>
+      <option value="month">本月</option>
+      <option value="quarter">本季</option>
+      <option value="half">半年</option>
+      <option value="year">年度</option>
+      <option value="all">全部</option>
+      <option value="custom">自定义</option>
+    </select>
+    <div id="toolbar"></div>
+  </div>
+</div>
+<!-- 第二行: subnav 导航 + quickQuery 快捷 -->
+<div class="subnav-row">
+  <div class="wip-subnav-inner" id="pageSubnav">
+    <button class="active" data-target="focusArea">系统状态</button>
+    <button data-target="chartArea">趋势图表</button>
+    <button data-target="eventArea">事件记录</button>
+  </div>
+  <div class="qq-row" id="quickQuery"></div>
+</div>
+</div>
+
+<!-- 状态指示条 -->
+<div class="status-bar" id="statusBar">
+  <span class="sb-item"><span class="sb-dot ok" id="sbDot"></span><span id="sbService">检测中...</span></span>
+  <span class="sb-sep">·</span>
+  <span class="sb-item">运行<strong id="sbUptime">--</strong></span>
+  <span class="sb-sep">·</span>
+  <span class="sb-item">MES<strong id="sbMes">--</strong></span>
+  <span class="sb-sep">·</span>
+  <span class="sb-item">内存<strong id="sbMem">--</strong></span>
+  <span class="sb-sep">·</span>
+  <span class="sb-item">会话<strong id="sbSess">--</strong></span>
+  <span class="sb-sep">·</span>
+  <span class="sb-item">同步<strong id="sbSync">--</strong></span>
+</div>
+
+<!-- 焦点区 -->
+<div class="health-focus" id="focusArea">
+  <div class="focus-main state-normal" id="focusMain">
+    <div class="fm-eyebrow" id="fmEyebrow">系统健康 · 实时监控</div>
+    <div class="fm-title" id="fmTitle">正在检测系统状态...</div>
+    <div class="fm-action" id="fmAction">系统正在连接各服务端点，请稍候...</div>
+    <div class="fm-meta" id="fmMeta">
+      <span>运行时长 <strong>--</strong></span>
+      <span>同步次数 <strong>--</strong></span>
+      <span>内存占用 <strong>--</strong></span>
+      <span>活跃会话 <strong>--</strong></span>
+    </div>
+    <div class="fm-actions">
+      <button class="btn-sys primary" id="btnPing">⚡ Ping 测试</button>
+      <button class="btn-sys" id="btnSync">🔄 手动同步</button>
+      <button class="btn-sys" id="btnRefresh">↻ 立即刷新</button>
+    </div>
+  </div>
+  <div class="health-minis">
+    <div class="health-mini" id="miniUptime">
+      <div class="hm-label">服务 Uptime</div>
+      <div class="hm-value">--</div>
+      <div class="hm-hint">进程运行时长</div>
+    </div>
+    <div class="health-mini" id="miniMem">
+      <div class="hm-label">内存占用</div>
+      <div class="hm-value">--</div>
+      <div class="hm-hint">RSS 常驻内存</div>
+    </div>
+    <div class="health-mini" id="miniMes">
+      <div class="hm-label">MES 连接</div>
+      <div class="hm-value">--</div>
+      <div class="hm-hint">Cookie 状态</div>
+    </div>
+    <div class="health-mini" id="miniFail">
+      <div class="hm-label">同步失败</div>
+      <div class="hm-value">--</div>
+      <div class="hm-hint">近30天失败天数</div>
+    </div>
+  </div>
+</div>
+
+<!-- 图表区 -->
+<div class="chart-stack" id="chartArea">
+  <div class="chart-two-col">
+    <div class="chart-panel">
+      <div class="cp-title">内存占用趋势 <span class="cp-sub">实时采样</span></div>
+      <div class="chart-box chart-box-sm" id="chartMem"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="cp-title">同步成功率 <span class="cp-sub" id="syncRateLabel">近30天</span></div>
+      <div class="chart-box chart-box-sm" id="chartSync"></div>
+    </div>
+  </div>
+  <div class="chart-panel">
+    <div class="cp-title">API 响应时间 <span class="cp-sub" id="pingStats">P50:-- P95:-- P99:--</span></div>
+    <div class="chart-box chart-box-sm" id="chartPing"></div>
+  </div>
+</div>
+
+<!-- 事件列表 -->
+<div class="event-section" id="eventArea">
+  <div class="chart-panel">
+    <div class="cp-title">
+      <span>近期事件</span>
+      <div class="event-filter" id="eventFilter">
+        <button class="active" data-filter="all">全部</button>
+        <button data-filter="alert">仅告警</button>
+      </div>
+    </div>
+    <div class="event-list" id="eventList">
+      <div class="attn-skeleton"><div class="attn-skel-bar" style="width:92%;height:14px"></div><div class="attn-skel-bar" style="width:88%;height:14px"></div><div class="attn-skel-bar" style="width:75%;height:14px"></div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /sys-page -->
+
+<script>
+const API = (location.port === '8080' || (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1')) ? '' : 'http://' + location.hostname + ':8080';
+
+let state = {
+  period: 'realtime', range: null,
+  health: null, server: null,
+  syncEntries: [], isAdmin: false,
+  pingHistory: [],
+  eventFilter: 'all',
+  charts: {}
+};
+
+function pad(n) { return String(n).padStart(2, '0'); }
+// esc 收口到 common.js (window.esc = escHtml 别名), 本页不再单独定义
+
+function fmtUptime(sec) {
+  if (sec == null || isNaN(sec)) return '--';
+  sec = Math.floor(sec);
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+  if (d > 0) return d + '天' + h + '时';
+  if (h > 0) return h + '时' + m + '分';
+  return m + '分';
+}
+
+function memMB(bytes) {
+  if (bytes == null || isNaN(bytes)) return 0;
+  return Math.round(bytes / 1048576);
+}
+
+function relTime(iso) {
+  if (!iso) return '--';
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return s + '秒前';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + '分钟前';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + '小时前';
+  return Math.floor(h / 24) + '天前';
+}
+
+/* ========== 主加载 ========== */
+let _loadSeq = 0;
+
+// 秒开: 用 localStorage 中上次缓存数据即时绘制, 消除白屏 (peek 失败静默 fallback)
+function peekWarmRender() {
+  try {
+    var healthURL = API + '/api/health';
+    var srvURL = API + '/api/system-status';
+    var syncURL = API + '/api/bad/sync-status';
+    var ckHealth = window.apiFetch.peek(healthURL);
+    var ckSrv = window.apiFetch.peek(srvURL);
+    var ckSync = window.apiFetch.peek(syncURL);
+    if (!ckHealth && !ckSrv && !ckSync) return; // 无任何缓存, 跳过秒开
+
+    // 仅在缓存存在时覆盖对应 state 片段, 避免用旧值清掉已有新值
+    if (ckHealth) state.health = ckHealth.val || null;
+    // /api/system-status 返回 {success,data:{...}}; data.memoryUsage 对应 admin 的 memory
+    if (ckSrv && ckSrv.val) {
+      var srvD = ckSrv.val.data || ckSrv.val;
+      if (srvD && typeof srvD.uptime !== 'undefined') {
+        state.server = srvD.memory ? srvD : { uptime: srvD.uptime, memory: srvD.memoryUsage, mesCookie: srvD.mesCookie, sessions: srvD.sessions, syncCount: srvD.syncCount, lastSync: srvD.lastSync, wsClients: srvD.wsClients, nodeVersion: srvD.nodeVersion };
+        state.isAdmin = true;
+      }
+    }
+    if (ckSync && ckSync.val && ckSync.val.success && Array.isArray(ckSync.val.entries)) {
+      state.syncEntries = ckSync.val.entries;
+    }
+
+    // 幂等渲染函数即时绘制 (renderStatusBar/renderFocus/renderMinis/renderEvents 均覆盖式)
+    renderStatusBar();
+    renderFocus();
+    renderMinis();
+    renderEvents();
+    // renderCharts 内 renderMemChart 会向 pingHistory push(累加, 非严格幂等),
+    // 此处仅渲染同步图(覆盖式 setOption), 内存/ping 图交由真实数据刷新, 避免重复采样点
+    renderSyncChart();
+    updateTimeBar();
+  } catch (e) { /* peek 失败静默, 不影响后续真实 fetch */ }
+}
+
+async function loadData(dateFrom, dateTo) {
+  state.range = { dateFrom, dateTo, label: WipUI.periodRange(state.period || 'realtime').label };
+  WipUI.UpdateBar.setTime('数据加载中...');
+  const seq = ++_loadSeq;
+
+  // 秒开: 先用上次缓存即时绘制, 再发起真实请求覆盖
+  peekWarmRender();
+
+  const [healthR, srvR, syncR] = await Promise.allSettled([
+    apiFetch(API + '/api/health').catch(() => null),
+    apiFetch(API + '/api/system-status').catch(() => null),
+    apiFetch(API + '/api/bad/sync-status').catch(() => null)
+  ]);
+
+  state.health = healthR.value || null;
+  // /api/system-status 返回 {success,data:{...}}; data.memoryUsage 对应 admin 的 memory
+  var srvVal = (srvR.status === 'fulfilled' && srvR.value) ? (srvR.value.data || srvR.value) : null;
+  if (srvVal && typeof srvVal.uptime !== 'undefined') {
+    state.server = srvVal.memory ? srvVal : { uptime: srvVal.uptime, memory: srvVal.memoryUsage, mesCookie: srvVal.mesCookie, sessions: srvVal.sessions, syncCount: srvVal.syncCount, lastSync: srvVal.lastSync, wsClients: srvVal.wsClients, nodeVersion: srvVal.nodeVersion };
+  } else { state.server = null; }
+  state.isAdmin = !!state.server;
+  state.syncEntries = (syncR.status === 'fulfilled' && syncR.value && syncR.value.success && Array.isArray(syncR.value.entries))
+    ? syncR.value.entries : [];
+
+  if (seq !== _loadSeq) return;
+
+  renderStatusBar();
+  renderFocus();
+  renderMinis();
+  renderCharts();
+  renderEvents();
+  updateTimeBar();
+}
+
+/* ========== 状态指示条 ========== */
+function renderStatusBar() {
+  const svcOk = !!state.health;
+  document.getElementById('sbDot').className = 'sb-dot ' + (svcOk ? 'ok' : 'err');
+  document.getElementById('sbService').textContent = svcOk ? '服务在线' : '服务离线';
+  if (!svcOk) document.getElementById('sbService').style.color = 'var(--danger)';
+
+  if (state.isAdmin && state.server) {
+    const s = state.server;
+    document.getElementById('sbUptime').textContent = fmtUptime(s.uptime);
+    const mesOk = !!s.mesCookie && !!state.health.hasCookie;
+    document.getElementById('sbMes').textContent = mesOk ? '已连接' : '异常';
+    if (!mesOk) document.getElementById('sbMes').style.color = 'var(--danger)';
+    document.getElementById('sbMem').textContent = memMB(s.memory && s.memory.rss) + 'MB';
+    document.getElementById('sbSess').textContent = s.sessions != null ? s.sessions : '--';
+    document.getElementById('sbSync').textContent = s.syncCount != null ? s.syncCount + '次' : '--';
+  } else if (state.health) {
+    document.getElementById('sbUptime').textContent = '需管理员';
+    document.getElementById('sbMes').textContent = state.health.hasCookie ? '已连接' : '异常';
+    document.getElementById('sbMem').textContent = '--';
+    document.getElementById('sbSess').textContent = '--';
+    document.getElementById('sbSync').textContent = state.syncEntries.length + '条记录';
+  } else {
+    document.getElementById('sbUptime').textContent = '--';
+    document.getElementById('sbMes').textContent = '--';
+    document.getElementById('sbMem').textContent = '--';
+    document.getElementById('sbSess').textContent = '--';
+    document.getElementById('sbSync').textContent = '--';
+  }
+}
+
+/* ========== 焦点区 ========== */
+function renderFocus() {
+  const main = document.getElementById('focusMain');
+  const titleEl = document.getElementById('fmTitle');
+  const actionEl = document.getElementById('fmAction');
+  const metaEl = document.getElementById('fmMeta');
+
+  document.getElementById('fmEyebrow').textContent = '系统健康 · ' + ((state.range && state.range.label) ? state.range.label : '实时');
+  main.classList.remove('state-normal', 'state-warn', 'state-danger');
+
+  if (!state.health) {
+    main.classList.add('state-danger');
+    titleEl.textContent = '服务离线 — /api/health 不可达';
+    actionEl.textContent = '后端服务可能已停止。请立即检查服务进程是否存活、端口是否监听、防火墙规则是否正常。';
+    metaEl.innerHTML = '<span>运行时长 <strong>--</strong></span><span>同步次数 <strong>--</strong></span><span>内存占用 <strong>--</strong></span><span>活跃会话 <strong>--</strong></span>';
+    return;
+  }
+
+  if (!state.isAdmin || !state.server) {
+    main.classList.add('state-warn');
+    titleEl.textContent = '权限受限 — 需要管理员查看完整指标';
+    actionEl.textContent = '当前账号非管理员，uptime/内存/会话等资源指标不可见。同步日志与 /api/health 仍可正常监控。';
+    const failed = state.syncEntries.filter(e => !e.complete).length;
+    metaEl.innerHTML =
+      '<span>MES Cookie <strong>' + (state.health.hasCookie ? '有效' : '缺失') + '</strong></span>' +
+      '<span>同步记录 <strong>' + state.syncEntries.length + '</strong></span>' +
+      '<span>失败天数 <strong>' + failed + '</strong></span>' +
+      '<span>资源指标 <strong>需管理员</strong></span>';
+    return;
+  }
+
+  const s = state.server;
+  const mem = memMB(s.memory && s.memory.rss);
+  const failed = state.syncEntries.filter(e => !e.complete).length;
+  const mesOk = !!s.mesCookie && !!state.health.hasCookie;
+
+  let level = 'normal', title = '', action = '';
+
+  if (!mesOk) {
+    level = 'danger';
+    title = 'MES 连接异常 — Cookie 缺失或已失效';
+    action = 'CMES cookie 不可用，数据同步将中断。请登录 CMES 重新获取 cookie，确认 cmes-lh-info 已注入并测试网络通路。';
+  } else if (failed >= 5) {
+    level = 'danger';
+    title = '同步告警 — 近30天存在 ' + failed + ' 天同步不完整';
+    action = '同步失败天数偏高。建议检查 MES 网络稳定性、磁盘空间、Cookie 有效期，必要时触发手动补同步。';
+  } else if (mem >= 900) {
+    level = 'danger';
+    title = '内存告警 — 占用 ' + mem + 'MB，存在 OOM 风险';
+    action = '内存接近危险阈值。建议排查同步任务/缓存是否存在内存泄漏，关注 heapUsed 增长趋势，在低峰期考虑重启进程。';
+  } else if (failed >= 1) {
+    level = 'warn';
+    title = '同步注意 — 近期存在 ' + failed + ' 天不完整，总体正常';
+    action = '个别日期同步不完整，可能为 MES 临时不可用。关注对应日期日志，必要时补同步。';
+  } else if (mem >= 600) {
+    level = 'warn';
+    title = '内存偏高 — 占用 ' + mem + 'MB，建议关注';
+    action = '内存水位偏高但尚未危险。持续监控增长趋势，排查长连接与缓存堆积，预留重启窗口。';
+  } else {
+    level = 'normal';
+    title = '系统运行良好 — 上次同步 ' + relTime(s.lastSync);
+    action = 'MES 同步正常、资源水位健康、服务在线。保持现有监控节奏，系统会自动每60秒刷新。';
+  }
+
+  main.classList.add('state-' + level);
+  titleEl.textContent = title;
+  actionEl.textContent = action;
+  metaEl.innerHTML =
+    '<span>运行时长 <strong>' + fmtUptime(s.uptime) + '</strong></span>' +
+    '<span>同步次数 <strong>' + (s.syncCount != null ? s.syncCount : '--') + '</strong></span>' +
+    '<span>内存占用 <strong>' + mem + 'MB</strong></span>' +
+    '<span>活跃会话 <strong>' + (s.sessions != null ? s.sessions : '--') + '</strong></span>';
+}
+
+/* ========== Mini 指标 ========== */
+function renderMinis() {
+  if (!state.health) {
+    setMini('miniUptime', '离线', '', 'danger');
+    setMini('miniMem', '--', '', '');
+    setMini('miniMes', '异常', '', 'danger');
+    setMini('miniFail', '--', '', '');
+    return;
+  }
+  if (!state.isAdmin || !state.server) {
+    setMini('miniUptime', '需管理员', 'admin 权限', '');
+    setMini('miniMem', '需管理员', 'admin 权限', '');
+    setMini('miniMes', state.health.hasCookie ? '在线' : '异常', 'Cookie 状态', state.health.hasCookie ? '' : 'danger');
+    const failed = state.syncEntries.filter(e => !e.complete).length;
+    setMini('miniFail', failed, '失败天数', failed >= 5 ? 'danger' : failed >= 1 ? 'warn' : '');
+    return;
+  }
+
+  const s = state.server;
+  const mem = memMB(s.memory && s.memory.rss);
+  const mesOk = !!s.mesCookie && !!state.health.hasCookie;
+  const failed = state.syncEntries.filter(e => !e.complete).length;
+
+  setMini('miniUptime', fmtUptime(s.uptime), '进程运行时长', '');
+  setMini('miniMem', mem + 'MB', 'RSS 常驻内存', mem >= 900 ? 'danger' : mem >= 600 ? 'warn' : '');
+  setMini('miniMes', mesOk ? '在线' : '异常', 'Cookie ' + (s.mesCookie ? '有效' : '缺失'), mesOk ? '' : 'danger');
+  setMini('miniFail', failed, '近30天失败天数', failed >= 5 ? 'danger' : failed >= 1 ? 'warn' : '');
+}
+
+function setMini(id, value, hint, mood) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('warn', 'danger');
+  if (mood) el.classList.add(mood);
+  el.querySelector('.hm-value').textContent = value;
+  el.querySelector('.hm-hint').textContent = hint;
+}
+
+/* ========== 图表 ========== */
+function renderCharts() { renderMemChart(); renderSyncChart(); renderPingChart(); }
+
+function renderMemChart() {
+  const el = document.getElementById('chartMem');
+  if (!el) return;
+  if (!state.charts.mem) state.charts.mem = echarts.init(el);
+
+  const cur = state.server ? memMB(state.server.memory && state.server.memory.rss) : null;
+  if (cur != null) {
+    state.pingHistory.push({ t: new Date(), mem: cur });
+    if (state.pingHistory.length > 20) state.pingHistory.shift();
+  }
+  const pts = state.pingHistory.filter(p => p.mem != null);
+
+  state.charts.mem.setOption(Object.assign({ tooltip: CHART.tooltip() }, {
+    grid: { left: 42, right: 16, top: 24, bottom: 28 },
+    xAxis: CHART.xAxis(pts.map(p => pad(p.t.getHours()) + ':' + pad(p.t.getMinutes()) + ':' + pad(p.t.getSeconds())), { fontSize: 10 }),
+    yAxis: Object.assign(CHART.yAxis({ fontSize: 10 }), { name: 'MB' }),
+    series: [{
+      type: 'line', data: pts.map(p => p.mem), smooth: true, symbol: 'none',
+      lineStyle: { color: CHART.colors.blue, width: 2 },
+      areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(1,102,177,0.18)' }, { offset: 1, color: 'rgba(1,102,177,0.02)' }]) },
+      markLine: {
+        silent: true, symbol: 'none',
+        lineStyle: { type: 'dashed', color: 'rgba(245,158,11,0.45)', width: 1 },
+        data: [{ yAxis: 600, label: { formatter: '600MB 警戒', color: CHART.colors.orange, fontSize: 10 } }]
+      }
+    }]
+  }));
+}
+
+function renderSyncChart() {
+  const el = document.getElementById('chartSync');
+  if (!el) return;
+  if (!state.charts.sync) state.charts.sync = echarts.init(el);
+
+  const entries = state.syncEntries.slice().reverse();
+  const dates = entries.map(e => e.date);
+  const synced = entries.map(e => e.syncedTotal || 0);
+  const missed = entries.map(e => Math.max(0, (e.mesTotal || 0) - (e.syncedTotal || 0)));
+  const failPts = [];
+  entries.forEach((e, i) => { if (!e.complete) failPts.push({ value: [i, e.mesTotal || 0] }); });
+
+  const total = entries.length, failCnt = entries.filter(e => !e.complete).length;
+  document.getElementById('syncRateLabel').textContent = total ? '成功率 ' + Math.round((total - failCnt) / total * 100) + '%' : '近30天';
+
+  state.charts.sync.setOption(Object.assign({ tooltip: CHART.tooltip() }, {
+    legend: Object.assign(CHART.legend({ top: 0, fontSize: 10 }), { data: ['已同步', '未同步', '失败点'] }),
+    grid: { left: 42, right: 16, top: 30, bottom: 28 },
+    xAxis: CHART.xAxis(dates, { fontSize: 9, rotate: dates.length > 15 ? 45 : 0 }),
+    yAxis: CHART.yAxis({ fontSize: 10 }),
+    series: [
+      { name: '已同步', type: 'bar', stack: 'total', data: synced, itemStyle: { color: CHART.colors.green }, barWidth: '60%', label: { show: true, position: 'top', color: CHART.legendText, fontSize: 9 } },
+      { name: '未同步', type: 'bar', stack: 'total', data: missed, itemStyle: { color: 'rgba(239,68,68,0.30)' } },
+      { name: '失败点', type: 'effectScatter', coordinateSystem: 'cartesian2d', data: failPts,
+        symbolSize: 8, rippleEffect: { period: 3.2, scale: 3, brushType: 'stroke' },
+        showEffectOn: 'render', itemStyle: { color: CHART.colors.red }, zlevel: 3 }
+    ]
+  }));
+}
+
+function renderPingChart() {
+  const el = document.getElementById('chartPing');
+  if (!el) return;
+  if (!state.charts.ping) state.charts.ping = echarts.init(el);
+
+  const pts = state.pingHistory.filter(p => p.ms != null);
+  const vals = pts.map(p => p.ms).sort((a, b) => a - b);
+  const p50 = vals.length ? vals[Math.floor(vals.length * 0.5)] : 0;
+  const p95 = vals.length ? vals[Math.floor(vals.length * 0.95)] : 0;
+  const p99 = vals.length ? vals[Math.floor(vals.length * 0.99)] : 0;
+  document.getElementById('pingStats').textContent = 'P50:' + p50 + 'ms  P95:' + p95 + 'ms  P99:' + p99 + 'ms';
+
+  state.charts.ping.setOption(Object.assign({ tooltip: CHART.tooltip() }, {
+    grid: { left: 42, right: 16, top: 16, bottom: 28 },
+    xAxis: CHART.xAxis(pts.map(p => pad(p.t.getHours()) + ':' + pad(p.t.getMinutes()) + ':' + pad(p.t.getSeconds())), { fontSize: 10 }),
+    yAxis: Object.assign(CHART.yAxis({ fontSize: 10 }), { name: 'ms' }),
+    series: [{
+      type: 'line', data: pts.map(p => p.ms), smooth: true, symbol: 'circle', symbolSize: 4,
+      lineStyle: { color: CHART.colors.cyan, width: 1.5 }, itemStyle: { color: CHART.colors.cyan },
+      areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(34,211,238,0.12)' }, { offset: 1, color: 'rgba(34,211,238,0.01)' }]) }
+    }]
+  }));
+}
+
+/* ========== 事件列表 ========== */
+function renderEvents() {
+  let entries = state.syncEntries || [];
+  if (state.eventFilter === 'alert') entries = entries.filter(e => !e.complete);
+  entries = entries.slice().reverse().slice(0, 30);
+
+  const el = document.getElementById('eventList');
+  if (!entries.length) {
+    el.innerHTML = ATTN.emptyHTML({msg: state.eventFilter === 'alert' ? '近期无告警事件，系统运行正常 ✓' : '暂无同步事件记录'});
+    return;
+  }
+
+  el.innerHTML = entries.map(e => {
+    const ok = !!e.complete;
+    const time = e.time ? new Date(e.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--';
+    return '<div class="event-row">' +
+      '<span class="ev-dot ' + (ok ? 'ok' : 'err') + '"></span>' +
+      '<span class="ev-date">' + esc(e.date || '--') + '</span>' +
+      '<span class="ev-time">' + esc(time) + '</span>' +
+      '<span class="ev-msg' + (ok ? '' : ' err') + '">' + (ok ? '同步完成' : '同步不完整') + '</span>' +
+      '<span class="ev-cnt">MES:' + (e.mesTotal || 0) + ' / 同步:' + (e.syncedTotal || 0) + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+/* ========== Ping ========== */
+async function pingTest() {
+  const btn = document.getElementById('btnPing');
+  btn.textContent = '⏳ Pinging...';
+  btn.disabled = true;
+  const t0 = performance.now();
+  try {
+    await apiFetch(API + '/api/health/ping');
+    const ms = Math.round(performance.now() - t0);
+    state.pingHistory.push({ t: new Date(), ms, mem: state.server ? memMB(state.server.memory && state.server.memory.rss) : null });
+    if (state.pingHistory.length > 20) state.pingHistory.shift();
+    renderPingChart();
+    if (window.Toast) Toast.success('Ping: ' + ms + ' ms');
+  } catch (e) {
+    if (window.Toast) Toast.error('Ping 失败');
+  }
+  btn.textContent = '⚡ Ping 测试';
+  btn.disabled = false;
+}
+
+/* ========== 时间栏 ========== */
+function updateTimeBar() {
+  const now = new Date();
+  const t = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' +
+            pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+  WipUI.UpdateBar.setTime((state.range && state.range.label) ? state.range.label + ' · ' + t + ' 更新' : '实时 · ' + t + ' 更新');
+}
+
+/* ========== 导出CSV ========== */
+function exportSyncCSV() {
+  const rows = state.eventFilter === 'alert' ? state.syncEntries.filter(e => !e.complete) : state.syncEntries;
+  if (!rows.length) { if (window.Toast) Toast.error('无数据可导出'); return; }
+  const csvCell = v => { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const header = 'date,mesTotal,syncedTotal,diff,status,time';
+  const lines = rows.map(e => {
+    return csvCell(e.date) + ',' + csvCell(e.mesTotal || 0) + ',' + csvCell(e.syncedTotal || 0) + ',' +
+           csvCell((e.mesTotal || 0) - (e.syncedTotal || 0)) + ',' + csvCell(e.complete ? '完整' : '失败') + ',' +
+           csvCell(e.time ? new Date(e.time).toLocaleString('zh-CN') : '');
+  });
+  const blob = new Blob(['﻿' + header + '\n' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'health_events_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if (window.Toast) Toast.success('已导出 ' + rows.length + ' 条');
+}
+
+/* ========== 初始化 ========== */
+function init() {
+  WipUI.UpdateBar.init({
+    periodTabsSelector: '#periodSelect',
+    enableCustomRange: true,
+    onPeriod: function(period, range) { state.period = period; loadData(range.dateFrom, range.dateTo); },
+    refreshBtnSelector: '#refreshBtn',
+    onRefresh: function() { pingTest(); if (state.range) loadData(state.range.dateFrom, state.range.dateTo); },
+    timeElSelector: '#updateTime',
+    liveDotSelector: '#liveDot'
+  });
+
+  WipUI.QuickQuery.init('#quickQuery', [
+    { key: 'all', label: '全部事件', icon: '⌧', apply: function() { state.eventFilter = 'all'; syncEventBtns('all'); } },
+    { key: 'alert', label: '仅告警', icon: '⚠', apply: function() { state.eventFilter = 'alert'; syncEventBtns('alert'); } }
+  ], { activeKey: 'all', onAfter: function() { renderEvents(); } });
+
+  function syncEventBtns(filter) {
+    document.querySelectorAll('#eventFilter button').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === filter);
+    });
+  }
+
+  WipUI.Toolbar.init('#toolbar', {
+    buttons: ['refresh', 'exportCSV', 'fullscreen', 'bigscreen'],
+    onRefresh: function() { pingTest(); if (state.range) loadData(state.range.dateFrom, state.range.dateTo); },
+    onExportCSV: exportSyncCSV,
+    targetSelector: '.sys-page'
+  });
+
+  WipUI.Subnav.init('#pageSubnav', [
+    { btn: '[data-target="focusArea"]', target: 'focusArea', active: true },
+    { btn: '[data-target="chartArea"]', target: 'chartArea' },
+    { btn: '[data-target="eventArea"]', target: 'eventArea' }
+  ]);
+
+  document.querySelectorAll('#eventFilter button').forEach(btn => {
+    btn.addEventListener('click', function() {
+      state.eventFilter = this.dataset.filter;
+      syncEventBtns(this.dataset.filter);
+      renderEvents();
+    });
+  });
+
+  document.getElementById('btnPing').addEventListener('click', pingTest);
+  document.getElementById('btnSync').addEventListener('click', function() {
+    const date = state.range ? state.range.dateFrom : new Date().toISOString().slice(0, 10);
+    apiFetch(API + '/api/sync?date=' + date).catch(() => {});
+    if (window.Toast) Toast.info('已触发同步，请稍后刷新查看结果');
+  });
+  document.getElementById('btnRefresh').addEventListener('click', function() {
+    if (state.range) loadData(state.range.dateFrom, state.range.dateTo);
+  });
+
+  // resize 防抖 150ms (原每帧 resize 图表, 改为停止拖动后统一 resize)
+  let _resizeTimer = null;
+  window.addEventListener('resize', function() {
+    if (_resizeTimer) clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(function() {
+      Object.values(state.charts).forEach(c => { try { c.resize(); } catch (e) {} });
+    }, 150);
+  });
+
+  setInterval(updateTimeBar, 1000);
+  window.withVisibilityGuard(function() { if (state.range) loadData(state.range.dateFrom, state.range.dateTo); }, 60000, { noImmediate: true });
+
+  const r = WipUI.periodRange('realtime');
+  loadData(r.dateFrom, r.dateTo);
+  setTimeout(pingTest, 800);
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+</script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});</script>
+</body>
+</html>

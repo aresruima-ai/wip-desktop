@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统设置 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0166B1">
+<style>
+/* ===== 系统设置 — BMW Shy Tech 工具型极简 (进阶版:对齐看板页设计语言,消除"两个产品"分裂) ===== */
+.sys-page { max-width: var(--content-width); margin: 0 auto; padding: 0 var(--page-pad-x); }
+
+/* --- 页标题:升级衬线+fs-page-title,对齐 focus-title 仪式感 --- */
+.sys-page-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-page-title); font-weight: 800; color: var(--text-primary);
+  letter-spacing: -0.025em; padding: 20px 0 16px;
+}
+
+/* --- 概览条 --- */
+.overview-bar {
+  display: flex; gap: 24px; flex-wrap: wrap; padding: 12px 0 4px;
+  margin-bottom: 16px; font-size: var(--fs-sm); color: var(--text-muted);
+  border-bottom: 1px solid var(--line-faint);
+}
+.overview-bar strong { font-weight: 600; color: var(--text-secondary); }
+
+/* --- Tab:进阶版删除本地定义,统一走 common.css §6d .tabs/.tab-btn/.tab-content --- */
+.tab-content.active { display: block; }
+@keyframes tabIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.tab-content { animation: tabIn var(--dur-enter) var(--ease-out); }
+
+/* --- 表单区块 --- */
+.form-section {
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 24px 28px; margin-bottom: var(--module-gap);
+}
+.form-section .fs-title {
+  font-size: var(--fs-md); font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 18px; letter-spacing: 0.04em;
+}
+.form-section .fs-hint {
+  font-size: var(--fs-xs); color: var(--text-muted); margin: -12px 0 14px;
+}
+
+/* --- 表单行 --- */
+.form-row {
+  display: flex; align-items: center; gap: 14px; padding: 6px 0;
+}
+.form-row + .form-row { margin-top: 2px; }
+.form-row label {
+  min-width: 120px; font-size: var(--fs-sm); color: var(--text-secondary);
+  font-weight: 500; flex-shrink: 0;
+}
+.form-row input, .form-row select {
+  padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--fs-sm);
+  border: 1px solid var(--line); background: var(--surface-3);
+  color: var(--text-primary); outline: none; font-family: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  width: 200px;
+}
+.form-row input:focus, .form-row select:focus {
+  border-color: var(--brand); box-shadow: 0 0 0 2px rgba(var(--brand-rgb),0.18);
+}
+.form-row .input-unit {
+  font-size: var(--fs-xs); color: var(--text-muted); margin-left: -8px;
+}
+
+/* --- Toggle开关 --- */
+.toggle-row {
+  display: flex; align-items: center; gap: 14px; padding: 6px 0;
+}
+.toggle-row + .toggle-row { margin-top: 2px; }
+.toggle-row label {
+  min-width: 120px; font-size: var(--fs-sm); color: var(--text-secondary);
+  font-weight: 500; flex-shrink: 0;
+}
+.toggle-switch { position: relative; width: 40px; height: 22px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch .slider {
+  position: absolute; inset: 0; background: var(--line);
+  border-radius: 11px; cursor: pointer; transition: background var(--dur-fast) var(--ease-out);
+}
+.toggle-switch .slider::before {
+  content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
+  background: var(--text-primary); border-radius: 50%;
+  transition: transform var(--dur-fast) var(--ease-hit);
+}
+.toggle-switch input:checked + .slider { background: var(--brand); }
+.toggle-switch input:checked + .slider::before { transform: translateX(18px); }
+
+/* --- 告警规则阈值 --- */
+.alert-rule-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.alert-rule-row + .alert-rule-row { margin-top: 4px; }
+.alert-rule-row label { min-width: 120px; font-size: var(--fs-sm); color: var(--text-secondary); font-weight: 500; flex-shrink: 0; }
+.alert-rule-row input {
+  padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--fs-sm);
+  border: 1px solid var(--line); background: var(--surface-3);
+  color: var(--text-primary); outline: none; font-family: inherit; width: 80px;
+  text-align: center; transition: border-color var(--dur-fast) var(--ease-out);
+}
+.alert-rule-row input:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(var(--brand-rgb),0.18); }
+.alert-rule-row .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.alert-rule-row .swatch.yellow { background: var(--warning); }
+.alert-rule-row .swatch.red { background: var(--danger); }
+
+/* --- 按钮: .btn-sys 已提到 common.css 统一一份(admin/health/settings 共用) --- */
+
+.form-actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-faint); }
+.save-status { font-size: var(--fs-xs); color: var(--success); opacity: 0; transition: opacity var(--dur-fast); }
+.save-status.show { opacity: 1; }
+.save-status.error { color: var(--danger); }
+
+/* --- 集成Tab MES状态 --- */
+.mes-status {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: var(--surface-2); border-radius: var(--radius-sm);
+  font-size: var(--fs-sm); color: var(--text-secondary); margin-top: 8px;
+}
+.mes-status .dot { width: 8px; height: 8px; border-radius: 50%; }
+.mes-status .dot.ok { background: var(--success); }
+.mes-status .dot.err { background: var(--danger); }
+
+/* --- Webhook事件多选 --- */
+.event-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.event-chip {
+  padding: 4px 12px; border-radius: 999px; font-size: var(--fs-xs);
+  cursor: pointer; font-family: inherit; border: 1px solid var(--line);
+  background: transparent; color: var(--text-muted);
+  transition: all var(--dur-fast) var(--ease-out);
+  user-select: none;
+}
+.event-chip:hover { border-color: var(--line-strong); color: var(--text-secondary); }
+.event-chip.selected { background: var(--brand-glow); border-color: var(--brand-border); color: var(--brand); }
+
+/* --- Webhook测试日志 --- */
+.webhook-log { margin-top: 10px; font-size: var(--fs-xs); color: var(--text-muted); }
+.webhook-log .wl-item { padding: 4px 8px; border-radius: 3px; margin: 2px 0; }
+.webhook-log .wl-item.ok { border-left: 3px solid var(--success); background: rgba(var(--success-rgb),0.06); }
+.webhook-log .wl-item.fail { border-left: 3px solid var(--danger); background: rgba(var(--danger-rgb),0.06); }
+
+@media (max-width: 600px) {
+  .form-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .form-row label { min-width: auto; }
+  .form-row input, .form-row select { width: 100%; }
+  .tabs { overflow-x: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-content.active { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="sys-page">
+
+<div class="sys-page-title">系统设置</div>
+
+<!-- 概览条 -->
+<div class="overview-bar" id="overviewBar">
+  <span>KPI目标项 <strong id="ovKpi">--</strong></span>
+  <span>告警规则 <strong id="ovAlert">--</strong></span>
+  <span>集成状态 <strong id="ovInteg">--</strong></span>
+  <span>API <strong id="ovApi">--</strong></span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="general">通用设置</button>
+  <button class="tab-btn" data-tab="kpi">KPI 目标</button>
+  <button class="tab-btn" data-tab="notif">通知与告警</button>
+  <button class="tab-btn" data-tab="integ">集成配置</button>
+</div>
+
+<!-- Tab: 通用设置 -->
+<div class="tab-content active" id="tab-general">
+  <div class="form-section">
+    <div class="fs-title">通用设置</div>
+    <div class="form-row">
+      <label>语言</label>
+      <select id="cfgLanguage">
+        <option value="zh-CN">中文 (简体)</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>主题</label>
+      <select id="cfgTheme" disabled>
+        <option value="dark">深色 (Dark) · 默认</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>自动刷新间隔</label>
+      <input type="number" id="cfgRefresh" min="5" max="300" value="30">
+      <span class="input-unit">秒</span>
+    </div>
+    <div class="form-row">
+      <label>时区</label>
+      <input type="text" id="cfgTimezone" value="Asia/Shanghai" readonly style="opacity:0.6;">
+    </div>
+    <div class="form-actions">
+      <button class="btn-sys primary" onclick="saveGeneral()">保存设置</button>
+      <span class="save-status" id="generalStatus">✓ 已保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: KPI 目标 -->
+<div class="tab-content" id="tab-kpi">
+  <div class="form-section">
+    <div class="fs-title">驾驶舱 KPI 目标配置</div>
+    <div class="fs-hint">修改后驾驶舱卡片将自动使用新目标值进行达成率计算和颜色标记</div>
+    <div class="form-row">
+      <label>日产量目标</label>
+      <input type="number" id="kpiDailyOutput" min="100" max="99999" value="1500">
+      <span class="input-unit">台/天</span>
+    </div>
+    <div class="form-row">
+      <label>直通率目标</label>
+      <input type="number" id="kpiFpy" min="80" max="100" step="0.1" value="95">
+      <span class="input-unit">%</span>
+    </div>
+    <div class="form-row">
+      <label>OEE 目标</label>
+      <input type="number" id="kpiOee" min="50" max="100" step="0.1" value="85">
+      <span class="input-unit">%</span>
+    </div>
+    <div class="form-row">
+      <label>PPM 上限</label>
+      <input type="number" id="kpiPpm" min="100" max="99999" value="3000">
+      <span class="input-unit">ppm（百万分之）</span>
+    </div>
+    <div class="form-actions">
+      <button class="btn-sys primary" onclick="saveKpiTargets()">保存 KPI 目标</button>
+      <span class="save-status" id="kpiStatus">✓ 已保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: 通知与告警 -->
+<div class="tab-content" id="tab-notif">
+  <div class="form-section">
+    <div class="fs-title">通知控制</div>
+    <div class="toggle-row">
+      <label>启用通知</label>
+      <label class="toggle-switch"><input type="checkbox" id="notifEnabled" onchange="toggleSave('notifEnabled', this.checked)"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <label>提示音</label>
+      <label class="toggle-switch"><input type="checkbox" id="notifSound" onchange="toggleSave('notifSound', this.checked)"><span class="slider"></span></label>
+    </div>
+    <div class="form-row">
+      <label>告警检查间隔</label>
+      <input type="number" id="alarmInterval" min="5" max="600" value="30">
+      <span class="input-unit">秒</span>
+    </div>
+    <div class="form-actions">
+      <button class="btn-sys primary" onclick="saveNotification()">保存</button>
+      <button class="btn-sys" onclick="testNotification()" style="margin-left:4px;">🔔 测试通知</button>
+      <span class="save-status" id="notifStatus">✓ 已保存</span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="fs-title">告警规则</div>
+    <div class="fs-hint">配置各项指标的告警触发阈值。黄色为预警线，红色为危险线。</div>
+    <div class="alert-rule-row">
+      <label>内存告警</label>
+      <span class="swatch yellow"></span>
+      <input type="number" id="memWarn" min="100" max="2000" value="600" onchange="markDirty('alertRules')">
+      <span class="input-unit">MB（预警）</span>
+      <span class="swatch red"></span>
+      <input type="number" id="memDanger" min="100" max="2000" value="900" onchange="markDirty('alertRules')">
+      <span class="input-unit">MB（危险）</span>
+    </div>
+    <div class="alert-rule-row">
+      <label>同步失败告警</label>
+      <input type="number" id="syncFailDays" min="1" max="30" value="5" onchange="markDirty('alertRules')">
+      <span class="input-unit">天内不完整即告警</span>
+    </div>
+    <div class="alert-rule-row">
+      <label>MES 断连告警</label>
+      <select id="mesAlarmMode" onchange="markDirty('alertRules')" style="width:120px;">
+        <option value="immediate">立即告警</option>
+        <option value="1min">1分钟后</option>
+        <option value="5min">5分钟后</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn-sys primary" onclick="saveAlertRules()">保存告警规则</button>
+      <span class="save-status" id="alertRulesStatus">✓ 已保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: 集成配置 -->
+<div class="tab-content" id="tab-integ">
+  <div class="form-section">
+    <div class="fs-title">MES 连接状态</div>
+    <div class="mes-status" id="mesStatusBox">
+      <span class="dot" id="mesDot"></span>
+      <span id="mesStatusText">检测中...</span>
+      <span style="margin-left:auto;font-size:var(--fs-xs);color:var(--text-muted);" id="mesBaseUrl"></span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="fs-title">Webhook 通知</div>
+    <div class="form-row">
+      <label>Webhook URL</label>
+      <input type="url" id="webhookUrl" placeholder="https://example.com/webhook" style="width:380px;">
+    </div>
+    <div style="padding:8px 0 6px 134px;">
+      <div class="fs-hint" style="margin:0 0 6px;">事件类型（可多选）</div>
+      <div class="event-chips" id="eventChips">
+        <button class="event-chip" data-ev="alarm">告警事件</button>
+        <button class="event-chip" data-ev="production">生产事件</button>
+        <button class="event-chip" data-ev="quality">质量事件</button>
+        <button class="event-chip" data-ev="equipment">设备事件</button>
+        <button class="event-chip" data-ev="system">系统事件</button>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-sys primary" onclick="saveWebhook()">保存 Webhook</button>
+      <span class="save-status" id="webhookStatus">✓ 已保存</span>
+    </div>
+    <div class="webhook-log" id="webhookLog"></div>
+  </div>
+</div>
+
+</div><!-- /sys-page -->
+
+<script>
+let settings = {};
+const webhookLogs = [];
+let selectedEvents = [];
+
+/* ========== 脏标记(保存按钮高亮) ========== */
+const dirtyFlags = {};
+function markDirty(section) { dirtyFlags[section] = true; }
+
+/* ========== Toast反馈 ========== */
+function showStatus(elId, ok, msg) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = ok ? ('✓ ' + (msg || '已保存')) : ('✗ ' + (msg || '失败'));
+  el.className = 'save-status show' + (ok ? '' : ' error');
+  setTimeout(() => { el.classList.remove('show'); }, 2500);
+}
+
+/* ========== 加载设置 ========== */
+async function loadSettings() {
+  try {
+    const d = await apiFetch('/api/settings');
+    settings = (d && d.success) ? (d.data || {}) : (d || {});
+  } catch (e) { settings = {}; }
+  applySettings();
+}
+
+function applySettings() {
+  document.getElementById('cfgLanguage').value = settings.language || 'zh-CN';
+  document.getElementById('cfgTheme').value = settings.theme || 'dark';
+  document.getElementById('cfgRefresh').value = settings.auto_refresh_interval || 30;
+  document.getElementById('cfgTimezone').value = settings.timezone || 'Asia/Shanghai';
+
+  document.getElementById('notifEnabled').checked = settings.notification_enabled !== false;
+  document.getElementById('notifSound').checked = settings.notification_sound !== false;
+  document.getElementById('alarmInterval').value = settings.alarm_check_interval || 30;
+
+  document.getElementById('kpiDailyOutput').value = settings.daily_output || 1500;
+  document.getElementById('kpiFpy').value = settings.fpy || 95;
+  document.getElementById('kpiOee').value = settings.oee || 85;
+  document.getElementById('kpiPpm').value = settings.ppm || 3000;
+
+  document.getElementById('memWarn').value = settings.mem_warn_mb || 600;
+  document.getElementById('memDanger').value = settings.mem_danger_mb || 900;
+  document.getElementById('syncFailDays').value = settings.sync_fail_days || 5;
+  document.getElementById('mesAlarmMode').value = settings.mes_alarm_mode || 'immediate';
+
+  document.getElementById('webhookUrl').value = settings.webhook_url || '';
+
+  selectedEvents = settings.webhook_events || [];
+  updateEventChips();
+
+  updateOverview();
+}
+
+/* ========== 事件类型多选 ========== */
+function updateEventChips() {
+  document.querySelectorAll('#eventChips .event-chip').forEach(chip => {
+    chip.classList.toggle('selected', selectedEvents.includes(chip.dataset.ev));
+  });
+}
+
+document.querySelectorAll('#eventChips .event-chip').forEach(chip => {
+  chip.addEventListener('click', function() {
+    const ev = this.dataset.ev;
+    const idx = selectedEvents.indexOf(ev);
+    if (idx >= 0) selectedEvents.splice(idx, 1); else selectedEvents.push(ev);
+    updateEventChips();
+    markDirty('webhook');
+  });
+});
+
+/* ========== Tab切换 ========== */
+document.querySelectorAll('#tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+  });
+});
+
+/* ========== 保存函数 ========== */
+async function putSetting(key, value) {
+  try {
+    const d = await apiFetch('/api/settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    }).catch(() => ({}));
+    return d && d.success !== false;
+  } catch (e) { return false; }
+}
+
+async function putSettings(obj) {
+  try {
+    const d = await apiFetch('/api/settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(obj)
+    }).catch(() => ({}));
+    return d && d.success !== false;
+  } catch (e) { return false; }
+}
+
+window.saveGeneral = async function() {
+  const ok = await putSettings({
+    language: document.getElementById('cfgLanguage').value,
+    theme: document.getElementById('cfgTheme').value,
+    auto_refresh_interval: Math.min(300, Math.max(5, parseInt(document.getElementById('cfgRefresh').value) || 30))
+  });
+  showStatus('generalStatus', ok);
+  if (ok) updateOverview();
+};
+
+window.saveKpiTargets = async function() {
+  const ok = await putSettings({
+    daily_output: Math.max(0, parseInt(document.getElementById('kpiDailyOutput').value) || 1500),
+    fpy: Math.min(100, Math.max(0, parseFloat(document.getElementById('kpiFpy').value) || 95)),
+    oee: Math.min(100, Math.max(0, parseFloat(document.getElementById('kpiOee').value) || 85)),
+    ppm: Math.max(0, parseInt(document.getElementById('kpiPpm').value) || 3000)
+  });
+  showStatus('kpiStatus', ok);
+  if (ok) updateOverview();
+};
+
+window.saveNotification = async function() {
+  const ok = await putSettings({
+    notification_enabled: document.getElementById('notifEnabled').checked,
+    notification_sound: document.getElementById('notifSound').checked,
+    alarm_check_interval: parseInt(document.getElementById('alarmInterval').value) || 30
+  });
+  showStatus('notifStatus', ok);
+  if (ok) updateOverview();
+};
+
+window.saveAlertRules = async function() {
+  const ok = await putSettings({
+    mem_warn_mb: parseInt(document.getElementById('memWarn').value) || 600,
+    mem_danger_mb: parseInt(document.getElementById('memDanger').value) || 900,
+    sync_fail_days: parseInt(document.getElementById('syncFailDays').value) || 5,
+    mes_alarm_mode: document.getElementById('mesAlarmMode').value
+  });
+  showStatus('alertRulesStatus', ok);
+  if (ok) updateOverview();
+};
+
+window.saveWebhook = async function() {
+  const ok = await putSettings({
+    webhook_url: document.getElementById('webhookUrl').value,
+    webhook_events: selectedEvents
+  });
+  showStatus('webhookStatus', ok);
+  if (ok) updateOverview();
+};
+
+/* Toggle即时保存 */
+window.toggleSave = async function(key, val) {
+  const ok = await putSetting(key, val);
+  if (!ok) {
+    // 回弹
+    const el = document.getElementById(key);
+    if (el) el.checked = !val;
+    if (window.Toast) Toast.error('保存失败，已恢复');
+  } else {
+    if (window.Toast) Toast.success('已更新');
+  }
+};
+
+/* ========== 测试通知 ========== */
+window.testNotification = function() {
+  if (typeof NotificationBell !== 'undefined' && NotificationBell.add) {
+    NotificationBell.add('测试通知', '通知功能正常运行', 'info');
+    if (window.Toast) Toast.success('测试通知已发送');
+  } else if (window.Toast) {
+    Toast.info('通知铃铛未初始化，但不影响通知功能');
+  }
+};
+
+function renderWebhookLog() {
+  const el = document.getElementById('webhookLog');
+  if (!webhookLogs.length) { el.innerHTML = ''; return; }
+  el.innerHTML = webhookLogs.map(l =>
+    '<div class="wl-item ' + (l.ok ? 'ok' : 'fail') + '">[' + esc(l.time) + '] ' +
+    (l.ok ? '✓' : '✗') + ' ' + esc(l.msg) + '</div>'
+  ).join('');
+}
+
+// esc 收口到 common.js (window.esc = escHtml 别名), 本页不再单独定义
+
+/* ========== MES 状态检查 ========== */
+async function checkMesStatus() {
+  try {
+    const d = await apiFetch('/api/health');
+    const ok = !!(d && d.hasCookie);
+    document.getElementById('mesDot').className = 'dot ' + (ok ? 'ok' : 'err');
+    document.getElementById('mesStatusText').textContent = ok ? 'MES Cookie 有效，同步通道正常' : 'MES Cookie 缺失或已失效';
+    document.getElementById('mesBaseUrl').textContent = 'lh-cmes.cviauto.cn';
+    document.getElementById('ovInteg').textContent = ok ? '正常' : '异常';
+  } catch (e) {
+    document.getElementById('mesDot').className = 'dot err';
+    document.getElementById('mesStatusText').textContent = '无法获取 MES 状态';
+    document.getElementById('ovInteg').textContent = '未知';
+  }
+}
+
+/* ========== 概览更新 ========== */
+function updateOverview() {
+  const kpiInputs = document.querySelectorAll('#tab-kpi input[type=number]');
+  let kpiCnt = 0;
+  kpiInputs.forEach(inp => { if (inp.value) kpiCnt++; });
+  document.getElementById('ovKpi').textContent = kpiCnt || '--';
+
+  const alertCnt = (document.getElementById('memWarn').value ? 1 : 0) +
+                   (document.getElementById('syncFailDays').value ? 1 : 0) + 1;
+  document.getElementById('ovAlert').textContent = alertCnt + '项';
+
+  document.getElementById('ovApi').textContent = window.location.origin;
+}
+
+/* ========== 初始化 ========== */
+document.addEventListener('DOMContentLoaded', function() {
+  loadSettings();
+  checkMesStatus();
+});
+</script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});</script>
+</body>
+</html>

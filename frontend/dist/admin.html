@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统管理 - AI数字化平台</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0166B1">
+<style>
+/* ===== 系统管理 — BMW Shy Tech 工具型极简 + 人性化CRUD =====
+   增: 行内/弹窗+实时校验+空态引导
+   删: 软删除优先+Confirm确认+Toast反馈
+   改: 弹窗预填+即时保存Toggle
+   查: 骨架屏+空态区分+错误重试+搜索防抖300ms */
+
+.sys-page { max-width: var(--content-width); margin: 0 auto; padding: 0 var(--page-pad-x); }
+
+/* --- 页标题:进阶版升级衬线+fs-page-title,对齐看板页 focus-title 仪式感 --- */
+.sys-page-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-page-title); font-weight: 800; color: var(--text-primary);
+  letter-spacing: -0.025em; padding: 20px 0 4px;
+}
+
+/* --- 概览条 --- */
+.overview-bar {
+  display: flex; gap: 24px; flex-wrap: wrap; padding: 8px 0 12px;
+  margin-bottom: 8px; font-size: var(--fs-sm); color: var(--text-muted);
+  border-bottom: 1px solid var(--line-faint);
+}
+.overview-bar strong { font-weight: 600; color: var(--text-secondary); }
+
+/* --- Tab:进阶版删除本地定义,统一走 common.css §6d .tabs/.tab-btn/.tab-content --- */
+.tabs { margin-bottom: 20px; overflow-x: auto; }
+.tab-content.active { display: block; }
+@keyframes tabIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.tab-content { animation: tabIn var(--dur-enter) var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) { .tab-content.active { animation: none !important; } }
+
+/* --- 工具栏 --- */
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar .search-input {
+  padding: 7px 12px; border-radius: var(--radius-sm); font-size: var(--fs-sm);
+  border: 1px solid var(--line); background: var(--surface-3);
+  color: var(--text-primary); outline: none; font-family: inherit; width: 200px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.toolbar .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(var(--brand-rgb),0.18); }
+.toolbar .search-input::placeholder { color: var(--text-muted); }
+
+/* --- 按钮 --- */
+.btn-sys { /* 已提到 common.css 统一一份(admin/health/settings 共用) */ }
+
+/* --- 统计卡 --- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--module-gap-sm); margin-bottom: var(--module-gap); }
+.stat-card {
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px 18px; text-align: center;
+  transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.stat-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.stat-card .sc-val { font-size: var(--fs-2xl); font-weight: 700; color: var(--brand); }
+.stat-card .sc-lbl { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 4px; }
+
+/* --- 表格 --- */
+.data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.data-table th {
+  text-align: left; padding: 9px 12px; color: var(--text-muted); font-weight: 600;
+  font-size: var(--fs-xs); letter-spacing: 0.04em; text-transform: uppercase;
+  border-bottom: 1px solid var(--line); background: var(--surface-2);
+  position: sticky; top: 0;
+}
+.data-table td {
+  padding: 9px 12px; border-bottom: 1px solid var(--line-faint); color: var(--text-secondary);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.data-table tbody tr { transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.data-table tbody tr:hover { background: var(--surface-1-hi); box-shadow: inset 3px 0 0 var(--brand); }
+
+/* --- Badge --- */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 500;
+}
+.badge.admin { background: var(--brand-dim); color: var(--brand); }
+.badge.user { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+.badge.active { background: var(--success-dim); color: var(--success); }
+.badge.disabled { background: var(--danger-dim); color: var(--danger); }
+
+/* --- 分页 --- */
+.pagination { display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 16px; }
+.pagination span { font-size: var(--fs-xs); color: var(--text-muted); }
+
+/* --- 弹窗 --- */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 24px 28px; min-width: 400px; max-width: 600px;
+  max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-3);
+  animation: modalIn var(--dur-enter) var(--ease-out);
+}
+@keyframes modalIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+.modal-box h3 { font-size: var(--fs-md); font-weight: 600; color: var(--text-secondary); margin-bottom: 18px; }
+.modal-box .form-group { margin-bottom: 14px; }
+.modal-box .form-group label { display: block; font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.04em; }
+.modal-box .form-group input, .modal-box .form-group select {
+  width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--fs-sm);
+  border: 1px solid var(--line); background: var(--surface-3);
+  color: var(--text-primary); outline: none; font-family: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.modal-box .form-group input:focus, .modal-box .form-group select:focus {
+  border-color: var(--brand); box-shadow: 0 0 0 2px rgba(var(--brand-rgb),0.18);
+}
+.modal-box .form-group .err-msg { font-size: var(--fs-xs); color: var(--danger); margin-top: 3px; display: none; }
+.modal-box .form-group.has-error input, .modal-box .form-group.has-error select { border-color: var(--danger); }
+.modal-box .form-group.has-error .err-msg { display: block; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-faint); }
+.modal-form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+
+/* --- 空态 --- */
+/* .empty-state / .skel 已提到 common.css 统一一份 */
+
+/* --- 服务监控 --- */
+.memory-bars { display: flex; align-items: flex-end; gap: 3px; height: 130px; padding: 4px 0; }
+.memory-bars .mb-bar { flex: 1; border-radius: 2px 2px 0 0; min-width: 8px; position: relative; transition: height var(--dur-fast) var(--ease-out); }
+.health-gauge { text-align: center; padding: 20px; }
+.health-gauge .hg-score { font-size: var(--fs-3xl); font-weight: 700; line-height: 1; }
+.health-gauge .hg-label { font-size: var(--fs-sm); margin-top: 4px; }
+.health-gauge .hg-issues { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 8px; }
+
+/* --- 日志筛选 --- */
+.log-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.log-filters select, .log-filters input {
+  padding: 7px 10px; border-radius: var(--radius-sm); font-size: var(--fs-sm);
+  border: 1px solid var(--line); background: var(--surface-3);
+  color: var(--text-primary); outline: none; font-family: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.log-filters select:focus, .log-filters input:focus { border-color: var(--brand); }
+
+/* --- 运营配置: 停机字典 --- */
+.downtime-editor { display: grid; grid-template-columns: 1fr 1fr; gap: var(--module-gap); }
+.downtime-editor .dt-col h4 { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: 8px; }
+.downtime-editor .dt-row { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+.downtime-editor .dt-row input { padding: 5px 8px; border-radius: var(--radius-sm); font-size: var(--fs-xs); border: 1px solid var(--line); background: var(--surface-3); color: var(--text-primary); outline: none; font-family: inherit; }
+.downtime-editor .dt-row input:focus { border-color: var(--brand); }
+
+/* --- Toast --- */
+.toast { position: fixed; top: 64px; right: 20px; z-index: 2000; }
+
+@media (max-width: 768px) {
+  .tabs { overflow-x: auto; }
+  .modal-box { min-width: auto; width: 95vw; }
+  .modal-form-2col { grid-template-columns: 1fr; }
+  .downtime-editor { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="sys-page" id="sysPage">
+
+<div class="sys-page-title">系统管理</div>
+
+<!-- 概览条 -->
+<div class="overview-bar" id="overviewBar">
+  <span>用户 <strong id="ovUsers">--</strong></span>
+  <span>数据库 <strong id="ovDb">--</strong></span>
+  <span>运行 <strong id="ovUptime">--</strong></span>
+  <span>会话 <strong id="ovSess">--</strong></span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="users">用户管理</button>
+  <button class="tab-btn" data-tab="data">数据管理</button>
+  <button class="tab-btn" data-tab="logs">日志审计</button>
+  <button class="tab-btn" data-tab="ops">运营配置</button>
+  <button class="tab-btn" data-tab="fixture">治具线材</button>
+  <button class="tab-btn" data-tab="monitor">服务监控</button>
+</div>
+
+<!-- ==================== Tab: 用户管理 ==================== -->
+<div class="tab-content active" id="tab-users">
+  <div class="toolbar">
+    <button class="btn-sys primary" onclick="showAddUser()">+ 新增用户</button>
+    <input class="search-input" id="userSearch" placeholder="搜索用户名..." oninput="debounceSearch('users')">
+  </div>
+  <table class="data-table">
+    <thead><tr><th>用户名</th><th>显示名</th><th>角色</th><th>状态</th><th>创建时间</th><th>最后登录</th><th>操作</th></tr></thead>
+    <tbody id="userTable"></tbody>
+  </table>
+  <div class="empty-state" id="userEmpty" style="display:none">
+    <div class="empty-icon">👥</div>
+    <div>暂无用户</div>
+    <div class="empty-action"><button class="btn-sys primary" onclick="showAddUser()">+ 新增第一个用户</button></div>
+  </div>
+</div>
+
+<!-- ==================== Tab: 数据管理 ==================== -->
+<div class="tab-content" id="tab-data">
+  <div class="stat-grid" id="dbStats"></div>
+
+  <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:var(--module-gap);">
+    <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:12px;">备份管理</h4>
+    <table class="data-table">
+      <thead><tr><th>时间</th><th>大小</th><th>表数量</th><th>操作</th></tr></thead>
+      <tbody id="backupTable"><tr><td colspan="4" class="empty-state">加载中...</td></tr></tbody>
+    </table>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+      <label style="font-size:var(--fs-xs);color:var(--text-muted);">备份保留</label>
+      <input type="number" id="retentionDays" value="30" min="1" max="365" style="width:70px;padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-sm);outline:none;font-family:inherit;">
+      <span style="font-size:var(--fs-xs);color:var(--text-muted);">天</span>
+      <button class="btn-sys" onclick="saveRetention()">保存</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== Tab: 日志审计 ==================== -->
+<div class="tab-content" id="tab-logs">
+  <div class="stat-grid" id="logStatsGrid"></div>
+  <div class="log-filters">
+    <select id="logLevel" onchange="debounceLoadLogs()"><option value="">全部级别</option><option value="info">INFO</option><option value="warn">WARN</option><option value="error">ERROR</option></select>
+    <select id="logCategory" onchange="debounceLoadLogs()"><option value="">全部分类</option><option value="access">访问</option><option value="system">系统</option><option value="admin">管理</option><option value="websocket">WebSocket</option></select>
+    <input type="text" id="logSearch" placeholder="搜索关键词..." style="width:180px;" oninput="debounceLoadLogs()">
+  </div>
+  <table class="data-table">
+    <thead><tr><th style="width:150px">时间</th><th style="width:60px">级别</th><th style="width:80px">分类</th><th>消息</th><th style="width:100px">IP</th></tr></thead>
+    <tbody id="logTable"></tbody>
+  </table>
+  <div class="pagination" id="logPagination"></div>
+</div>
+
+<!-- ==================== Tab: 运营配置 ==================== -->
+<div class="tab-content" id="tab-ops">
+  <!-- 班次模板 -->
+  <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:var(--module-gap);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);">班次模板</h4>
+      <button class="btn-sys primary" onclick="addShiftConfig()">+ 新增班次模板</button>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>模板名称</th><th>适用产线</th><th>班次</th><th>休息时间</th><th>生效日期</th><th>操作</th></tr></thead>
+      <tbody id="shiftConfigTable"><tr><td colspan="6" class="empty-state">加载中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- 特殊排班 -->
+  <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:var(--module-gap);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);">特殊排班（临时覆盖）</h4>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-sys primary" onclick="addShiftOverride()">+ 新增特殊排班</button>
+        <button class="btn-sys" onclick="quickOvertime()">⚡ 今天加班</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>日期</th><th>产线</th><th>类型</th><th>备注</th><th>操作</th></tr></thead>
+      <tbody id="shiftOverrideTable"><tr><td colspan="5" class="empty-state">加载中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- 停机类型字典 -->
+  <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:var(--module-gap);">
+    <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:12px;">停机类型字典</h4>
+    <div class="downtime-editor" id="downtimeEditor"></div>
+    <button class="btn-sys primary" style="margin-top:12px;" onclick="saveDowntimeCats()">保存停机类型</button>
+  </div>
+
+  <!-- 出勤录入 + 产品配置 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--module-gap);">
+    <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;">
+      <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:12px;">📋 出勤录入</h4>
+      <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">日期</label><input type="date" id="attDate" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;width:120px;"></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">线体</label><select id="attLine" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;"><option value="">全部线体</option></select></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">人数</label><input type="number" id="attCount" value="12" min="0" max="200" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;width:60px;"></div>
+        <button class="btn-sys primary" onclick="submitAttendance()" style="height:32px;">✓ 录入</button>
+        <span id="attMsg" style="font-size:var(--fs-xs);color:var(--success);"></span>
+      </div>
+      <table class="data-table" style="font-size:var(--fs-xs);"><thead><tr><th>日期</th><th>线体</th><th>人数</th><th>时间</th><th></th></tr></thead>
+      <tbody id="attTable"><tr><td colspan="5" class="empty-state">加载中...</td></tr></tbody></table>
+    </div>
+
+    <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;">
+      <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:12px;">📦 产品型号配置</h4>
+      <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">型号</label><input type="text" id="prodModel" placeholder="如: C26" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;width:80px;"></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">名称</label><input type="text" id="prodName" placeholder="产品名称" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;width:140px;"></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">节拍(s)</label><input type="number" id="prodCT" value="48" min="1" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;width:60px;"></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;">UPH</label><input type="number" id="prodUPH" value="0" min="0" style="padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--text-primary);font-size:var(--fs-xs);outline:none;font-family:inherit;width:60px;"></div>
+        <button class="btn-sys primary" onclick="submitProduct()" style="height:32px;">✓ 保存</button>
+        <span id="prodMsg" style="font-size:var(--fs-xs);color:var(--success);"></span>
+      </div>
+      <table class="data-table" style="font-size:var(--fs-xs);"><thead><tr><th>型号</th><th>名称</th><th>节拍</th><th>UPH</th><th></th></tr></thead>
+      <tbody id="prodTable"><tr><td colspan="5" class="empty-state">加载中...</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Tab: 治具线材 ==================== -->
+<div class="tab-content" id="tab-fixture">
+  <div class="toolbar">
+    <button class="btn-sys primary" onclick="showAddFixture()">+ 新增治具</button>
+    <button class="btn-sys primary" onclick="showAddCable()">+ 新增线材</button>
+    <span style="font-size:var(--fs-xs);color:var(--text-muted);">次数/时长按过站记录反推</span>
+  </div>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:12px 0 8px;">治具台账</h4>
+  <table class="data-table">
+    <thead><tr><th>编号</th><th>名称</th><th>类型</th><th>线体</th><th>工序code</th><th>启用日</th><th>停用日</th><th>设计寿命</th><th>预警/报废</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody id="fixtureAdminTable"></tbody>
+  </table>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:20px 0 8px;">报废闭环管理 <span style="font-size:var(--fs-xs);color:var(--text-muted);">(治具+线材 已报废件 + 待报废处置队列;点「报废」填报废单)</span></h4>
+  <table class="data-table">
+    <thead><tr><th>类别</th><th>编号</th><th>名称</th><th>线体</th><th>已用/设计</th><th>寿命进度</th><th>当前状态</th><th>报废单</th><th>操作</th></tr></thead>
+    <tbody id="scrapAdminTable"></tbody>
+  </table>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:20px 0 8px;">线材台账 <span style="font-size:var(--fs-xs);color:var(--text-muted);">(EDO 同步 · 过站反推用量)</span></h4>
+  <table class="data-table">
+    <thead><tr><th>编号</th><th>名称</th><th>机型</th><th>类型</th><th>线体</th><th>启用日</th><th>设计次数</th><th>负责人</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody id="cableAdminTable"></tbody>
+  </table>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:20px 0 8px;">EDO 台账同步</h4>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;">
+    <button class="btn-sys primary" onclick="importEdoCables()">📥 从 EDO 导入/刷新治具线材台账</button>
+    <span style="font-size:var(--fs-xs);color:var(--text-muted);">读取 治具档案_履历表.xlsx → 筛线材 → 机型模糊匹配线体 → upsert(ai_aging_cable, 幂等)</span>
+    <pre id="importResult" style="font-size:var(--fs-xs);color:var(--text-secondary);background:var(--surface-2);padding:8px 12px;border-radius:var(--radius-sm);margin:8px 0;width:100%;display:none;white-space:pre-wrap;max-height:240px;overflow:auto;"></pre>
+  </div>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:20px 0 8px;">客户机型 → 内部料号 对照表 <span style="font-size:var(--fs-xs);color:var(--text-muted);">(EDO 机型对不上 production 时,在此补录)</span></h4>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+    <input type="text" id="mmCustomer" placeholder="客户机型(如 CX1E-A1)" style="flex:1;min-width:160px;">
+    <input type="text" id="mmInternal" placeholder="内部料号(如 QOA.UD03.1624.ZK)" style="flex:1;min-width:200px;">
+    <select id="mmMatch" style="min-width:100px;"><option value="prefix">前缀匹配</option><option value="exact">精确</option><option value="contains">包含</option></select>
+    <button class="btn-sys primary" onclick="addModelMap()">+ 添加</button>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>客户机型</th><th>内部料号</th><th>匹配方式</th><th>备注</th><th>操作</th></tr></thead>
+    <tbody id="modelMapTable"></tbody>
+  </table>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:20px 0 8px;">未映射机型 <span style="font-size:var(--fs-xs);color:var(--text-muted);">(机型对不上 production → 未在产/在册;补对照后重导入即捞回真实过站)</span></h4>
+  <div id="unmappedView" style="font-size:var(--fs-xs);color:var(--text-secondary);padding:8px 0;display:flex;flex-wrap:wrap;gap:6px;">加载中...</div>
+
+  <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin:20px 0 8px;">对账(内部QA): 过站反推 vs EDO 剩余次数 <span style="font-size:var(--fs-xs);color:var(--text-muted);">(基准不同,仅供内部参考,不上客户页)</span></h4>
+  <div id="reconcileView" style="font-size:var(--fs-xs);color:var(--text-secondary);padding:8px 0;">点刷新加载对账…</div>
+
+</div>
+
+<!-- ==================== Tab: 服务监控 ==================== -->
+<div class="tab-content" id="tab-monitor">
+  <div class="stat-grid" id="monitorStats"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--module-gap);margin-bottom:var(--module-gap);">
+    <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;">
+      <div style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:10px;">内存使用趋势（最近10次采样）</div>
+      <div class="memory-bars" id="memoryChart"></div>
+    </div>
+    <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;">
+      <div style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:10px;">系统健康度</div>
+      <div class="health-gauge" id="healthGauge"></div>
+    </div>
+  </div>
+
+  <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:var(--module-gap);">
+    <h4 style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:12px;">在线会话</h4>
+    <table class="data-table">
+      <thead><tr><th>Token前缀</th><th>用户</th><th>角色</th><th>登录时间</th><th>存活</th></tr></thead>
+      <tbody id="sessionTable"></tbody>
+    </table>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+    <button class="btn-sys primary" onclick="triggerSync()">🔄 手动触发同步</button>
+    <span id="syncMsg" style="font-size:var(--fs-xs);color:var(--success);"></span>
+  </div>
+</div>
+
+</div><!-- /sys-page -->
+
+<!-- ===== 用户弹窗 ===== -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal-box">
+    <h3 id="userModalTitle">新增用户</h3>
+    <input type="hidden" id="editUserId">
+    <div class="form-group"><label>用户名 *</label><input type="text" id="muUsername" placeholder="登录用户名"><span class="err-msg" id="errUsername"></span></div>
+    <div class="form-group" id="muPwdGroup"><label>密码 *</label><input type="password" id="muPassword" placeholder="登录密码"><span class="err-msg" id="errPassword"></span></div>
+    <div class="form-group"><label>显示名称</label><input type="text" id="muDisplayName" placeholder="可选"></div>
+    <div class="form-group"><label>角色</label><select id="muRole"><option value="user">普通用户</option><option value="admin">管理员</option></select></div>
+    <div class="modal-actions">
+      <button class="btn-sys" onclick="closeModal('userModal')">取消</button>
+      <button class="btn-sys primary" id="btnSubmitUser" onclick="submitUser()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 重置密码弹窗 ===== -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal-box">
+    <h3>重置密码</h3>
+    <input type="hidden" id="resetUserId">
+    <div class="form-group"><label>新密码 *</label><input type="password" id="resetPassword" placeholder="输入新密码"><span class="err-msg" id="errResetPwd"></span></div>
+    <div class="modal-actions">
+      <button class="btn-sys" onclick="closeModal('resetModal')">取消</button>
+      <button class="btn-sys primary" onclick="submitReset()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 治具弹窗 ===== -->
+<div class="modal-overlay" id="fixtureModal">
+  <div class="modal-box" style="max-width:560px;">
+    <h3 id="fixtureModalTitle">新增治具</h3>
+    <input type="hidden" id="editFixtureId">
+    <div class="modal-form-2col">
+      <div class="form-group"><label>编号 *</label><input type="text" id="fxCode"></div>
+      <div class="form-group"><label>名称 *</label><input type="text" id="fxName"></div>
+      <div class="form-group"><label>类型</label><select id="fxType"><option>测试夹具</option><option>组装治具</option><option>检测治具</option><option>其他</option></select></div>
+      <div class="form-group"><label>线体(MES code)</label><input type="text" id="fxLine"></div>
+      <div class="form-group"><label>绑定工序code *</label><input type="text" id="fxOp"></div>
+      <div class="form-group"><label>设计寿命(次) *</label><input type="number" id="fxDesign"></div>
+      <div class="form-group"><label>PING针寿命(次)</label><input type="number" id="fxPing" placeholder="测试治具填,如10000"></div>
+      <div class="form-group"><label>启用日 *</label><input type="date" id="fxInstall"></div>
+      <div class="form-group"><label>停用日</label><input type="date" id="fxRetire"></div>
+      <div class="form-group"><label>预警阈值</label><input type="number" id="fxWarn" step="0.1" value="0.9"></div>
+      <div class="form-group"><label>报废阈值</label><input type="number" id="fxScrap" step="0.1" value="1.0"></div>
+      <div class="form-group"><label>状态</label><select id="fxStatus"><option>在用</option><option>停用</option><option>已报废</option></select></div>
+      <div class="form-group"><label>备注</label><input type="text" id="fxRemark"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sys" onclick="closeModal('fixtureModal')">取消</button>
+      <button class="btn-sys primary" onclick="submitFixture()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 治具报废单弹窗 ===== -->
+<div class="modal-overlay" id="scrapModal">
+  <div class="modal-box" style="max-width:520px;">
+    <h3 id="scrapModalTitle">资产报废处置</h3>
+    <input type="hidden" id="scrapFixtureId">
+    <input type="hidden" id="scrapKind" value="fixture">
+    <div style="font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:10px;">报废为真实操作,提交后该资产状态置「已报废」并退出预警队列。请如实填写。</div>
+    <div class="modal-form-2col">
+      <div class="form-group"><label>治具编号</label><input type="text" id="scrapCode" disabled></div>
+      <div class="form-group"><label>治具名称</label><input type="text" id="scrapName" disabled></div>
+      <div class="form-group"><label>报废日期 *</label><input type="date" id="scrapDate"></div>
+      <div class="form-group"><label>报废原因 *</label><select id="scrapReason"><option value="">请选择</option><option>达到设计寿命</option><option>物理损坏</option><option>精度超差</option><option>产线淘汰</option><option>其他</option></select></div>
+      <div class="form-group"><label>处理方式</label><select id="scrapMethod"><option>报废销毁</option><option>变卖</option><option>返修</option></select></div>
+      <div class="form-group"><label>操作人(审批) *</label><input type="text" id="scrapOperator"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>替换治具编号</label><input type="text" id="scrapReplacement" placeholder="如有替换件填编号,无则留空"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>备注</label><input type="text" id="scrapRemark"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sys" onclick="closeModal('scrapModal')">取消</button>
+      <button class="btn-sys danger" onclick="submitScrapFixture()">确认报废</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 线材弹窗 ===== -->
+<div class="modal-overlay" id="cableModal">
+  <div class="modal-box" style="max-width:560px;">
+    <h3 id="cableModalTitle">新增线材</h3>
+    <input type="hidden" id="editCableId">
+    <div class="modal-form-2col">
+      <div class="form-group"><label>编号 *</label><input type="text" id="cbCode"></div>
+      <div class="form-group"><label>名称</label><input type="text" id="cbName"></div>
+      <div class="form-group"><label>规格</label><input type="text" id="cbSpec"></div>
+      <div class="form-group"><label>线体(MES code)</label><input type="text" id="cbLine"></div>
+      <div class="form-group"><label>老化工序code *</label><input type="text" id="cbOp"></div>
+      <div class="form-group"><label>单次时长(分) *</label><input type="number" id="cbUnit"></div>
+      <div class="form-group"><label>设计时长(h) *</label><input type="number" id="cbDesign"></div>
+      <div class="form-group"><label>启用日 *</label><input type="date" id="cbInstall"></div>
+      <div class="form-group"><label>停用日</label><input type="date" id="cbRetire"></div>
+      <div class="form-group"><label>预警阈值</label><input type="number" id="cbWarn" step="0.1" value="0.8"></div>
+      <div class="form-group"><label>报废阈值</label><input type="number" id="cbScrap" step="0.1" value="1.0"></div>
+      <div class="form-group"><label>状态</label><select id="cbStatus"><option>在用</option><option>停用</option><option>已报废</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sys" onclick="closeModal('cableModal')">取消</button>
+      <button class="btn-sys primary" onclick="submitCable()">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const localDate = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+let logPage = 1, monitorTimer = null, memoryHistory = [], _fixturesCache = [], _cablesCache = [];
+const MAX_MEM_POINTS = 10;
+
+/* ========== 工具 ========== */
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML.replace(/'/g, '&#39;'); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtUptime(sec) {
+  if (typeof sec !== 'number' || sec < 0) return '-';
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  return (d > 0 ? d + '天' : '') + (h > 0 || d > 0 ? h + '时' : '') + m + '分';
+}
+
+/* ========== Toast ========== */
+function toast(msg, isError) {
+  if (window.Toast) { window.Toast[isError ? 'error' : 'success'](msg); return; }
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:64px;right:20px;padding:10px 18px;border-radius:6px;font-size:13px;z-index:3000;' +
+    'background:' + (isError ? 'var(--danger-dim)' : 'var(--success-dim)') + ';' +
+    'color:' + (isError ? 'var(--danger)' : 'var(--success)') + ';' +
+    'border:1px solid ' + (isError ? 'var(--danger-border)' : 'var(--success-border)') + ';';
+  t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+/* ========== 弹窗 ========== */
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+/* ========== 确认对话框 ========== */
+function confirmAction(title, msg, cb, opts) {
+  if (window.Confirm) { window.Confirm(title, msg, opts || {}).then(cb); return; }
+  if (confirm(msg)) cb(true);
+}
+
+/* ========== 骨架屏 ========== */
+function renderSkeleton(tbody, cols, rows) {
+  rows = rows || 5;
+  let h = '';
+  for (let r = 0; r < rows; r++) {
+    h += '<tr>' + Array.from({ length: cols }, () => '<td><div class="skel skel-line" style="width:' + (45 + Math.random() * 50) + '%"></div></td>').join('') + '</tr>';
+  }
+  tbody.innerHTML = h;
+}
+
+/* ========== 搜索防抖 ========== */
+const _searchTimers = {};
+function debounceSearch(tab) {
+  clearTimeout(_searchTimers[tab]);
+  _searchTimers[tab] = setTimeout(() => {
+    if (tab === 'users') loadUsers();
+  }, 300);
+}
+// 日志查询自动触发(改级别/分类/搜索词 自动查,免点查询按钮)
+function debounceLoadLogs() {
+  clearTimeout(_searchTimers.logs);
+  _searchTimers.logs = setTimeout(() => { loadLogs(); }, 300);
+}
+
+/* ========== Tab切换 ========== */
+document.querySelectorAll('#tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+    const tab = this.dataset.tab;
+    if (tab === 'users') loadUsers();
+    if (tab === 'data') loadDbInfo();
+    if (tab === 'logs') { loadLogStats(); loadLogs(); }
+    if (tab === 'ops') loadOpsTab();
+    if (tab === 'fixture') loadFixtureLedger();
+    if (tab === 'monitor') startMonitorTimer();
+    if (tab !== 'monitor') stopMonitorTimer();
+  });
+});
+
+/* ========== 权限检查 ========== */
+async function checkAdmin() {
+  try {
+    const r = await apiFetch('/api/admin/session-info');
+    if (r.status === 403) { location.href = '/portal.html'; return; }
+  } catch (e) { /* non-fatal */ }
+}
+
+/* ==================== 用户管理 ==================== */
+let _usersCache = [];
+async function loadUsers() {
+  const tbody = document.getElementById('userTable');
+  renderSkeleton(tbody, 7, 5);
+  try {
+    const d = await apiFetch('/api/admin/users');
+    if (!d.success) return;
+    _usersCache = d.data || [];
+    const search = (document.getElementById('userSearch').value || '').toLowerCase();
+    const filtered = search ? _usersCache.filter(u => (u.username || '').toLowerCase().includes(search)) : _usersCache;
+
+    if (!filtered.length) {
+      const empty = document.getElementById('userEmpty');
+      tbody.innerHTML = '';
+      empty.style.display = search ? 'none' : '';
+      if (search) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">未找到匹配用户 "<b>' + esc(search) + '</b>"<br><button class="btn-sys" style="margin-top:8px" onclick="document.getElementById(\'userSearch\').value=\'\';loadUsers();">清除搜索</button></td></tr>'; }
+      else { empty.style.display = ''; }
+    } else {
+      document.getElementById('userEmpty').style.display = 'none';
+      tbody.innerHTML = filtered.map(u =>
+        '<tr><td>' + esc(u.username) + '</td><td>' + esc(u.display_name || '-') + '</td>' +
+        '<td><span class="badge ' + u.role + '">' + (u.role === 'admin' ? '管理员' : '用户') + '</span></td>' +
+        '<td><span class="badge ' + (u.status === 'active' ? 'active' : 'disabled') + '">' + (u.status === 'active' ? '正常' : '已禁用') + '</span></td>' +
+        '<td>' + (u.created_at ? new Date(u.created_at).toLocaleString('zh-CN') : '-') + '</td>' +
+        '<td>' + (u.last_login ? new Date(u.last_login).toLocaleString('zh-CN') : '从未登录') + '</td>' +
+        '<td>' +
+          '<button class="btn-sys xs" onclick="editUser(\'' + u.id + '\',\'' + esc(u.display_name || '') + '\',\'' + u.role + '\',\'' + (u.status || 'active') + '\')">编辑</button> ' +
+          '<button class="btn-sys xs" onclick="showReset(\'' + u.id + '\')">重置密码</button> ' +
+          (u.username !== 'admin' ? '<button class="btn-sys xs danger" onclick="deleteUser(\'' + u.id + '\',\'' + esc(u.username) + '\')">删除</button>' : '') +
+        '</td></tr>'
+      ).join('');
+    }
+    updateOverview();
+  } catch (e) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">加载失败 <button class="btn-sys" onclick="loadUsers()">重试</button></td></tr>'; }
+}
+
+function showAddUser() {
+  document.getElementById('userModalTitle').textContent = '新增用户';
+  document.getElementById('editUserId').value = '';
+  document.getElementById('muUsername').value = '';
+  document.getElementById('muUsername').disabled = false;
+  document.getElementById('muPassword').value = '';
+  document.getElementById('muDisplayName').value = '';
+  document.getElementById('muRole').value = 'user';
+  document.getElementById('muPwdGroup').style.display = '';
+  clearErrors();
+  openModal('userModal');
+}
+
+function editUser(id, displayName, role, status) {
+  document.getElementById('userModalTitle').textContent = '编辑用户';
+  document.getElementById('editUserId').value = id;
+  document.getElementById('muUsername').value = '';
+  document.getElementById('muUsername').disabled = true;
+  document.getElementById('muPassword').value = '';
+  document.getElementById('muDisplayName').value = displayName;
+  document.getElementById('muRole').value = role;
+  document.getElementById('muPwdGroup').style.display = 'none';
+  clearErrors();
+  openModal('userModal');
+}
+
+function clearErrors() {
+  document.querySelectorAll('#userModal .form-group').forEach(g => g.classList.remove('has-error'));
+  document.querySelectorAll('#userModal .err-msg').forEach(e => e.textContent = '');
+}
+
+async function submitUser() {
+  const id = document.getElementById('editUserId').value;
+  clearErrors();
+
+  if (id) {
+    const body = { display_name: document.getElementById('muDisplayName').value, role: document.getElementById('muRole').value };
+    try {
+      const d = await apiFetch('/api/admin/users/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => ({}));
+      if (!d.success) { toast(d.error || '用户编辑未上线，演示模式', true); closeModal('userModal'); return; }
+      toast('用户已更新'); closeModal('userModal'); loadUsers();
+    } catch (e) { toast('网络错误', true); }
+  } else {
+    const username = document.getElementById('muUsername').value.trim();
+    const password = document.getElementById('muPassword').value;
+    let hasErr = false;
+    if (!username) { document.getElementById('muUsername').parentElement.classList.add('has-error'); document.getElementById('errUsername').textContent = '用户名不能为空'; hasErr = true; }
+    if (!password) { document.getElementById('muPassword').parentElement.classList.add('has-error'); document.getElementById('errPassword').textContent = '密码不能为空'; hasErr = true; }
+    if (hasErr) return;
+
+    try {
+      const d = await apiFetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, display_name: document.getElementById('muDisplayName').value, role: document.getElementById('muRole').value }) });
+      if (!d.success) { toast(d.error || '用户创建未上线，演示模式', true); closeModal('userModal'); return; }
+      toast('用户已创建'); closeModal('userModal'); loadUsers();
+    } catch (e) { toast('网络错误', true); }
+  }
+}
+
+function showReset(id) {
+  document.getElementById('resetUserId').value = id;
+  document.getElementById('resetPassword').value = '';
+  document.getElementById('resetPassword').parentElement.classList.remove('has-error');
+  document.getElementById('errResetPwd').textContent = '';
+  openModal('resetModal');
+}
+
+async function submitReset() {
+  const pwd = document.getElementById('resetPassword').value;
+  if (!pwd) { document.getElementById('resetPassword').parentElement.classList.add('has-error'); document.getElementById('errResetPwd').textContent = '请输入新密码'; return; }
+  const id = document.getElementById('resetUserId').value;
+  try {
+    const d = await apiFetch('/api/admin/users/' + id + '/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) }).catch(() => ({}));
+    if (!d.success) { toast(d.error || '密码重置未上线，演示模式', true); closeModal('resetModal'); return; }
+    toast('密码已重置'); closeModal('resetModal');
+  } catch (e) { toast('网络错误', true); }
+}
+
+async function deleteUser(id, name) {
+  confirmAction('删除确认', '确定删除用户 "' + name + '"？此操作不可恢复。', async (ok) => {
+    if (!ok) return;
+    try {
+      const d = await apiFetch('/api/admin/users/' + id, { method: 'DELETE' }).catch(() => ({}));
+      if (!d.success) { toast(d.error || '用户删除未上线，演示模式', true); return; }
+      toast('用户 "' + name + '" 已删除'); loadUsers();
+    } catch (e) { toast('网络错误', true); }
+  }, { danger: true, okText: '确认删除' });
+}
+
+/* ==================== 数据管理 ==================== */
+async function loadDbInfo() {
+  try {
+    const d = await apiFetch('/api/admin/db-info');
+    if (!d.success) return;
+    const stats = d.data;
+    document.getElementById('dbStats').innerHTML = Object.entries(stats).map(([k, v]) =>
+      '<div class="stat-card"><div class="sc-val">' + v + '</div><div class="sc-lbl">' + esc(k) + '</div></div>'
+    ).join('');
+    updateOverview();
+  } catch (e) {}
+  loadBackups();
+}
+
+async function loadBackups() {
+  try {
+    const d = await apiFetch('/api/backup/list');
+    const list = d.backups || d.data || (Array.isArray(d) ? d : []);
+    const tbody = document.getElementById('backupTable');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无备份</td></tr>'; return; }
+    tbody.innerHTML = list.map(b =>
+      '<tr><td>' + esc(b.time || b.created_at || '') + '</td><td>' + (b.size || '--') + '</td><td>' + (b.tables ?? '--') + '</td>' +
+      '<td><a class="btn-sys xs" href="/api/backup/download/' + encodeURIComponent(b.key || b.id) + '" style="text-decoration:none;">下载</a></td></tr>'
+    ).join('');
+  } catch (e) { document.getElementById('backupTable').innerHTML = '<tr><td colspan="4" class="empty-state">加载失败</td></tr>'; }
+}
+
+async function saveRetention() {
+  try {
+    await apiFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backup_retention_days: parseInt(document.getElementById('retentionDays').value) || 30 }) });
+    toast('已保存');
+  } catch (e) { toast('保存失败', true); }
+}
+
+/* ==================== 日志审计 ==================== */
+async function loadLogStats() {
+  try {
+    const d = await apiFetch('/api/admin/log-stats');
+    if (!d.success) return;
+    const s = d.data;
+    document.getElementById('logStatsGrid').innerHTML =
+      '<div class="stat-card"><div class="sc-val">' + (s.totalToday || 0) + '</div><div class="sc-lbl">今日日志</div></div>' +
+      '<div class="stat-card"><div class="sc-val" style="color:var(--danger)">' + (s.errorsToday || 0) + '</div><div class="sc-lbl">今日错误</div></div>' +
+      '<div class="stat-card"><div class="sc-val">' + (s.requestsLastHour || 0) + '</div><div class="sc-lbl">近1h请求</div></div>';
+  } catch (e) {}
+}
+
+async function loadLogs() {
+  const tbody = document.getElementById('logTable');
+  renderSkeleton(tbody, 5, 6);
+  try {
+    const params = new URLSearchParams({ page: logPage, pageSize: 50 });
+    const level = document.getElementById('logLevel').value;
+    const category = document.getElementById('logCategory').value;
+    const search = document.getElementById('logSearch').value;
+    if (level) params.set('level', level);
+    if (category) params.set('category', category);
+    if (search) params.set('search', search);
+    const d = await apiFetch('/api/admin/logs?' + params);
+    if (!d.success) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">日志加载失败</td></tr>'; return; }
+    const note = d.stored === false && d.note ? '<tr><td colspan="5" class="empty-state" style="color:var(--text-muted)">ℹ ' + esc(d.note) + '</td></tr>' : '';
+    if (!d.rows || !d.rows.length) { tbody.innerHTML = note || '<tr><td colspan="5" class="empty-state">无日志记录</td></tr>'; document.getElementById('logPagination').innerHTML=''; return; }
+    tbody.innerHTML = note + d.rows.map(l => {
+      const lc = l.level === 'error' ? 'var(--danger)' : l.level === 'warn' ? 'var(--warning)' : 'var(--success)';
+      return '<tr><td style="font-size:11px;white-space:nowrap">' + (l.time ? new Date(l.time).toLocaleString('zh-CN') : '-') + '</td>' +
+        '<td style="color:' + lc + '">' + (l.level || '').toUpperCase() + '</td>' +
+        '<td style="font-size:11px">' + esc(l.path || '-') + '</td>' +
+        '<td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.message || '') + '">' + esc(l.message || '') + '</td>' +
+        '<td style="font-size:11px">' + esc(l.ip || '-') + '</td></tr>';
+    }).join('');
+    document.getElementById('logPagination').innerHTML =
+      '<button class="btn-sys xs" ' + (logPage <= 1 ? 'disabled' : '') + ' onclick="logPage--;loadLogs()">上一页</button>' +
+      '<span>第 ' + d.page + ' / ' + d.totalPages + ' 页（共 ' + d.total + ' 条）</span>' +
+      '<button class="btn-sys xs" ' + (logPage >= d.totalPages ? 'disabled' : '') + ' onclick="logPage++;loadLogs()">下一页</button>';
+  } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">加载失败 <button class="btn-sys" onclick="loadLogs()">重试</button></td></tr>'; }
+}
+
+/* ==================== 运营配置 ==================== */
+function loadOpsTab() { loadShiftConfigs(); loadShiftOverrides(); loadDowntimeCats(); loadAttendanceList(); loadProductsAdmin(); }
+
+/* -- 班次模板 -- */
+let shiftConfigs = [];
+async function loadShiftConfigs() {
+  renderSkeleton(document.getElementById('shiftConfigTable'), 6, 3);
+  try {
+    const d = await apiFetch('/api/shift-config');
+    shiftConfigs = d.items || [];
+    const tbody = document.getElementById('shiftConfigTable');
+    if (!shiftConfigs.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无班次模板<br><button class="btn-sys primary" style="margin-top:8px" onclick="addShiftConfig()">+ 新增第一个模板</button></td></tr>'; return; }
+    tbody.innerHTML = shiftConfigs.map(c => {
+      const shifts = (c.shifts || []).map(s => s.name + '(' + s.start + '-' + s.end + (s.pre_shift_min ? '点检' + s.pre_shift_min : '') + ')').join('、');
+      const breaks = (c.breaks || []).map(b => b.name + '(' + b.start + '-' + b.end + ')').join('、');
+      const handover = c.handover_min != null ? ('交接' + c.handover_min + '分') : '交接自动';
+      return '<tr><td>' + esc(c.name || '') + '</td><td>' + (c.line_name ? esc(c.line_name) : '<span style="color:var(--text-muted)">全局默认</span>') + '</td>' +
+        '<td style="font-size:11px">' + (shifts || '--') + '</td><td style="font-size:11px">' + (breaks || '--') + '<br><span style="color:var(--text-muted)">' + handover + '</span></td>' +
+        '<td>' + (c.effective_date || '--') + '</td>' +
+        '<td><button class="btn-sys xs" onclick="editShiftConfig(\'' + c._id + '\')">编辑</button> <button class="btn-sys xs danger" onclick="delShiftConfig(\'' + c._id + '\')">删除</button></td></tr>';
+    }).join('');
+  } catch (e) {}
+}
+window.addShiftConfig = function() { showShiftModal(null); };
+window.editShiftConfig = function(id) { showShiftModal(shiftConfigs.find(c => c._id === id || c._id?.toString() === id)); };
+window.delShiftConfig = async function(id) {
+  confirmAction('删除确认', '确定删除此班次模板？', async (ok) => {
+    if (!ok) return;
+    await apiFetch('/api/shift-config?id=' + id, { method: 'DELETE' });
+    toast('已删除'); loadShiftConfigs();
+  }, { danger: true });
+};
+
+function showShiftModal(existing) {
+  const data = existing || { name: '默认班次', line_name: null, handover_min: undefined, shifts: [{ name: '早班', start: '08:00', end: '17:30', pre_shift_min: 0 }], breaks: [{ name: '午休', start: '12:00', end: '13:00' }], effective_date: localDate(new Date()) };
+  const html = '<div style="max-width:520px">' +
+    '<div class="form-group"><label>模板名称</label><input type="text" id="sc_name" value="' + esc(data.name || '') + '"></div>' +
+    '<div class="form-group"><label>适用产线（留空=全局）</label><input type="text" id="sc_line" value="' + esc(data.line_name || '') + '"></div>' +
+    '<div class="form-group"><label>生效日期</label><input type="date" id="sc_date" value="' + (data.effective_date || '') + '"></div>' +
+    '<div class="form-group"><label>交接班时长（分钟，留空=按相邻班次间隙自动推，封顶30，间隙&gt;180豁免）</label><input type="number" min="0" max="120" id="sc_handover" value="' + (data.handover_min != null ? data.handover_min : '') + '" placeholder="自动"></div>' +
+    '<h4 style="font-size:12px;color:var(--text-muted);margin:12px 0 6px;">班次定义（点检分钟=每班开始前扣除的班前会议/点检时间，0=不扣）</h4><div id="sc_shifts">' +
+    (data.shifts || []).map(s => '<div style="display:flex;gap:4px;margin-bottom:4px;align-items:center;"><input type="text" style="width:54px" placeholder="班次名" value="' + esc(s.name || '') + '" class="sc-shift-name"><input type="time" value="' + (s.start || '') + '" class="sc-shift-start"><span>至</span><input type="time" value="' + (s.end || '') + '" class="sc-shift-end"><input type="number" min="0" max="120" style="width:46px" title="班前点检分钟" placeholder="点检" value="' + (s.pre_shift_min || 0) + '" class="sc-shift-preshift"><button class="btn-sys xs danger" onclick="this.parentElement.remove()">×</button></div>').join('') +
+    '</div><button class="btn-sys xs" style="margin-bottom:12px;" onclick="document.getElementById(\'sc_shifts\').insertAdjacentHTML(\'beforeend\',\'<div style=\\\'display:flex;gap:4px;margin-bottom:4px;align-items:center;\\\'><input type=\\\'text\\\' style=\\\'width:54px\\\' placeholder=\\\'班次名\\\' class=\\\'sc-shift-name\\\'><input type=\\\'time\\\' class=\\\'sc-shift-start\\\'><span>至</span><input type=\\\'time\\\' class=\\\'sc-shift-end\\\'><input type=\\\'number\\\' min=\\\'0\\\' max=\\\'120\\\' style=\\\'width:46px\\\' title=\\\'班前点检分钟\\\' placeholder=\\\'点检\\\' value=\\\'0\\\' class=\\\'sc-shift-preshift\\\'><button class=\\\'btn-sys xs danger\\\' onclick=\\\'this.parentElement.remove()\\\'>×</button></div>\')">+ 添加班次</button>' +
+    '<h4 style="font-size:12px;color:var(--text-muted);margin:12px 0 6px;">休息时间</h4><div id="sc_breaks">' +
+    (data.breaks || []).map(b => '<div style="display:flex;gap:4px;margin-bottom:4px;align-items:center;"><input type="text" style="width:60px" placeholder="名称" value="' + esc(b.name || '') + '" class="sc-break-name"><input type="time" value="' + (b.start || '') + '" class="sc-break-start"><span>至</span><input type="time" value="' + (b.end || '') + '" class="sc-break-end"><button class="btn-sys xs danger" onclick="this.parentElement.remove()">×</button></div>').join('') +
+    '</div><button class="btn-sys xs" onclick="document.getElementById(\'sc_breaks\').insertAdjacentHTML(\'beforeend\',\'<div style=\\\'display:flex;gap:4px;margin-bottom:4px;align-items:center;\\\'><input type=\\\'text\\\' style=\\\'width:60px\\\' placeholder=\\\'名称\\\' class=\\\'sc-break-name\\\'><input type=\\\'time\\\' class=\\\'sc-break-start\\\'><span>至</span><input type=\\\'time\\\' class=\\\'sc-break-end\\\'><button class=\\\'btn-sys xs danger\\\' onclick=\\\'this.parentElement.remove()\\\'>×</button></div>\')">+ 添加休息</button></div>';
+
+  confirmAction('班次模板配置', html, async (ok) => {
+    if (!ok) return;
+    const shifts = [...document.querySelectorAll('#sc_shifts > div')].map(row => ({
+      name: row.querySelector('.sc-shift-name').value, start: row.querySelector('.sc-shift-start').value, end: row.querySelector('.sc-shift-end').value,
+      pre_shift_min: Math.max(0, Number(row.querySelector('.sc-shift-preshift').value) || 0)
+    })).filter(s => s.start && s.end);
+    const breaks = [...document.querySelectorAll('#sc_breaks > div')].map(row => ({
+      name: row.querySelector('.sc-break-name').value, start: row.querySelector('.sc-break-start').value, end: row.querySelector('.sc-break-end').value
+    })).filter(b => b.start && b.end);
+    const handoverRaw = document.getElementById('sc_handover').value;
+    const payload = { _id: existing?._id || undefined, name: document.getElementById('sc_name').value, line_name: document.getElementById('sc_line').value || null, effective_date: document.getElementById('sc_date').value,
+      handover_min: handoverRaw !== '' ? Math.max(0, Number(handoverRaw) || 0) : undefined,
+      shifts, breaks, is_active: true };
+    await apiFetch('/api/shift-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    toast('班次配置已保存'); loadShiftConfigs();
+  }, { okText: '保存', cancelText: '取消' });
+}
+
+/* -- 特殊排班 -- */
+let shiftOverrides = [];
+async function loadShiftOverrides() {
+  renderSkeleton(document.getElementById('shiftOverrideTable'), 5, 3);
+  try {
+    const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0');
+    const df = y + '-' + m + '-01', dt = y + '-' + m + '-' + new Date(y, now.getMonth() + 1, 0).getDate();
+    const d = await apiFetch('/api/shift-override?dateFrom=' + df + '&dateTo=' + dt);
+    shiftOverrides = d.items || [];
+    const tbody = document.getElementById('shiftOverrideTable');
+    if (!shiftOverrides.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">本月无特殊排班</td></tr>'; return; }
+    const types = { overtime: '加班', early_off: '提前收班', holiday: '休假', custom: '自定义' };
+    tbody.innerHTML = shiftOverrides.map(o =>
+      '<tr><td>' + (o.date || '') + '</td><td>' + (o.line_name || '全线') + '</td><td>' + (types[o.type] || o.type || '') + '</td><td>' + esc(o.remark || '') + '</td>' +
+      '<td><button class="btn-sys xs danger" onclick="delShiftOverride(\'' + o._id + '\')">删除</button></td></tr>'
+    ).join('');
+  } catch (e) {}
+}
+window.addShiftOverride = function() {
+  const html = '<div class="form-group"><label>日期</label><input type="date" id="so_date" value="' + localDate(new Date()) + '"></div>' +
+    '<div class="form-group"><label>产线（留空=全线）</label><input type="text" id="so_line"></div>' +
+    '<div class="form-group"><label>类型</label><select id="so_type"><option value="overtime">加班</option><option value="early_off">提前收班</option><option value="holiday">休假</option><option value="custom">自定义</option></select></div>' +
+    '<div class="form-group"><label>备注</label><input type="text" id="so_remark"></div>';
+  confirmAction('新增特殊排班', html, async (ok) => {
+    if (!ok) return;
+    const payload = { date: document.getElementById('so_date').value, line_name: document.getElementById('so_line').value || null, type: document.getElementById('so_type').value, remark: document.getElementById('so_remark').value };
+    await apiFetch('/api/shift-override', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    toast('特殊排班已保存'); loadShiftOverrides();
+  }, { okText: '保存', cancelText: '取消' });
+};
+window.quickOvertime = function() {
+  confirmAction('确认', '确定将今天（' + localDate(new Date()) + '）设为加班日？', async (ok) => {
+    if (!ok) return;
+    await apiFetch('/api/shift-override', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: localDate(new Date()), line_name: null, type: 'overtime', remark: '一键加班' }) });
+    toast('今日已设为加班'); loadShiftOverrides();
+  });
+};
+window.delShiftOverride = async function(id) {
+  confirmAction('确认', '确定删除此特殊排班？', async (ok) => {
+    if (!ok) return;
+    await apiFetch('/api/shift-override?id=' + id, { method: 'DELETE' });
+    toast('已删除'); loadShiftOverrides();
+  }, { danger: true });
+};
+
+/* -- 停机类型字典 -- */
+let downtimeCats = {};
+async function loadDowntimeCats() {
+  try {
+    const d = await apiFetch('/api/downtime-categories');
+    downtimeCats = d.categories || {};
+    renderDowntimeCats();
+  } catch (e) {}
+}
+function renderDowntimeCats() {
+  const el = document.getElementById('downtimeEditor');
+  let h = '';
+  for (const group of ['planned', 'unplanned']) {
+    const label = group === 'planned' ? '计划停机' : '非计划停机';
+    const items = downtimeCats[group] || [];
+    h += '<div class="dt-col"><h4>' + label + '</h4>';
+    h += items.map((it, i) => '<div class="dt-row"><input type="text" style="width:80px" value="' + esc(it.code) + '" data-group="' + group + '" data-idx="' + i + '" class="dc-code"><input type="text" style="width:100px" value="' + esc(it.label) + '" data-group="' + group + '" data-idx="' + i + '" class="dc-label"><button class="btn-sys xs danger" onclick="removeDowntimeCat(\'' + group + '\',' + i + ')">×</button></div>').join('');
+    h += '<button class="btn-sys xs" style="margin-top:4px;" onclick="addDowntimeCat(\'' + group + '\')">+ 添加</button></div>';
+  }
+  el.innerHTML = h;
+}
+window.addDowntimeCat = function(group) { if (!downtimeCats[group]) downtimeCats[group] = []; downtimeCats[group].push({ code: 'new_' + Date.now() % 1000, label: '新类型' }); renderDowntimeCats(); };
+window.removeDowntimeCat = function(group, idx) { downtimeCats[group].splice(idx, 1); renderDowntimeCats(); };
+window.saveDowntimeCats = async function() {
+  document.querySelectorAll('.dc-code').forEach(el => { const g = el.dataset.group, i = +el.dataset.idx; if (downtimeCats[g] && downtimeCats[g][i]) downtimeCats[g][i].code = el.value; });
+  document.querySelectorAll('.dc-label').forEach(el => { const g = el.dataset.group, i = +el.dataset.idx; if (downtimeCats[g] && downtimeCats[g][i]) downtimeCats[g][i].label = el.value; });
+  await apiFetch('/api/downtime-categories', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(downtimeCats) });
+  toast('停机类型已保存');
+};
+
+/* -- 出勤 -- */
+async function loadAttendanceList() {
+  try {
+    const r = await apiFetch('/api/attendance');
+    const rows = (r && r.items) ? r.items : (r && r.data) ? r.data : [];
+    const tbody = document.getElementById('attTable');
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">暂无出勤记录，请录入</td></tr>'; return; }
+    tbody.innerHTML = rows.slice(0, 20).map(a =>
+      '<tr><td>' + (a.date || '') + '</td><td>' + (a.line_name || a.line_display || '-') + '</td><td>' + (a.headcount || a.on_duty_count || '-') + '</td><td>' + (a.created_at ? new Date(a.created_at).toLocaleString('zh-CN') : '-') + '</td><td><button class="btn-sys xs danger" onclick="deleteAttendance(\'' + a._id + '\')">删除</button></td></tr>'
+    ).join('');
+  } catch (e) { document.getElementById('attTable').innerHTML = '<tr><td colspan="5" class="empty-state">加载失败</td></tr>'; }
+}
+window.submitAttendance = async function() {
+  const date = document.getElementById('attDate').value || localDate(new Date());
+  const line = document.getElementById('attLine').value;
+  const count = parseInt(document.getElementById('attCount').value) || 0;
+  if (count <= 0) { document.getElementById('attMsg').textContent = '人数需>0'; document.getElementById('attMsg').style.color = 'var(--danger)'; return; }
+  try {
+    const d = await apiFetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, line_name: line || null, headcount: count, on_duty_count: count }) });
+    document.getElementById('attMsg').textContent = d.success ? '✓ 已录入' : '✗ 失败';
+    document.getElementById('attMsg').style.color = d.success ? 'var(--success)' : 'var(--danger)';
+    if (d.success) { document.getElementById('attCount').value = 12; loadAttendanceList(); }
+    setTimeout(() => { document.getElementById('attMsg').textContent = ''; }, 2500);
+  } catch (e) { document.getElementById('attMsg').textContent = '✗ 网络错误'; }
+};
+window.deleteAttendance = async function(id) {
+  confirmAction('确认', '删除此出勤记录？', async (ok) => {
+    if (!ok) return;
+    await apiFetch('/api/attendance/' + id, { method: 'DELETE' }); loadAttendanceList();
+  }, { danger: true });
+};
+
+/* -- 产品配置 -- */
+async function loadProductsAdmin() {
+  try {
+    const r = await apiFetch('/api/products');
+    const items = (r && r.items) ? r.items : (r && r.data) ? r.data : [];
+    const tbody = document.getElementById('prodTable');
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">暂无产品配置</td></tr>'; return; }
+    tbody.innerHTML = items.map(p =>
+      '<tr><td>' + esc(p.model || p.id || '-') + '</td><td>' + esc(p.name || '-') + '</td><td>' + (p.cycle_time || '-') + '</td><td>' + (p.uph || '-') + '</td>' +
+      '<td><button class="btn-sys xs danger" onclick="deleteProduct(\'' + esc(p.model || p.id) + '\')">删除</button></td></tr>'
+    ).join('');
+  } catch (e) { document.getElementById('prodTable').innerHTML = '<tr><td colspan="5" class="empty-state">加载失败</td></tr>'; }
+}
+window.submitProduct = async function() {
+  const model = document.getElementById('prodModel').value.trim();
+  const name = document.getElementById('prodName').value.trim();
+  const ct = parseInt(document.getElementById('prodCT').value) || 0;
+  const uph = parseInt(document.getElementById('prodUPH').value) || 0;
+  if (!model) { document.getElementById('prodMsg').textContent = '型号必填'; document.getElementById('prodMsg').style.color = 'var(--danger)'; return; }
+  try {
+    const d = await apiFetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_model: model, product_name: name || model, cycle_time: ct, uph }) });
+    document.getElementById('prodMsg').textContent = d.success ? '✓ 已保存' : '✗ 失败';
+    document.getElementById('prodMsg').style.color = d.success ? 'var(--success)' : 'var(--danger)';
+    if (d.success) { document.getElementById('prodModel').value = ''; document.getElementById('prodName').value = ''; loadProductsAdmin(); }
+    setTimeout(() => { document.getElementById('prodMsg').textContent = ''; }, 2500);
+  } catch (e) { document.getElementById('prodMsg').textContent = '✗ 网络错误'; }
+};
+window.deleteProduct = async function(model) {
+  confirmAction('确认', '删除产品配置: ' + model + '？', async (ok) => {
+    if (!ok) return;
+    await apiFetch('/api/products/' + encodeURIComponent(model), { method: 'DELETE' }); loadProductsAdmin();
+  }, { danger: true });
+};
+async function loadLinesForEntry() {
+  try {
+    const r = await apiFetch('/api/lines');
+    const lines = (r && r.items) ? r.items : [];
+    document.getElementById('attLine').innerHTML = '<option value="">全部线体</option>' + lines.map(l => '<option value="' + (l.code || l.id) + '">' + (l.name || l.code) + '</option>').join('');
+  } catch (e) {}
+}
+
+/* ==================== 治具线材 ==================== */
+function loadFixtureLedger() { loadFixturesAdmin(); loadScrapAdmin(); loadCablesAdmin(); loadModelMap(); loadReconcile(); loadUnmappedModels(); }
+
+async function loadFixturesAdmin() {
+  const tbody = document.getElementById('fixtureAdminTable');
+  renderSkeleton(tbody, 11, 4);
+  try {
+    const d = await apiFetch('/api/admin/fixture');
+    if (!d.success) return;
+    _fixturesCache = d.data || [];
+    if (!_fixturesCache.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty-state">暂无治具台账<br><button class="btn-sys primary" style="margin-top:8px" onclick="showAddFixture()">+ 新增治具</button></td></tr>'; return; }
+    tbody.innerHTML = _fixturesCache.map(f =>
+      '<tr><td>' + esc(f.code) + '</td><td>' + esc(f.name) + '</td><td>' + esc(f.type || '-') + '</td><td>' + esc(f.line_name || '-') + '</td><td>' + esc(f.work_operation_code || '-') + '</td>' +
+      '<td>' + esc(f.install_date || '-') + '</td><td>' + esc(f.retire_date || '-') + '</td><td>' + (f.design_life || 0) + '</td><td>' + Math.round((f.warn_ratio ?? 0.8) * 100) + '% / ' + Math.round((f.scrap_ratio ?? 1) * 100) + '%</td>' +
+      '<td>' + esc(f.status || '在用') + '</td>' +
+      '<td><button class="btn-sys xs" onclick="editFixture(\'' + f._id + '\')">编辑</button> <button class="btn-sys xs danger" onclick="deleteFixture(\'' + f._id + '\',\'' + esc(f.code) + '\')">删除</button></td></tr>'
+    ).join('');
+  } catch (e) { toast('加载治具失败', true); }
+}
+
+function showAddFixture() {
+  document.getElementById('fixtureModalTitle').textContent = '新增治具';
+  document.getElementById('editFixtureId').value = '';
+  ['fxCode','fxName','fxLine','fxOp','fxDesign','fxPing','fxInstall','fxRetire','fxRemark'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fxCode').disabled = false;
+  document.getElementById('fxType').value = '测试夹具';
+  document.getElementById('fxWarn').value = '0.9'; document.getElementById('fxScrap').value = '1.0';
+  document.getElementById('fxStatus').value = '在用';
+  openModal('fixtureModal');
+}
+
+function editFixture(id) {
+  const f = _fixturesCache.find(x => x._id === id); if (!f) return;
+  document.getElementById('fixtureModalTitle').textContent = '编辑治具';
+  document.getElementById('editFixtureId').value = f._id;
+  document.getElementById('fxCode').value = f.code || ''; document.getElementById('fxCode').disabled = true;
+  document.getElementById('fxName').value = f.name || '';
+  document.getElementById('fxType').value = f.type || '测试夹具';
+  document.getElementById('fxLine').value = f.line_name || '';
+  document.getElementById('fxOp').value = f.work_operation_code || '';
+  document.getElementById('fxDesign').value = f.design_life || '';
+  document.getElementById('fxPing').value = f.ping_life || '';
+  document.getElementById('fxInstall').value = f.install_date || '';
+  document.getElementById('fxRetire').value = f.retire_date || '';
+  document.getElementById('fxWarn').value = f.warn_ratio ?? 0.9;
+  document.getElementById('fxScrap').value = f.scrap_ratio ?? 1.0;
+  document.getElementById('fxStatus').value = f.status || '在用';
+  document.getElementById('fxRemark').value = f.remark || '';
+  openModal('fixtureModal');
+}
+
+async function submitFixture() {
+  const id = document.getElementById('editFixtureId').value;
+  const body = {
+    code: document.getElementById('fxCode').value.trim(), name: document.getElementById('fxName').value.trim(),
+    type: document.getElementById('fxType').value, line_name: document.getElementById('fxLine').value.trim(),
+    work_operation_code: document.getElementById('fxOp').value.trim(), design_life: Number(document.getElementById('fxDesign').value) || 0,
+    ping_life: Number(document.getElementById('fxPing').value) || null,
+    install_date: document.getElementById('fxInstall').value, retire_date: document.getElementById('fxRetire').value || '',
+    warn_ratio: Number(document.getElementById('fxWarn').value) || 0.9, scrap_ratio: Number(document.getElementById('fxScrap').value) || 1.0,
+    status: document.getElementById('fxStatus').value, remark: document.getElementById('fxRemark').value.trim()
+  };
+  if (!body.code || !body.name || !body.work_operation_code || !body.install_date || !body.design_life) { toast('编号/名称/工序/启用日/设计寿命 为必填项', true); return; }
+  if (id) body._id = id;
+  try {
+    const d = await apiFetch('/api/admin/fixture', { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (d.success) { toast(id ? '治具已更新' : '治具已新增'); closeModal('fixtureModal'); loadFixturesAdmin(); }
+    else toast(d.error || '保存失败', true);
+  } catch (e) { toast('网络错误', true); }
+}
+
+async function deleteFixture(id, code) {
+  confirmAction('删除确认', '确定删除治具 "' + code + '"？', async (ok) => {
+    if (!ok) return;
+    try {
+      const d = await apiFetch('/api/admin/fixture?id=' + id, { method: 'DELETE' });
+      if (d.success) { toast('治具 "' + code + '" 已删除'); loadFixturesAdmin(); }
+      else toast(d.error || '删除失败', true);
+    } catch (e) { toast('网络错误', true); }
+  }, { danger: true, okText: '确认删除' });
+}
+
+/* ===== 报废闭环管理 ===== */
+// 用 /api/fixtures(queryFixtures, 含 level/scrap/used_count/progress) 取数据;
+// 与 _fixturesCache(getFixtures 全字段, 无 level) 分开, 因待报废判定需 level
+let _scrapAssetsCache = [];
+async function loadScrapAdmin() {
+  const tbody = document.getElementById('scrapAdminTable');
+  renderSkeleton(tbody, 9, 3);
+  try {
+    const [df, dc] = await Promise.all([
+      apiFetch('/api/fixtures').catch(() => ({})),
+      apiFetch('/api/aging-cables').catch(() => ({}))
+    ]);
+    const fx = (df.success ? df.data : []) || [];
+    const cb = (dc.success ? dc.data : []) || [];
+    _scrapAssetsCache = fx.map(x => Object.assign({}, x, { kind: 'fixture' })).concat(cb.map(x => Object.assign({}, x, { kind: 'cable' })));
+    const scrapped = _scrapAssetsCache.filter(x => x.scrap && x.scrap.status === 'scrapped');
+    const pending = _scrapAssetsCache.filter(x => (!x.scrap || x.scrap.status !== 'scrapped') && x.level === 'danger');
+    if (!scrapped.length && !pending.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">暂无已报废件,暂无待报废件(无治具/线材达到报废阈值)</td></tr>';
+      return;
+    }
+    const rows = [];
+    for (const f of scrapped) {
+      const sp = f.scrap || {};
+      rows.push('<tr><td>' + esc(f.kind === 'cable' ? '线材' : '治具') + '</td><td>' + esc(f.code) + '</td><td>' + esc(f.name || '-') + '</td><td>' + esc(f.line_name || '-') + '</td>' +
+        '<td>' + (f.used_count != null ? f.used_count : '-') + ' / ' + (f.design_life || 0) + '</td>' +
+        '<td>' + (f.progress != null ? (f.progress * 100).toFixed(0) + '%' : '-') + '</td>' +
+        '<td><span style="color:var(--text-muted);">已报废</span></td>' +
+        '<td>' + esc(sp.scrap_date || '-') + ' · ' + esc(sp.reason || '-') + (sp.replacement_code ? ' · 替换 ' + esc(sp.replacement_code) : '') + '</td>' +
+        '<td><span style="font-size:var(--fs-xs);color:var(--text-muted);">已处置</span></td></tr>');
+    }
+    for (const f of pending) {
+      rows.push('<tr><td>' + esc(f.kind === 'cable' ? '线材' : '治具') + '</td><td>' + esc(f.code) + '</td><td>' + esc(f.name || '-') + '</td><td>' + esc(f.line_name || '-') + '</td>' +
+        '<td>' + (f.used_count != null ? f.used_count : '-') + ' / ' + (f.design_life || 0) + '</td>' +
+        '<td><span style="color:var(--danger);">' + (f.progress != null ? (f.progress * 100).toFixed(0) + '%' : '-') + '</span></td>' +
+        '<td><span style="color:var(--danger);">待报废</span></td><td>-</td>' +
+        '<td><button class="btn-sys xs danger" onclick="showScrapAsset(\'' + f._id + '\',\'' + f.kind + '\')">报废</button></td></tr>');
+    }
+    tbody.innerHTML = rows.join('');
+  } catch (e) { toast('加载报废队列失败', true); }
+}
+
+function showScrapAsset(id, kind) {
+  const f = _scrapAssetsCache.find(x => x._id === id && x.kind === kind); if (!f) { toast('资产不存在', true); return; }
+  if (f.scrap && f.scrap.status === 'scrapped') { toast('该资产已报废', true); return; }
+  document.getElementById('scrapFixtureId').value = f._id;
+  document.getElementById('scrapKind').value = kind;
+  document.getElementById('scrapModalTitle').textContent = (kind === 'cable' ? '线材' : '治具') + '报废处置';
+  document.getElementById('scrapCode').value = f.code || '';
+  document.getElementById('scrapName').value = f.name || '';
+  const now = new Date();
+  document.getElementById('scrapDate').value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  document.getElementById('scrapReason').value = '';
+  document.getElementById('scrapMethod').value = '报废销毁';
+  document.getElementById('scrapOperator').value = '';
+  document.getElementById('scrapReplacement').value = '';
+  document.getElementById('scrapRemark').value = '';
+  openModal('scrapModal');
+}
+
+async function submitScrapFixture() {
+  const id = document.getElementById('scrapFixtureId').value;
+  const kind = document.getElementById('scrapKind').value || 'fixture';
+  if (!id) { toast('未选中资产', true); return; }
+  const f = _scrapAssetsCache.find(x => x._id === id && x.kind === kind);
+  const scrapDate = document.getElementById('scrapDate').value;
+  const reason = document.getElementById('scrapReason').value;
+  const operator = document.getElementById('scrapOperator').value.trim();
+  const method = document.getElementById('scrapMethod').value;
+  const replacement = document.getElementById('scrapReplacement').value.trim();
+  const remark = document.getElementById('scrapRemark').value.trim();
+  if (!scrapDate || !reason || !operator) { toast('报废日期/原因/操作人 为必填项', true); return; }
+  confirmAction('报废确认', '确定将' + (kind === 'cable' ? '线材' : '治具') + ' "' + (f ? f.code : '') + '" 置为已报废？此操作将记入台账,不可撤销。', async (ok) => {
+    if (!ok) return;
+    const body = {
+      _id: id,
+      status: '已报废',
+      retire_date: scrapDate,
+      scrap: {
+        status: 'scrapped',
+        scrap_date: scrapDate,
+        reason: reason,
+        method: method,
+        operator: operator,
+        replacement_code: replacement,
+        remark: remark
+      }
+    };
+    try {
+      const endpoint = kind === 'cable' ? '/api/admin/aging-cable' : '/api/admin/fixture';
+      const d = await apiFetch(endpoint, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (d.success) { toast('已报废处置'); closeModal('scrapModal'); loadFixturesAdmin(); loadCablesAdmin(); loadScrapAdmin(); }
+      else toast(d.error || '报废失败', true);
+    } catch (e) { toast('网络错误', true); }
+  }, { danger: true, okText: '确认报废' });
+}
+
+async function loadCablesAdmin() {
+  const tbody = document.getElementById('cableAdminTable');
+  renderSkeleton(tbody, 11, 4);
+  try {
+    const d = await apiFetch('/api/admin/aging-cable');
+    if (!d.success) return;
+    _cablesCache = d.data || [];
+    if (!_cablesCache.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">暂无线材台账,点上方「从 EDO 导入」</td></tr>'; return; }
+    tbody.innerHTML = _cablesCache.map(c =>
+      '<tr><td>' + esc(c.code) + '</td><td>' + esc(c.name || '-') + '</td><td>' + esc(c.product_model || '-') + '</td><td>' + esc(c.cable_type || '-') + '</td><td>' + esc(c.line_name || '-') + '</td>' +
+      '<td>' + esc(c.install_date || '-') + '</td><td>' + (c.design_life || 0) + '</td><td>' + esc(c.keeper || '-') + '</td><td>' + esc(c.edo_status || c.status || '在用') + '</td>' +
+      '<td><button class="btn-sys xs danger" onclick="deleteCable(\'' + c._id + '\',\'' + esc(c.code) + '\')">删除</button></td></tr>'
+    ).join('');
+  } catch (e) { toast('加载线材失败', true); }
+}
+
+function showAddCable() {
+  document.getElementById('cableModalTitle').textContent = '新增线材';
+  document.getElementById('editCableId').value = '';
+  ['cbCode','cbName','cbSpec','cbLine','cbOp','cbUnit','cbDesign','cbInstall','cbRetire'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cbCode').disabled = false;
+  document.getElementById('cbWarn').value = '0.8'; document.getElementById('cbScrap').value = '1.0';
+  document.getElementById('cbStatus').value = '在用';
+  openModal('cableModal');
+}
+
+function editCable(id) {
+  const c = _cablesCache.find(x => x._id === id); if (!c) return;
+  document.getElementById('cableModalTitle').textContent = '编辑线材';
+  document.getElementById('editCableId').value = c._id;
+  document.getElementById('cbCode').value = c.code || ''; document.getElementById('cbCode').disabled = true;
+  document.getElementById('cbName').value = c.name || '';
+  document.getElementById('cbSpec').value = c.spec || '';
+  document.getElementById('cbLine').value = c.line_name || '';
+  document.getElementById('cbOp').value = c.work_operation_code || '';
+  document.getElementById('cbUnit').value = c.unit_minutes || '';
+  document.getElementById('cbDesign').value = c.design_hours || '';
+  document.getElementById('cbInstall').value = c.install_date || '';
+  document.getElementById('cbRetire').value = c.retire_date || '';
+  document.getElementById('cbWarn').value = c.warn_ratio ?? 0.8;
+  document.getElementById('cbScrap').value = c.scrap_ratio ?? 1.0;
+  document.getElementById('cbStatus').value = c.status || '在用';
+  openModal('cableModal');
+}
+
+async function submitCable() {
+  const id = document.getElementById('editCableId').value;
+  const body = {
+    code: document.getElementById('cbCode').value.trim(), name: document.getElementById('cbName').value.trim(),
+    spec: document.getElementById('cbSpec').value.trim(), line_name: document.getElementById('cbLine').value.trim(),
+    work_operation_code: document.getElementById('cbOp').value.trim(), unit_minutes: Number(document.getElementById('cbUnit').value) || 0,
+    design_hours: Number(document.getElementById('cbDesign').value) || 0, install_date: document.getElementById('cbInstall').value,
+    retire_date: document.getElementById('cbRetire').value || '', warn_ratio: Number(document.getElementById('cbWarn').value) || 0.8,
+    scrap_ratio: Number(document.getElementById('cbScrap').value) || 1.0, status: document.getElementById('cbStatus').value
+  };
+  if (!body.code || !body.work_operation_code || !body.install_date || !body.unit_minutes || !body.design_hours) { toast('编号/工序/启用日/单次时长/设计时长 为必填项', true); return; }
+  if (id) body._id = id;
+  try {
+    const d = await apiFetch('/api/admin/aging-cable', { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (d.success) { toast(id ? '线材已更新' : '线材已新增'); closeModal('cableModal'); loadCablesAdmin(); }
+    else toast(d.error || '保存失败', true);
+  } catch (e) { toast('网络错误', true); }
+}
+
+async function deleteCable(id, code) {
+  confirmAction('删除确认', '确定删除线材 "' + code + '"？', async (ok) => {
+    if (!ok) return;
+    try {
+      const d = await apiFetch('/api/admin/aging-cable?id=' + id, { method: 'DELETE' });
+      if (d.success) { toast('线材 "' + code + '" 已删除'); loadCablesAdmin(); }
+      else toast(d.error || '删除失败', true);
+    } catch (e) { toast('网络错误', true); }
+  }, { danger: true, okText: '确认删除' });
+}
+
+/* ==================== EDO 导入 / 机型对照表 / 对账 ==================== */
+async function importEdoCables() {
+  const pre = document.getElementById('importResult');
+  pre.style.display = 'block'; pre.textContent = '导入中(读xlsx + 机型匹配 + upsert,约5-15秒)...';
+  try {
+    const d = await apiFetch('/api/admin/import-edo-cables', { method: 'POST' });
+    if (d.success) { pre.textContent = d.output || '导入完成'; toast('EDO 导入完成'); loadCablesAdmin(); }
+    else { pre.textContent = '导入失败: ' + (d.error || '') + '\n' + (d.stderr || ''); toast('导入失败', true); }
+  } catch (e) { pre.textContent = '网络错误: ' + e.message; toast('网络错误', true); }
+}
+
+async function loadModelMap() {
+  const tbody = document.getElementById('modelMapTable');
+  try {
+    const d = await apiFetch('/api/admin/model-map');
+    if (!d.success) return;
+    const list = d.data || [];
+    tbody.innerHTML = list.length ? list.map(m =>
+      '<tr><td>' + esc(m.customer) + '</td><td>' + esc(m.internal) + '</td><td>' + esc(m.match || 'prefix') + '</td><td>' + esc(m.note || '') + '</td>' +
+      '<td><button class="btn-sys xs danger" onclick="deleteModelMap(\'' + encodeURIComponent(m.customer) + '\')">删除</button></td></tr>'
+    ).join('') : '<tr><td colspan="5" class="empty-state">暂无对照(EDO机型对不上production时补录)</td></tr>';
+  } catch (e) { toast('加载对照表失败', true); }
+}
+
+async function addModelMap() {
+  const customer = document.getElementById('mmCustomer').value.trim();
+  const internal = document.getElementById('mmInternal').value.trim();
+  const match = document.getElementById('mmMatch').value;
+  if (!customer || !internal) { toast('客户机型/内部料号必填', true); return; }
+  try {
+    const d = await apiFetch('/api/admin/model-map', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({customer, internal, match}) });
+    if (d.success) { toast('对照已添加,重新导入即生效'); document.getElementById('mmCustomer').value=''; document.getElementById('mmInternal').value=''; loadModelMap(); }
+    else toast(d.error || '添加失败', true);
+  } catch (e) { toast('网络错误', true); }
+}
+
+async function deleteModelMap(customerEnc) {
+  confirmAction('删除确认', '删除该机型对照?', async (ok) => {
+    if (!ok) return;
+    try {
+      const d = await apiFetch('/api/admin/model-map/' + customerEnc, { method:'DELETE' });
+      if (d.success) { toast('已删除'); loadModelMap(); } else toast(d.error || '删除失败', true);
+    } catch (e) { toast('网络错误', true); }
+  }, { danger: true, okText: '确认删除' });
+}
+
+async function loadReconcile() {
+  const el = document.getElementById('reconcileView');
+  el.textContent = '对账加载中...';
+  try {
+    const d = await apiFetch('/api/aging-cables/reconcile');
+    if (!d.success) { el.textContent = '加载失败'; return; }
+    const data = d.data || {};
+    const ratio = data.diff_ratio == null ? '-' : (data.diff_ratio * 100).toFixed(1) + '%';
+    el.innerHTML = '可对账电缆: <b>' + (data.count||0) + '</b> 根 (有EDO剩余次数且已映射)<br>' +
+      '反推均摊合计: <b>' + (data.sum_reverse||0) + '</b> · EDO用量合计: <b>' + (data.sum_edo||0) + '</b> · 偏差: <b>' + ratio + '</b><br>' +
+      '<span style="color:var(--text-muted)">注: 过站(产出单位)与EDO(线材使用次数)基准不同,偏差大属正常,客户页仅展示过站反推,不展示EDO剩余以避免基准混淆。</span>';
+  } catch (e) { el.textContent = '加载失败'; }
+}
+
+async function loadUnmappedModels() {
+  const el = document.getElementById('unmappedView');
+  if (!el) return;
+  el.textContent = '加载中...';
+  try {
+    const d = await apiFetch('/api/admin/unmapped-models');
+    if (!d.success) { el.textContent = '加载失败'; return; }
+    const list = d.data || [];
+    if (!list.length) { el.innerHTML = '<span style="color:var(--success)">全部机型已映射 ✓</span>'; return; }
+    el.innerHTML = list.map(m =>
+      '<button class="btn-sys xs" style="cursor:pointer" onclick="quickAddModelMap(\'' + esc(m.model).replace(/'/g,"\\'") + '\')" title="点击填入对照表添加">' + esc(m.model) + ' <span style="color:var(--text-muted)">' + m.type + ' ' + m.count + '根</span></button>'
+    ).join('');
+  } catch (e) { el.textContent = '加载失败'; }
+}
+
+function quickAddModelMap(model) {
+  document.getElementById('mmCustomer').value = model;
+  document.getElementById('mmInternal').focus();
+  document.getElementById('mmInternal').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+/* 预警/到期队列(内部, 不上客户页): 筛 level==='warning'||'danger' 的治具+线材 */
+function alertLevelTag(lv) {
+  if (lv === 'danger') return '<span style="color:var(--danger);font-weight:600">danger(到期)</span>';
+  if (lv === 'warning') return '<span style="color:var(--warning);font-weight:600">warning(预警)</span>';
+  return '<span style="color:var(--text-muted)">' + esc(lv || '-') + '</span>';
+}
+async function loadAlertQueue() {
+  const tbody = document.getElementById('alertQueueTable');
+  if (!tbody) return;
+  renderSkeleton(tbody, 9, 4);
+  try {
+    const [fx, cb] = await Promise.all([
+      apiFetch('/api/fixtures').catch(() => ({})),
+      apiFetch('/api/aging-cables').catch(() => ({}))
+    ]);
+    const fxList = (fx.data || []).filter(x => x.level === 'warning' || x.level === 'danger');
+    const cbList = (cb.data || []).filter(x => x.level === 'warning' || x.level === 'danger');
+    const rows = [];
+    fxList.forEach(x => rows.push({ cat: '治具', code: x.code, name: x.name, mx: x.work_operation_code || x.product_model || '-', line: x.line_name || '-', used: x.used_count, design: x.design_life, pct: x.progress, level: x.level }));
+    cbList.forEach(x => rows.push({ cat: '线材', code: x.code, name: x.name, mx: x.product_model || '-', line: x.line_name || '-', used: x.used_count, design: x.design_life, pct: x.progress, level: x.level }));
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="color:var(--success)">无预警/到期项 ✓</td></tr>'; return; }
+    rows.sort((a, b) => (b.pct || 0) - (a.pct || 0));
+    tbody.innerHTML = rows.map(r =>
+      '<tr><td>' + esc(r.cat) + '</td><td>' + esc(r.code) + '</td><td>' + esc(r.name) + '</td><td>' + esc(r.mx) + '</td><td>' + esc(r.line) + '</td>' +
+      '<td>' + (r.used || 0) + '</td><td>' + (r.design || 0) + '</td><td>' + (r.pct != null ? (r.pct * 100).toFixed(1) + '%' : '-') + '</td><td>' + alertLevelTag(r.level) + '</td></tr>'
+    ).join('');
+  } catch (e) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">加载失败</td></tr>'; }
+}
+
+/* ==================== 服务监控 ==================== */
+async function loadMonitor() {
+  try {
+
+    const d = await apiFetch('/api/admin/server-status');
+    if (d.success) {
+      const s = d.data;
+      document.getElementById('monitorStats').innerHTML =
+        '<div class="stat-card"><div class="sc-val">' + (typeof s.uptime === 'number' ? fmtUptime(s.uptime) : '-') + '</div><div class="sc-lbl">运行时长</div></div>' +
+        '<div class="stat-card"><div class="sc-val">' + (s.memoryUsage ? s.memoryUsage.rss : '-') + '</div><div class="sc-lbl">内存(MB)</div></div>' +
+        '<div class="stat-card"><div class="sc-val">' + (s.wsClients ?? '-') + '</div><div class="sc-lbl">WS连接</div></div>' +
+        '<div class="stat-card"><div class="sc-val">' + (s.activeSessions ?? '-') + '</div><div class="sc-lbl">活跃会话</div></div>' +
+        '<div class="stat-card"><div class="sc-val">' + (s.dbSize || '-') + '</div><div class="sc-lbl">数据库大小</div></div>' +
+        '<div class="stat-card"><div class="sc-val">' + (s.nodeVersion || '-') + '</div><div class="sc-lbl">Node版本</div></div>';
+      updateMemoryChart(Math.round(s.memoryUsage ? s.memoryUsage.rss : (parseFloat(s.memoryMB) || 0)));
+      updateHealthGauge(s);
+      updateOverview();
+    }
+  } catch (e) {}
+
+  try {
+    const d2 = await apiFetch('/api/admin/sessions');
+    const tbody = document.getElementById('sessionTable');
+    if (!d2.success || !d2.data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">无在线会话</td></tr>'; return; }
+    tbody.innerHTML = d2.data.map(s =>
+      '<tr><td>' + esc(s.tokenPrefix) + '</td><td>' + esc(s.user) + '</td>' +
+      '<td><span class="badge ' + s.role + '">' + (s.role === 'admin' ? '管理员' : '用户') + '</span></td>' +
+      '<td>' + new Date(s.loginTime).toLocaleString('zh-CN') + '</td><td>' + (s.alive || '-') + '</td></tr>'
+    ).join('');
+  } catch (e) {}
+}
+
+function updateMemoryChart(memMB) {
+  memoryHistory.push(memMB);
+  if (memoryHistory.length > MAX_MEM_POINTS) memoryHistory.shift();
+  const max = Math.max(...memoryHistory, 100);
+  const el = document.getElementById('memoryChart');
+  if (!el) return;
+  el.innerHTML = memoryHistory.map((v, i) => {
+    const h = Math.max(4, (v / max) * 100);
+    const color = v > 200 ? 'var(--danger)' : v > 100 ? 'var(--warning)' : 'var(--success)';
+    return '<div class="mb-bar" style="height:' + h + '%;background:' + color + '" title="' + v + 'MB">' +
+      (i === memoryHistory.length - 1 ? '<span style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap">' + v + 'MB</span>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function updateHealthGauge(data) {
+  const el = document.getElementById('healthGauge');
+  if (!el) return;
+  let score = 100, issues = [];
+  const mem = data.memoryUsage ? data.memoryUsage.rss : 0;
+  if (mem > 300) { score -= 20; issues.push('内存偏高'); } else if (mem > 200) { score -= 10; }
+  if (data.wsClients === 0) score -= 5;
+  if (data.uptime < 60) { score -= 10; issues.push('刚重启'); }
+  const color = score >= 90 ? 'var(--success)' : score >= 70 ? 'var(--warning)' : 'var(--danger)';
+  const label = score >= 90 ? '健康' : score >= 70 ? '一般' : '注意';
+  el.innerHTML = '<div class="hg-score" style="color:' + color + '">' + score + '</div><div class="hg-label" style="color:' + color + '">' + label + '</div>' +
+    (issues.length ? '<div class="hg-issues">' + issues.join(' | ') + '</div>' : '');
+}
+
+async function triggerSync() {
+  try {
+    const d = await apiFetch('/api/admin/sync-trigger', { method: 'POST' });
+    document.getElementById('syncMsg').textContent = d.message || '已触发同步';
+    setTimeout(() => { document.getElementById('syncMsg').textContent = ''; }, 3000);
+  } catch (e) { toast('触发失败', true); }
+}
+
+function startMonitorTimer() { monitorTimer = window.withVisibilityGuard(loadMonitor, 10000); } // 标签页隐藏时暂停监控轮询
+function stopMonitorTimer() { if (monitorTimer) { monitorTimer.stop(); monitorTimer = null; } }
+
+/* ==================== 概览条 ==================== */
+function updateOverview() {
+  document.getElementById('ovUsers').textContent = _usersCache.length || '--';
+  document.getElementById('ovUptime').textContent = '--';
+  document.getElementById('ovSess').textContent = '--';
+  // async update from server
+  apiFetch('/api/admin/server-status').then(d => {
+    if (d && d.success) {
+      document.getElementById('ovUptime').textContent = fmtUptime(d.data.uptime);
+      document.getElementById('ovSess').textContent = d.data.activeSessions ?? '--';
+    }
+  }).catch(() => {});
+  apiFetch('/api/admin/db-info').then(d => {
+    if (d && d.success) {
+      const total = Object.values(d.data).reduce((a, b) => a + b, 0);
+      document.getElementById('ovDb').textContent = Object.keys(d.data).length + '集合·' + total + '条';
+    }
+  }).catch(() => {});
+}
+
+/* ==================== 初始化 ==================== */
+document.addEventListener('DOMContentLoaded', function() {
+  checkAdmin();
+  loadUsers();
+  loadLinesForEntry();
+  document.getElementById('attDate').value = localDate(new Date());
+});
+</script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});</script>
+</body>
+</html>

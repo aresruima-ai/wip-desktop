@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全域驾驶舱 - AI数字化看板</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="chart-theme.js"></script>
+<script src="libs/echarts.min.js"></script>
+<script src="libs/echarts-liquidfill.min.js"></script>
+<script src="wip-ui.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0166B1">
+<style>
+/* ===== 驾驶舱 — SIGMA v4.0 BMW Edition 融合设计 =====
+   注意力钩子原则：先减权 → 再衬托 → 再让焦点活起来
+   压倒性焦点 = Focus Command Panel（呼吸光 / 状态脉冲 / 数值跳动）
+   衬托层 = KPI 卡（stagger 入场 / 数值滚动 / 变化脉冲）
+   弱化层 = 图表与 Tab（hover 才亮起，平时克制）
+============================================================ */
+body { overflow-x: hidden; }
+
+/* --- 全局：尊重 reduced-motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- KPI 9 卡布局：前8核心 + 返工率 --- */
+.kpi-row.cockpit {
+  display: grid !important;
+  grid-template-columns: repeat(9, minmax(0, 1fr)) !important;
+  gap: var(--sp-4) !important;
+  margin-bottom: var(--sp-6);
+}
+@media (max-width: 1440px) {
+  .kpi-row.cockpit { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 1024px) {
+  .kpi-row.cockpit { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 768px) {
+  .kpi-row.cockpit { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+/* KPI 卡片 — 驾驶舱专用精致风格 */
+.kpi-row.cockpit .kpi-card {
+  border-left: 3px solid var(--kpi-color, var(--brand));
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-5);
+  min-height: 130px;
+  position: relative; overflow: hidden; cursor: pointer;
+  background: var(--surface-1);
+  /* 进阶版:入场起手态改由 ATTN.revealCascade 注入 .attn-reveal(JS 注入,避免 CSS 写死 opacity:0 导致 JS 失败时永久不可见)。
+     删除本地 opacity:0 + .in 类机制,统一 .attn-reveal/.attn-in。 */
+  transition: border-color var(--dur-slow) var(--ease-out),
+              box-shadow   var(--dur-slow) var(--ease-out);
+}
+/* legacy .in 类保留兼容(revealCascade 未跑时的兜底可见) */
+.kpi-row.cockpit .kpi-card.in { opacity: 1; transform: none; }
+.kpi-row.cockpit .kpi-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, var(--kpi-color, var(--brand)), transparent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* 状态光带：正常/预警/报警 三态，平时静止，预警微脉动，报警强脉冲 */
+.kpi-row.cockpit .kpi-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(120% 80% at 0% 0%, var(--kpi-color, var(--brand)), transparent 55%);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.kpi-row.cockpit .kpi-card:hover {
+  border-color: var(--kpi-color, var(--brand));
+  box-shadow: var(--shadow-2), inset 0 0 0 1px rgba(var(--brand-rgb),0.08);
+  transform: translateY(-3px);
+}
+.kpi-row.cockpit .kpi-card:hover::after { opacity: 0.08; }
+/* 进阶版:严重度三态统一 sev-warn/sev-danger(原 state-warn/state-alert 由 ATTN.setFocusState 兼容清理)。
+   legacy state-warn/state-alert 类保留作 alias,效果等价(避免改 HTML 调用点的大量改动)。 */
+.kpi-row.cockpit .kpi-card.state-warn,
+.kpi-row.cockpit .kpi-card.sev-warn {
+  border-left-width: 3px;
+  animation: kpi-warn-breath 2.8s var(--ease-in-out) infinite;
+}
+.kpi-row.cockpit .kpi-card.state-alert,
+.kpi-row.cockpit .kpi-card.sev-danger {
+  animation: kpi-alert-pulse 1.4s var(--ease-in-out) infinite;
+}
+.kpi-row.cockpit .kpi-card.state-alert::after,
+.kpi-row.cockpit .kpi-card.sev-danger::after { opacity: 0.10; }
+@keyframes kpi-warn-breath {
+  0%, 100% { box-shadow: inset 3px 0 0 0 var(--warning), 0 0 0 0 rgba(var(--warning-rgb),0); }
+  50%      { box-shadow: inset 3px 0 0 0 var(--warning), 0 0 18px -4px rgba(var(--warning-rgb),0.35); }
+}
+@keyframes kpi-alert-pulse {
+  0%, 100% { box-shadow: inset 3px 0 0 0 var(--danger), 0 0 0 0 rgba(var(--danger-rgb),0); }
+  50%      { box-shadow: inset 3px 0 0 0 var(--danger), 0 0 22px -2px rgba(var(--danger-rgb),0.45); }
+}
+.kpi-row.cockpit .kpi-label {
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.kpi-row.cockpit .kpi-value {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+  /* 数值更新时闪烁高亮（由 .flash 类触发） */
+  transition: color var(--dur-base) var(--ease-out), text-shadow var(--dur-base) var(--ease-out);
+}
+.kpi-row.cockpit .kpi-value.flash-up {
+  color: var(--success);
+  text-shadow: 0 0 14px rgba(var(--success-rgb),0.55);
+}
+.kpi-row.cockpit .kpi-value.flash-down {
+  color: var(--danger);
+  text-shadow: 0 0 14px rgba(var(--danger-rgb),0.55);
+}
+.kpi-row.cockpit .kpi-sub {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.kpi-change {
+  position: absolute; top: 10px; right: 12px;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 6px; border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  opacity: 0; transform: translateY(-4px);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.kpi-row.cockpit .kpi-card.in .kpi-change { opacity: 1; transform: translateY(0); }
+.kpi-change.up   { color: var(--success); background: var(--success-dim); }
+.kpi-change.down { color: var(--danger);  background: var(--danger-dim); }
+.kpi-change.flat { color: var(--text-muted); }
+/* 变化数字刷新瞬间放大回弹 */
+.kpi-change.bump { animation: kpi-change-bump 600ms var(--ease-out); }
+@keyframes kpi-change-bump {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(-2px) scale(1.35); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* --- 液态填充图 KPI --- */
+.kpi-liquid-wrap {
+  display: flex; align-items: center; gap: 12px;
+}
+.kpi-liquid {
+  width: 48px; height: 48px; flex-shrink: 0;
+}
+
+/* --- 驾驶舱 Chart Grid：2x2 精密布局 --- */
+.cockpit-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: var(--sp-5) !important;
+  margin-bottom: var(--sp-6);
+}
+.cockpit-grid .chart-panel {
+  padding: 22px 26px !important;
+  min-height: 320px;
+  /* 进阶版:入场改由 ATTN.revealCascade 注入 .attn-reveal 起手态(JS注入,避免CSS写死opacity导致JS失败时不可见)。
+     删除本地 opacity:0 起手态 + .revealed 类机制,统一走 .attn-reveal/.attn-in。 */
+  transition: box-shadow var(--dur-slow) var(--ease-out),
+              border-color var(--dur-slow) var(--ease-out);
+}
+.cockpit-grid .chart-panel:hover {
+  box-shadow: var(--shadow-2);
+  border-color: var(--brand-border);
+}
+.cockpit-grid .chart-box {
+  min-height: 280px;
+}
+@media (max-width: 900px) {
+  .cockpit-grid { grid-template-columns: 1fr !important; }
+}
+
+/* --- 底部 Tab 区 --- */
+.cockpit-tabs {
+  display: flex; align-items: center; gap: 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--sp-5);
+}
+.cockpit-tab {
+  padding: 10px 20px;
+  font-size: var(--fs-sm); font-weight: 500;
+  color: var(--text-muted); background: transparent;
+  border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; transition: all var(--dur-fast);
+  font-family: inherit; letter-spacing: 0.2px;
+  position: relative;
+}
+.cockpit-tab:hover { color: var(--text-secondary); }
+.cockpit-tab.active {
+  color: var(--brand); border-bottom-color: var(--brand);
+  font-weight: 600;
+}
+.cockpit-tab-badge {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; margin-left: 6px; vertical-align: middle;
+}
+.cockpit-tab-badge.warn { background: var(--warning); }
+.cockpit-tab-badge.alert {
+  background: var(--danger);
+  box-shadow: 0 0 6px rgba(var(--danger-rgb),0.55);
+  animation: badge-alert 1.4s var(--ease-in-out) infinite;
+}
+@keyframes badge-alert {
+  0%, 100% { box-shadow: 0 0 4px rgba(var(--danger-rgb),0.4); }
+  50%      { box-shadow: 0 0 10px rgba(var(--danger-rgb),0.85); }
+}
+
+.cockpit-panel { display: none; }
+.cockpit-panel.active { display: block; animation: panel-in 380ms var(--ease-out); }
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Focus 全区：压倒性焦点 --- */
+.cockpit-focus {
+  margin-bottom: var(--sp-6);
+  position: relative;
+}
+/* 进阶版:删除 focus-title fs-2xl !important 覆盖,回归 common.css fs-3xl + 衬线 var(--font-display)
+   (原 L644 §6b fs-hero 冲突块已于 Phase0 删除,此处不再二次覆盖) */
+/* 焦点呼吸光：边缘渐变缓慢明灭，制造"活的心脏"感 */
+.cockpit-focus .focus-shell {
+  position: relative;
+  isolation: isolate;
+}
+.cockpit-focus .focus-shell::before {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg,
+    rgba(var(--brand-rgb),0.18) 0%,
+    transparent 35%,
+    transparent 65%,
+    rgba(var(--brand-rgb),0.10) 100%);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: -1;
+  /* 密度纪律：正常态静态高光(不呼吸)，为雷达环让出常驻名额；水球+雷达+live-dot 已提供活力 */
+  animation: none;
+}
+@keyframes focus-aura {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.75; }
+}
+/* 三态光：正常=静态蓝高光 / 预警=琥珀呼吸 / 报警=红强脉冲 */
+.cockpit-focus .focus-shell.state-warn::before {
+  background: linear-gradient(135deg, rgba(var(--warning-rgb),0.22), transparent 50%, rgba(var(--warning-rgb),0.12));
+  animation: focus-aura 3s var(--ease-in-out) infinite;
+}
+.cockpit-focus .focus-shell.state-alert::before {
+  background: linear-gradient(135deg, rgba(var(--danger-rgb),0.30), transparent 50%, rgba(var(--danger-rgb),0.18));
+  animation: focus-aura-alert 1.6s var(--ease-in-out) infinite;
+}
+@keyframes focus-aura-alert {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.95; }
+}
+/* 焦点 eyebrow 的 pulse 点：随状态变色 */
+.cockpit-focus .pulse {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--success);
+  margin-right: 7px; vertical-align: middle;
+  box-shadow: 0 0 0 0 rgba(var(--success-rgb),0.55);
+  animation: pulse-ring 2s var(--ease-out) infinite;
+}
+.cockpit-focus .focus-shell.state-warn .pulse {
+  background: var(--warning);
+  box-shadow: 0 0 0 0 rgba(var(--warning-rgb),0.55);
+}
+.cockpit-focus .focus-shell.state-alert .pulse {
+  background: var(--danger);
+  box-shadow: 0 0 0 0 rgba(var(--danger-rgb),0.6);
+  animation-duration: 1.2s;
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  70%  { box-shadow: 0 0 0 7px rgba(255,255,255,0); opacity: 0.7; }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); opacity: 1; }
+}
+/* 焦点数值跳动高亮 */
+.cockpit-focus .focus-meta strong,
+.cockpit-focus .focus-side .value,
+.cockpit-focus .focus-detail .value {
+  transition: color var(--dur-base) var(--ease-out), text-shadow var(--dur-base) var(--ease-out);
+}
+.cockpit-focus .flash {
+  color: var(--brand) !important;
+  text-shadow: 0 0 16px rgba(var(--brand-rgb),0.6);
+}
+/* 光标跟随聚光灯（pointer 设备） */
+@media (pointer: fine) {
+  .cockpit-focus .focus-shell {
+    --mx: 50%; --my: 50%;
+  }
+  .cockpit-focus .focus-shell::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(280px circle at var(--mx) var(--my),
+      rgba(var(--brand-rgb),0.10), transparent 60%);
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--dur-slow) var(--ease-out);
+    z-index: 0;
+  }
+  .cockpit-focus .focus-shell:hover::after { opacity: 1; }
+  .cockpit-focus .focus-shell > * { position: relative; z-index: 1; }
+}
+
+/* --- Update Bar 实时心跳 --- */
+.update-bar .live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 0 rgba(var(--success-rgb),0.6);
+  animation: live-heartbeat 1.8s var(--ease-out) infinite;
+  display: inline-block; flex-shrink: 0;
+}
+.update-bar .live-dot.stale {
+  background: var(--warning);
+  animation-duration: 1s;
+}
+.update-bar .live-dot.error {
+  background: var(--danger);
+  animation: live-heartbeat 0.8s var(--ease-out) infinite;
+}
+@keyframes live-heartbeat {
+  0%   { box-shadow: 0 0 0 0 currentColor; transform: scale(1); }
+  70%  { box-shadow: 0 0 0 6px rgba(255,255,255,0); transform: scale(1.15); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); transform: scale(1); }
+}
+.update-bar .time.flash {
+  animation: time-flash 600ms var(--ease-out);
+}
+@keyframes time-flash {
+  0%   { color: var(--text-primary); }
+  50%  { color: var(--brand); }
+  100% { color: var(--text-primary); }
+}
+
+/* --- 周期选择器 --- */
+.period-select {
+  padding: 5px 28px 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M0 3l5 5 5-5' stroke='%238893a3' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 8px center !important;
+  color: var(--text-primary); font-size: var(--fs-sm);
+  font-family: inherit; cursor: pointer; height: 32px;
+  appearance: none; transition: border-color var(--dur-fast);
+}
+.period-select:focus { outline: none; border-color: var(--brand-border) !important; }
+
+/* --- 刷新按钮 --- */
+.refresh-btn {
+  padding: 5px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: transparent;
+  color: var(--text-secondary); font-size: var(--fs-sm);
+  cursor: pointer; font-family: inherit;
+  transition: all var(--dur-fast);
+}
+.refresh-btn:hover { border-color: var(--brand-border); color: var(--brand); }
+.refresh-btn.spinning { pointer-events: none; }
+.refresh-btn.spinning::before {
+  content: '↻'; display: inline-block; margin-right: 4px;
+  animation: spin 800ms linear infinite;
+}
+
+/* --- 全域 Alert Bar --- */
+.cockpit-alert {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-radius: var(--radius-lg);
+  background: var(--danger-dim); border: 1px solid var(--danger-border);
+  color: var(--danger); font-size: var(--fs-sm);
+  margin-bottom: var(--sp-5); display: none;
+  position: relative; overflow: hidden;
+}
+.cockpit-alert.show {
+  display: flex;
+  animation: alert-in 420ms var(--ease-out);
+}
+.cockpit-alert.show::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--danger);
+  animation: alert-edge 1.4s var(--ease-in-out) infinite;
+}
+@keyframes alert-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes alert-edge {
+  0%, 100% { box-shadow: 0 0 6px rgba(var(--danger-rgb),0.4); }
+  50%      { box-shadow: 0 0 14px rgba(var(--danger-rgb),0.9); }
+}
+.cockpit-alert .alert-icon { font-size: 16px; flex-shrink: 0; }
+.cockpit-alert .alert-msg { flex: 1; line-height: 1.6; }
+.cockpit-alert .alert-dismiss {
+  background: none; border: none; color: var(--danger);
+  cursor: pointer; font-size: 16px; padding: 2px 6px;
+  border-radius: var(--radius-xs); transition: background var(--dur-fast);
+}
+.cockpit-alert .alert-dismiss:hover { background: rgba(var(--danger-rgb),0.15); }
+
+/* --- 图表全宽 --- */
+.cockpit-full-chart {
+  margin-bottom: var(--sp-6);
+}
+.cockpit-full-chart .chart-box {
+  min-height: 360px;
+}
+
+/* --- 区段标题：弱化衬托 --- */
+.kpi-section-title {
+  opacity: 0.85;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.kpi-section-title:hover { opacity: 1; }
+
+/* --- Loading Mask 平滑淡出 --- */
+.loading-mask {
+  transition: opacity 420ms var(--ease-out);
+}
+.loading-mask.hide {
+  opacity: 0; pointer-events: none;
+}
+
+/* ===== 压倒性焦点：OEE 指挥水球 + 雷达扫描环 (蓝图签名钩子#1) ===== */
+.cockpit-focus .command-orb-wrap{
+  position:relative;width:128px;height:128px;margin:6px auto 14px;
+  display:flex;align-items:center;justify-content:center;
+}
+.cockpit-focus .command-orb{width:128px;height:128px;position:relative;z-index:2}
+.cockpit-focus .orb-radar{
+  position:absolute;inset:-6px;border-radius:50%;z-index:1;
+  background:conic-gradient(from 0deg, rgba(var(--brand-rgb),0) 0deg, rgba(var(--brand-rgb),0.38) 40deg, rgba(var(--brand-rgb),0) 80deg);
+  -webkit-mask:radial-gradient(circle, transparent 58%, #000 59% 72%, transparent 73%);
+          mask:radial-gradient(circle, transparent 58%, #000 59% 72%, transparent 73%);
+  animation:cockpit-radar var(--scan-period,3.6s) linear infinite;
+}
+.cockpit-focus .focus-shell.state-warn .orb-radar{
+  background:conic-gradient(from 0deg,rgba(var(--warning-rgb),0) 0deg,rgba(var(--warning-rgb),0.40) 40deg,rgba(var(--warning-rgb),0) 80deg);
+}
+.cockpit-focus .focus-shell.state-alert .orb-radar{
+  background:conic-gradient(from 0deg,rgba(var(--danger-rgb),0) 0deg,rgba(var(--danger-rgb),0.45) 40deg,rgba(var(--danger-rgb),0) 80deg);
+  animation-duration:1.6s;
+}
+@keyframes cockpit-radar{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.cockpit-focus .orb-radar{animation:none;opacity:0.45}}
+</style>
+</head>
+<body>
+
+<!-- Loading Mask -->
+<div class="loading-mask" id="loadingMask">
+  <div class="loading-spinner"></div>
+</div>
+
+<div class="wip-page cockpit-page">
+
+  <!-- ===== Top Bar — 单层顶栏(状态|操作) 无FilterBar/quickQuery/subnav ===== -->
+  <div class="top-bar">
+    <div class="tb-seg tb-seg-status">
+      <div class="live-dot" id="liveDot"></div>
+      <span class="time" id="updateTime">数据加载中...</span>
+      <span id="misceInfo" style="font-size:11px;color:var(--text-muted)"></span>
+    </div>
+    <div class="tb-divider"></div>
+    <div class="tb-seg tb-seg-action">
+      <select class="period-select" id="periodSelect">
+        <option value="realtime">实时</option>
+        <option value="week">本周</option>
+        <option value="month">本月</option>
+        <option value="quarter">本季</option>
+        <option value="half">半年</option>
+        <option value="year">年度</option>
+        <option value="all">全部</option>
+        <option value="custom">自定义</option>
+      </select>
+      <span class="period-custom" id="periodCustom" style="display:none">
+        <input type="date" id="customFrom" class="cust-from"><span class="cust-sep">~</span><input type="date" id="customTo" class="cust-to">
+      </span>
+      <button class="refresh-btn" id="refreshBtn">↻ 刷新</button>
+    </div>
+  </div>
+
+  <!-- ===== 全域 Alert ===== -->
+  <div class="cockpit-alert" id="cockpitAlert">
+    <span class="alert-icon">⚠</span>
+    <span class="alert-msg" id="alertMsg"></span>
+    <button class="alert-dismiss" id="alertDismiss">×</button>
+  </div>
+
+  <!-- ===== Focus Command Panel：全域焦点 ===== -->
+  <div class="cockpit-focus">
+    <div class="focus-shell" id="focusShell">
+      <div class="focus-card">
+        <div class="focus-content">
+          <div class="focus-eyebrow"><span class="pulse"></span><span id="focusScope">全域关注 · 综合状态</span></div>
+          <div class="focus-title" id="focusTitle">正在读取全域状态...</div>
+          <div class="command-orb-wrap" id="commandOrbWrap" aria-label="全域 OEE 指挥水球">
+            <div class="orb-radar"></div>
+            <div class="command-orb" id="commandOrb"></div>
+          </div>
+          <div class="focus-action" id="focusAction">系统综合 OEE / 不良率 / 设备状态 / 服务健康，优先指出当前最需要处理的异常项。</div>
+          <div class="focus-meta" id="focusMeta">
+            <span class="focus-chip"><strong id="fmKpi1">--</strong><span id="fmLabel1">OEE</span></span>
+            <span class="focus-chip"><strong id="fmKpi2">--</strong><span id="fmLabel2">FPY</span></span>
+            <span class="focus-chip"><strong id="fmKpi3">--</strong><span id="fmLabel3">不良PPM</span></span>
+            <span class="focus-chip"><strong id="fmKpi4">--</strong><span id="fmLabel4">服务</span></span>
+          </div>
+          <div class="focus-detail" id="focusDetail">
+            <div class="focus-detail-block">
+              <div class="label">最差产线 OEE</div>
+              <div class="value" id="focusWorstLine">--</div>
+              <div class="sub" id="focusWorstLineSub">点击查看详情</div>
+            </div>
+            <div class="focus-detail-block">
+              <div class="label">TOP1 不良</div>
+              <div class="value" id="focusTopBad">--</div>
+              <div class="sub" id="focusTopBadSub">集中度 --</div>
+            </div>
+          </div>
+          <div class="focus-actions" id="focusActions">
+            <button onclick="Cockpit.scrollTo('cockpitGrid')">查看趋势</button>
+            <button onclick="Cockpit.scrollTo('cockpitTabs')">查看明细</button>
+            <button onclick="Cockpit.refreshAll()">全域刷新</button>
+          </div>
+        </div>
+      </div>
+      <div class="focus-side">
+        <div class="focus-mini" id="focusSide1">
+          <div class="label">OEE 综合</div>
+          <div class="value" id="focusSide1Val">--</div>
+          <div class="hint" id="focusSide1Hint">全部产线</div>
+        </div>
+        <div class="focus-mini" id="focusSide2">
+          <div class="label">不良 PPM</div>
+          <div class="value" id="focusSide2Val">--</div>
+          <div class="hint" id="focusSide2Hint">实时</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 核心 KPI 8卡：4页融合 ===== -->
+  <div class="kpi-section-title"><span>全域核心指标</span><span>生产 · 质量 · 设备 · 系统</span></div>
+  <div class="kpi-row cockpit" id="kpiRow">
+
+    <!-- 来自 dashboard -->
+    <div class="kpi-card" style="--kpi-color:var(--brand)" onclick="Cockpit.openDrawer('oee')">
+      <div class="kpi-label">OEE 设备综合效率</div>
+      <div class="kpi-value" id="kpiOEE">--</div>
+      <div class="kpi-sub" id="kpiOEESub">--</div>
+      <div class="kpi-change flat" id="kpiOEEChange"></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color:var(--success)" onclick="Cockpit.openDrawer('output')">
+      <div class="kpi-label">今日产出</div>
+      <div class="kpi-value" id="kpiOutput">--</div>
+      <div class="kpi-sub" id="kpiOutputSub">--</div>
+      <div class="kpi-change flat" id="kpiOutputChange"></div>
+    </div>
+
+    <!-- 来自 bad -->
+    <div class="kpi-card" style="--kpi-color:var(--danger)" onclick="Cockpit.openDrawer('bad')">
+      <div class="kpi-label">不良 PPM</div>
+      <div class="kpi-value" id="kpiPPM">--</div>
+      <div class="kpi-sub" id="kpiPPMSub">--</div>
+      <div class="kpi-change flat" id="kpiPPMChange"></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color:var(--success)" onclick="Cockpit.openDrawer('fpy')">
+      <div class="kpi-label">FPY 直通率</div>
+      <div class="kpi-value" id="kpiFPY">--</div>
+      <div class="kpi-sub" id="kpiFPYSub">--</div>
+      <div class="kpi-change flat" id="kpiFPYChange"></div>
+    </div>
+
+    <!-- 来自 oee -->
+    <div class="kpi-card" style="--kpi-color:var(--brand)" onclick="Cockpit.openDrawer('availability')">
+      <div class="kpi-label">设备可用率 <span style="font-size:10px;color:var(--text-muted);font-weight:400">·运行时长推算</span></div>
+      <div class="kpi-value" id="kpiAvail">--</div>
+      <div class="kpi-sub" id="kpiAvailSub">--</div>
+      <div class="kpi-change flat" id="kpiAvailChange"></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color:var(--warning)" onclick="Cockpit.openDrawer('performance')">
+      <div class="kpi-label">表现指数</div>
+      <div class="kpi-value" id="kpiPerf">--</div>
+      <div class="kpi-sub" id="kpiPerfSub">--</div>
+      <div class="kpi-change flat" id="kpiPerfChange"></div>
+    </div>
+
+    <!-- 来自 health -->
+    <div class="kpi-card" style="--kpi-color:var(--info)" onclick="Cockpit.openDrawer('health')">
+      <div class="kpi-label">服务状态</div>
+      <div class="kpi-value" id="kpiHealth" style="font-size:var(--fs-xl)">--</div>
+      <div class="kpi-sub" id="kpiHealthSub">--</div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color:var(--purple)" onclick="Cockpit.openDrawer('sync')">
+      <div class="kpi-label">数据同步</div>
+      <div class="kpi-value" id="kpiSync" style="font-size:var(--fs-xl)">--</div>
+      <div class="kpi-sub" id="kpiSyncSub">--</div>
+    </div>
+
+    <!-- 12-KPI Phase1: 返工率(质量域,真实数据) -->
+    <div class="kpi-card" style="--kpi-color:var(--warning)" onclick="location.href='bad.html'">
+      <div class="kpi-label">返工率</div>
+      <div class="kpi-value" id="kpiRework">--</div>
+      <div class="kpi-sub" id="kpiReworkSub">--</div>
+    </div>
+
+  </div>
+
+  <!-- ===== 关键图表 2x2 Grid ===== -->
+  <div class="kpi-section-title"><span>关键趋势</span><span>点击图表查看明细</span></div>
+  <div class="cockpit-grid" id="cockpitGrid">
+    <div class="chart-panel">
+      <div class="chart-panel-title">产出 & OEE 日趋势</div>
+      <div class="chart-box" id="chartOutput"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">不良 Pareto</div>
+      <div class="chart-box" id="chartPareto"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">设备 OEE 趋势</div>
+      <div class="chart-box" id="chartOEE"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">服务同步历史</div>
+      <div class="chart-box" id="chartHealth"></div>
+    </div>
+  </div>
+
+  <!-- ===== 底部 Tab 区：各页面明细 ===== -->
+  <div id="cockpitTabs">
+    <div class="cockpit-tabs" id="cockpitTabBar">
+      <button class="cockpit-tab active" data-target="panelProduction">生产总览</button>
+      <button class="cockpit-tab" data-target="panelQuality">质量分析<span class="cockpit-tab-badge warn" id="badgeQuality" style="display:none"></span></button>
+      <button class="cockpit-tab" data-target="panelEquipment">设备 OEE</button>
+      <button class="cockpit-tab" data-target="panelSystem">系统运维<span class="cockpit-tab-badge" id="badgeSystem" style="display:none"></span></button>
+    </div>
+
+    <!-- 生产总览 Panel -->
+    <div class="cockpit-panel active" id="panelProduction">
+      <div class="full-stack">
+        <div class="chart-panel">
+          <div class="chart-panel-title">各线体产出对比</div>
+          <div class="chart-box chart-box-md" id="chartLine"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-title">产出分段（组装 / 测试 / 包装）</div>
+          <div class="chart-box chart-box-md" id="chartStage"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 质量分析 Panel -->
+    <div class="cockpit-panel" id="panelQuality">
+      <div class="full-stack">
+        <div class="chart-panel">
+          <div class="chart-panel-title">不良趋势</div>
+          <div class="chart-box chart-box-md" id="chartBadTrend"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-title">SPC 控制图</div>
+          <div class="chart-box chart-box-md" id="chartSPC"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设备 OEE Panel -->
+    <div class="cockpit-panel" id="panelEquipment">
+      <div class="full-stack">
+        <div class="chart-panel">
+          <div class="chart-panel-title">OEE 分解（可用率 · 表现指数 · 质量指数）</div>
+          <div class="chart-box chart-box-md" id="chartOEEDetail"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-title">停机时间线</div>
+          <div class="chart-box chart-box-md" id="chartDowntime"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 系统运维 Panel -->
+    <div class="cockpit-panel" id="panelSystem">
+      <div class="full-stack">
+        <div class="chart-panel">
+          <div class="chart-panel-title">内存趋势</div>
+          <div class="chart-box chart-box-md" id="chartMemory"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-title">服务响应时间</div>
+          <div class="chart-box chart-box-md" id="chartResponse"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wip-page -->
+
+<!-- ===== Drawer (统一 WipUI.Drawer 标准 DOM) ===== -->
+<div class="drawer-mask" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h3 id="drawerTitle">--</h3>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="refresh-btn" id="drawerExport" style="font-size:var(--fs-xs);padding:4px 10px">&#x2B07; 导出</button>
+      <button class="drawer-close" id="drawerCloseBtn">&times;</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-stats" id="drawerStats"></div>
+    <div id="drawerContent"></div>
+  </div>
+</div>
+
+<!-- ===== JavaScript ===== -->
+<script>
+'use strict';
+
+/* ============================================================
+   兼容层：原页面引用了 renderNav / $ / CHART.theme / CHART.textColor /
+   CHART.colors[n]，但这些在共享脚本里并不存在（chart-theme.js 暴露的是
+   CHART.colors.blue 等对象属性）。这里就地补齐，避免 ReferenceError，
+   不写共享文件以免与并行分身冲突。
+   ============================================================ */
+// $ 选择器（若全局未定义则注入）
+if (typeof window.$ !== 'function') {
+  window.$ = function(id) {
+    return document.getElementById(id && id.charAt(0) === '#' ? id.slice(1) : id);
+  };
+}
+// renderNav 占位：nav.js 会自建顶栏，这里只做兜底，不重复创建
+if (typeof window.renderNav !== 'function') {
+  window.renderNav = function() { /* nav.js 自建 header，无需此处动作 */ };
+}
+// CHART 兼容补丁：补 theme / textColor / colors[n] 数组别名
+if (window.CHART) {
+  if (typeof CHART.theme === 'undefined')   CHART.theme = null; // echarts.init(el, null) 等价默认主题
+  if (typeof CHART.textColor === 'undefined') CHART.textColor = CHART.legendText || '#8893a3';
+  // 把对象 colors 别名为数组（保留对象原属性的同时支持 [n] 索引）
+  if (CHART.colors && !Array.isArray(CHART.colors)) {
+    var _pal = CHART.palette6 || [
+      CHART.colors.blue, CHART.colors.green, CHART.colors.orange,
+      CHART.colors.red,  CHART.colors.purple, CHART.colors.cyan
+    ];
+    // 不覆盖原对象，而是在其上挂 0..5 数字键 + length，使其"伪数组化"
+    _pal.forEach(function(c, i) { CHART.colors[i] = c; });
+    CHART.colors.length = _pal.length;
+  }
+}
+
+/* ============================================================
+   驾驶舱主模块 — 注意力钩子版
+   ============================================================ */
+const Cockpit = (() => {
+  let currentPeriod = 'realtime';
+  let charts = {};
+  let refreshTimer = null;
+  let ws = null;
+  let revealObs = null;
+  let lastKPI = {};      // 记录上次 KPI 值，用于检测变化方向
+  let focusState = 'normal'; // normal | warn | danger (进阶版:统一 sev 语义)
+  let _tabInited = {};     // 跟踪已初始化的 tab 面板
+
+  // 进阶版:reduced-motion 单一真源查 ATTN.REDUCED(删除本地 matchMedia 重复检测)
+  const REDUCED = (window.ATTN && ATTN.REDUCED) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // 进阶版:setKPI 别名透传 ATTN.setKPI(原依赖未定义全局 setKPI 的潜伏 bug,数据齐全时才触发 ReferenceError)
+  var setKPI = (window.ATTN && ATTN.setKPI) || function(id, v){ var e = document.getElementById(id); if(e) e.textContent = v; };
+
+	  /* 日期格式化辅助 */
+	  // localDate 收口到 common.js (window.localDate), 本页不再单独定义
+
+  /* ===== 周期→日期范围(取代散落的 var today 硬编码) =====
+     realtime/today → 今天; week→本周; month→本月; quarter/half/year 同理;
+     custom → localStorage 持久化(key='_wipui_custom_range' 与其他页一致)。
+     返回 {dateFrom, dateTo, prevFrom, prevTo, label}: prev* 为前一周期, 供环比。
+     currentPeriod='realtime' 时保持实时(today),不破坏 cockpit 实时定位。 */
+  function getRange() {
+    // 'today' 与 'realtime' 都映射为今天(periodRange 无 today 选项,复用 realtime 语义)
+    var p = (currentPeriod === 'today') ? 'realtime' : currentPeriod;
+    var r = (window.WipUI && WipUI.periodRange) ? WipUI.periodRange(p) : _fallbackRange(p);
+    return r || { dateFrom: localDate(), dateTo: localDate(), prevFrom: null, prevTo: null, label: '今天' };
+  }
+  // 本地兜底(防止 wip-ui 未加载): 与 WipUI.periodRange 语义一致
+  function _fallbackRange(p) {
+    var now = new Date(), t = localDate(now);
+    var y = now.getFullYear(), m = now.getMonth();
+    function f(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    if (p === 'realtime' || p === 'today') return { dateFrom: t, dateTo: t, prevFrom: null, prevTo: null, label: '今天' };
+    if (p === 'week') { var dow = now.getDay()||7; var mon = new Date(now); mon.setDate(now.getDate()-dow+1); return { dateFrom: f(mon), dateTo: t, prevFrom: null, prevTo: null, label: '本周' }; }
+    if (p === 'month') { var ms = String(m+1).padStart(2,'0'); return { dateFrom: y+'-'+ms+'-01', dateTo: t, prevFrom: null, prevTo: null, label: '本月' }; }
+    if (p === 'quarter') { var qs = Math.floor(m/3)*3; return { dateFrom: y+'-'+String(qs+1).padStart(2,'0')+'-01', dateTo: t, prevFrom: null, prevTo: null, label: '本季' }; }
+    if (p === 'half') { return { dateFrom: y+'-'+(m<6?'01':'07')+'-01', dateTo: t, prevFrom: null, prevTo: null, label: '半年' }; }
+    if (p === 'year') { return { dateFrom: y+'-01-01', dateTo: t, prevFrom: null, prevTo: null, label: '年度' }; }
+    return { dateFrom: t, dateTo: t, prevFrom: null, prevTo: null, label: '今天' };
+  }
+
+  /* ===== 初始化 ===== */
+  function init() {
+    try { renderNav('cockpit'); } catch(e) { /* nav.js 自建 */ }
+    patchFocusSpotlight();
+    initCommandOrb();
+    bindEvents();
+    setupReveal();
+    loadAll();
+    startAutoRefresh();
+    connectWS();
+    hideLoadingMask();
+  }
+
+  /* ===== 隐藏 Loading Mask（平滑淡出，兼容 common.css 的 .hidden）===== */
+  function hideLoadingMask() {
+    var mask = $('loadingMask');
+    if (!mask) return;
+    setTimeout(function() {
+      mask.classList.add('hide');      // 本页淡出过渡
+      mask.classList.add('hidden');    // common.css 约定（display:none 兜底）
+      setTimeout(function() { mask.style.display = 'none'; }, 500);
+    }, 400);
+  }
+
+  /* ===== 焦点卡光标跟随聚光灯 ===== */
+  function patchFocusSpotlight() {
+    if (REDUCED) return;
+    var shell = $('focusShell');
+    if (!shell) return;
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    shell.addEventListener('mousemove', function(e) {
+      var r = shell.getBoundingClientRect();
+      shell.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      shell.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  }
+
+  /* ===== 事件绑定 ===== */
+  function bindEvents() {
+    var ps = $('periodSelect');
+    if (ps) ps.addEventListener('change', function(e) {
+      currentPeriod = e.target.value;
+      if (currentPeriod === 'custom') {
+        _showCustomDate(true);
+        // 若已有持久化范围则直接应用,否则等用户选日期
+        var saved = _loadCustomRange();
+        if (saved && saved.dateFrom && saved.dateTo) {
+          $('customFrom').value = saved.dateFrom;
+          $('customTo').value = saved.dateTo;
+          loadAll();
+        }
+        return;
+      }
+      _showCustomDate(false);
+      loadAll();
+    });
+    // 自定义日期: date change 自动触发查询(无"应用"按钮,与其他页一致)
+    var cf = $('customFrom'), ct = $('customTo');
+    if (cf) cf.addEventListener('change', _applyCustomDate);
+    if (ct) ct.addEventListener('change', _applyCustomDate);
+    // 初始化: 若 localStorage 有自定义范围,回填 date input
+    var _savedInit = _loadCustomRange();
+    if (_savedInit && _savedInit.dateFrom && _savedInit.dateTo) {
+      if (cf) cf.value = _savedInit.dateFrom;
+      if (ct) ct.value = _savedInit.dateTo;
+    }
+    function _showCustomDate(show) { var w = $('periodCustom'); if (w) w.style.display = show ? '' : 'none'; }
+    function _applyCustomDate() {
+      var f = ($('customFrom')||{}).value, t = ($('customTo')||{}).value;
+      if (!f || !t) return;
+      if (f > t) { var tmp = f; f = t; t = tmp; $('customFrom').value = f; $('customTo').value = t; }
+      try { localStorage.setItem('_wipui_custom_range', JSON.stringify({ dateFrom: f, dateTo: t })); } catch(e){}
+      loadAll();
+    }
+    function _loadCustomRange() { try { return JSON.parse(localStorage.getItem('_wipui_custom_range')); } catch(e){ return null; } }
+    var rb = $('refreshBtn');
+    if (rb) rb.addEventListener('click', function() {
+      rb.classList.add('spinning');
+      loadAll(function() { setTimeout(function(){ rb.classList.remove('spinning'); }, 600); });
+    });
+    var ad = $('alertDismiss');
+    if (ad) ad.addEventListener('click', function() {
+      $('cockpitAlert').classList.remove('show');
+    });
+    // Drawer 遮罩点击关闭由 WipUI.Drawer 统一绑定；这里只需绑关闭按钮 + 导出按钮
+    // (wip-ui 仅在注入按钮时绑定 click;页面自带 #drawerExport 需自行绑定 exportCSV)
+    var dcb = $('drawerCloseBtn');
+    if (dcb) dcb.addEventListener('click', closeDrawer);
+    var expBtn = $('drawerExport');
+    if (expBtn) expBtn.addEventListener('click', function () {
+      if (window.WipUI && WipUI.Drawer) WipUI.Drawer.exportCSV();
+    });
+
+    // Tab 切换（含懒加载图表初始化）
+    document.querySelectorAll('.cockpit-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.cockpit-tab').forEach(function(b){ b.classList.remove('active'); });
+        document.querySelectorAll('.cockpit-panel').forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        var panelId = btn.dataset.target;
+        var tgt = $(panelId);
+        if (tgt) tgt.classList.add('active');
+        // 懒加载：首次打开该 tab 时初始化图表
+        if (panelId && !_tabInited[panelId]) {
+          _tabInited[panelId] = true;
+          initTabCharts(panelId);
+        }
+        resizeCharts();
+      });
+    });
+  }
+
+  /* ===== 滚动揭示:进阶版迁移 ATTN.revealCascade(删除本地 setupReveal + .revealed 类机制) ===== */
+  function setupReveal() {
+    if (window.ATTN && ATTN.revealCascade) {
+      try { ATTN.revealCascade('.cockpit-grid .chart-panel', { step: 60, cap: 260 }); } catch(e){}
+    }
+  }
+
+  /* ===== 加载全部数据 ===== */
+  function loadAll(done) {
+    loadFocus();
+    loadKPIs();
+    loadCharts();
+    loadTabCharts();
+    loadQualityKPIs();
+    if (typeof done === 'function') done();
+  }
+
+  /* ===== 12-KPI Phase1: 返工率卡(真实数据) ===== */
+  function loadQualityKPIs() {
+    var _rng = getRange();
+    var _urlQ = '/api/quality?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rQuality = function(q){ if(!q||!q.success) return;
+      if(!q||!q.success)return;
+      setKPI('kpiRework', q.rework_rate==null?'--':q.rework_rate+'%', '', '', 'kpiReworkSub', '返工 '+(q.rework_sn_count||0)+'/'+(q.total_sn_count||0)+' SN');
+      if(q.rework_rate!=null && q.rework_rate>5) toggleCardState('kpiRework','warn');
+    };
+    var _ck = window.apiFetch.peek(_urlQ);
+    if (_ck) { try { _rQuality(_ck.val); } catch(e){} }
+    apiFetch(_urlQ).then(_rQuality).catch(function(){});
+  }
+
+  /* ===== Focus Command Panel (真实API) ===== */
+    function loadFocus() {
+      var _rng = getRange();
+      var _urlFocusKpi = "/api/dashboard-kpi?dateFrom="+_rng.dateFrom+"&dateTo="+_rng.dateTo;
+      var _rFocusKpi = function(kpi){
+        if(!kpi||kpi.success===false) return;
+        var oee=kpi.oee!=null?kpi.oee.toFixed(1)+"%":"--";
+        var fpy=kpi.fpy!=null?kpi.fpy.toFixed(2)+"%":"--";
+        var ppm=kpi.ppm!=null?Math.round(kpi.ppm):"--";
+        // 进阶版:实时视角(与 portal 回顾视角切割) — "全域实时 · OEE/PPM/异常",口径=今日当下
+        setText("focusTitle","全域实时 · OEE "+oee+" · PPM "+ppm);
+        setText("focusAction",(kpi.openExceptions||0)>0?(kpi.openExceptions+" 项异常待处理"):"各项指标运行正常");
+        flashSet("fmKpi1",oee); flashSet("fmKpi2",fpy); flashSet("fmKpi3",String(ppm));
+        flashSet("fmKpi4",(kpi.openExceptions||0)===0?"正常":kpi.openExceptions+"项");
+        flashSet("focusSide1Val",oee); setText("focusSide1Hint","综合OEE");
+        flashSet("focusSide2Val",String(ppm)); setText("focusSide2Hint","实时PPM");
+        flashSet("focusWorstLine","--"); setText("focusWorstLineSub","加载中...");
+        flashSet("focusTopBad","--"); setText("focusTopBadSub","加载中...");
+        updateTimestamp("更新: "+new Date().toLocaleTimeString("zh-CN"));
+        var sev=kpi.oee!=null&&kpi.oee<60?"danger":kpi.oee!=null&&kpi.oee<85?"warn":"normal";
+        setFocusState(sev);
+        if (kpi.oee != null) updateOrb(kpi.oee);
+      };
+      var _ckFk = window.apiFetch.peek(_urlFocusKpi);
+      if (_ckFk) { try { _rFocusKpi(_ckFk.val); } catch(e){} }
+      apiFetch(_urlFocusKpi).then(_rFocusKpi).catch(function(){});
+      var _urlFocusAll = "/api/dashboard-all?dateFrom="+_rng.dateFrom+"&dateTo="+_rng.dateTo;
+      var _rFocusAll = function(dash){
+        if(!dash||!dash.oeeByLine||!dash.oeeByLine.length) { setText("focusWorstLineSub","暂无线体数据"); return; }
+        var worst=dash.oeeByLine.reduce(function(m,l){return (l.oee||100)<(m.oee||100)?l:m;},dash.oeeByLine[0]);
+        flashSet("focusWorstLine",(worst.line_display||worst.line_name||"?")+" · "+(worst.oee!=null?worst.oee.toFixed(1)+"%":"--"));
+        setText("focusWorstLineSub","共"+dash.oeeByLine.length+"条产线");
+      };
+      var _ckFa = window.apiFetch.peek(_urlFocusAll);
+      if (_ckFa) { try { _rFocusAll(_ckFa.val); } catch(e){} }
+      apiFetch(_urlFocusAll).then(_rFocusAll).catch(function(){});
+    }  /* ===== 核心 KPI (真实API) ===== */
+    function loadKPIs() {
+      var _rng = getRange();
+      // 环比对比: 用前一周期(prevFrom/prevTo); 若无(实时/今天)则回退到昨天,保持原环比语义
+      var prevFrom = _rng.prevFrom || localDate(new Date(Date.now()-86400000));
+      var prevTo = _rng.prevTo || prevFrom;
+      var cmpLabel = _rng.prevFrom ? '较上期' : '较昨日';
+      var _urlKpiToday = "/api/dashboard-kpi?dateFrom="+_rng.dateFrom+"&dateTo="+_rng.dateTo;
+      var _rKpiToday = function(kpi){
+        if(!kpi||kpi.success===false) return;
+        var oee=kpi.oee!=null?kpi.oee.toFixed(1)+"%":"--";
+        var output=kpi.output!=null?Number(kpi.output).toLocaleString():"--";
+        var offline=kpi.output_offline!=null?kpi.output_offline:null;
+        var ppm=kpi.ppm!=null?Math.round(kpi.ppm):"--";
+        var fpy=kpi.fpy!=null?kpi.fpy.toFixed(2)+"%":"--";
+        var dir=function(cur,prev,goodIsUp){if(cur==null||prev==null)return"";var d=cur-prev;return d>0?(goodIsUp?"up":"down"):d<0?(goodIsUp?"down":"up"):"flat";};
+        var arrow=function(d){return d==="up"?"▲":d==="down"?"▼":"";};
+        // 对比前一周期(实时模式=昨日)
+        apiFetch("/api/dashboard-kpi?dateFrom="+prevFrom+"&dateTo="+prevTo).then(function(kpiY){
+          if(!kpiY||kpiY.success===false) return;
+          var dOee=kpi.oee!=null&&kpiY.oee!=null?(kpi.oee-kpiY.oee).toFixed(1):null;
+          var dOut=kpi.output!=null&&kpiY.output!=null?kpi.output-kpiY.output:null;
+          var dPpm=kpi.ppm!=null&&kpiY.ppm!=null?kpiY.ppm-kpi.ppm:null;
+          var dFpy=kpi.fpy!=null&&kpiY.fpy!=null?(kpi.fpy-kpiY.fpy).toFixed(2):null;
+          var dOeeStr=dOee!=null?(dOee>0?"▲ "+Math.abs(dOee)+"%":"▼ "+Math.abs(dOee)+"%"):"";
+          var dOutStr=dOut!=null?(dOut>0?"▲ "+Math.abs(dOut).toLocaleString():"▼ "+Math.abs(dOut).toLocaleString()):"";
+          var dPpmStr=dPpm!=null?(dPpm>0?"▼ "+Math.abs(Math.round(dPpm)):"▲ "+Math.abs(Math.round(dPpm))):"";
+          var dFpyStr=dFpy!=null?(dFpy>0?"▲ "+Math.abs(dFpy)+"%":"▼ "+Math.abs(dFpy)+"%"):"";
+          setKPI("kpiOEE",oee,dOeeStr,dOee>0?"up":"down","kpiOEESub",dOee!=null?(cmpLabel+" "+(dOee>0?"+":"")+dOee+"%"):cmpLabel+" 无数据");
+          setKPI("kpiOutput",output,dOutStr,dOut>0?"up":"down","kpiOutputSub","下线 "+(offline!=null?Math.round(offline).toLocaleString():"--")+" · "+(dOut!=null?(cmpLabel+" "+(dOut>0?"+":"")+dOut):cmpLabel+" 无数据"));
+          setKPI("kpiPPM",String(ppm),dPpmStr,dPpm>0?"down":"up","kpiPPMSub",dPpm!=null?(cmpLabel+" "+(dPpm>0?"-":"+")+Math.abs(Math.round(dPpm))):cmpLabel+" 无数据");
+          setKPI("kpiFPY",fpy,dFpyStr,dFpy>0?"up":"down","kpiFPYSub",dFpy!=null?(cmpLabel+" "+(dFpy>0?"+":"")+dFpy+"%"):cmpLabel+" 无数据");
+          toggleCardState("kpiPPM",ppm>5000?"alert":ppm>2000?"warn":null);
+        }).catch(function(){});
+        setKPI("kpiOEE",oee,"","","kpiOEESub","加载对比数据...");
+        setKPI("kpiOutput",output,"","","kpiOutputSub","下线 "+(offline!=null?Math.round(offline).toLocaleString():"--")+" · 加载对比数据...");
+        setKPI("kpiPPM",String(ppm),"","","kpiPPMSub","目标<5000");
+        setKPI("kpiFPY",fpy,"","","kpiFPYSub","目标>=95%");
+        toggleCardState("kpiPPM",ppm>5000?"alert":ppm>2000?"warn":null);
+        // 更新指挥水球
+        if (kpi.oee != null) updateOrb(kpi.oee);
+        staggerKpiIn();
+      };
+      var _ckKpi = window.apiFetch.peek(_urlKpiToday);
+      if (_ckKpi) { try { _rKpiToday(_ckKpi.val); } catch(e){} }
+      apiFetch(_urlKpiToday).then(_rKpiToday).catch(function(){});
+      // 可用率+表现指数(从OEE分解获取)
+      var _urlOeeToday = "/api/oee?dateFrom="+_rng.dateFrom+"&dateTo="+_rng.dateTo;
+      var _rOeeToday = function(oeeD){
+        if(!oeeD||!oeeD.success) return;
+        var avail=oeeD.availability!=null?oeeD.availability.toFixed(1)+"%":"--";
+        var perf=oeeD.performance!=null?oeeD.performance.toFixed(1):"--";
+        // 对比前一周期(实时模式=昨日)
+        apiFetch("/api/oee?dateFrom="+prevFrom+"&dateTo="+prevTo).then(function(oeeY){
+          if(!oeeY||!oeeY.success) return;
+          if(oeeD.availability!=null&&oeeY.availability!=null){
+            var dAvail=(oeeD.availability-oeeY.availability).toFixed(1);
+            setKPI("kpiAvail",avail,dAvail>0?"▲ "+Math.abs(dAvail)+"%":"▼ "+Math.abs(dAvail)+"%",dAvail>0?"up":"down","kpiAvailSub",cmpLabel+" "+(dAvail>0?"+":"")+dAvail+"%");
+          } else { setKPI("kpiAvail",avail,"","","kpiAvailSub","可用率"); }
+          if(oeeD.performance!=null&&oeeY.performance!=null){
+            var dPerf=(oeeD.performance-oeeY.performance).toFixed(1);
+            setKPI("kpiPerf",perf,dPerf>0?"▲ "+Math.abs(dPerf):"▼ "+Math.abs(dPerf),dPerf>0?"up":"down","kpiPerfSub",cmpLabel+" "+(dPerf>0?"+":"")+dPerf);
+          } else { setKPI("kpiPerf",perf,"","","kpiPerfSub","表现指数"); }
+        }).catch(function(){
+          setKPI("kpiAvail",avail,"","","kpiAvailSub","可用率");
+          setKPI("kpiPerf",perf,"","","kpiPerfSub","表现指数");
+        });
+      };
+      var _ckOee = window.apiFetch.peek(_urlOeeToday);
+      if (_ckOee) { try { _rOeeToday(_ckOee.val); } catch(e){} }
+      apiFetch(_urlOeeToday).then(_rOeeToday).catch(function(){});
+      // 服务状态
+      apiFetch("/api/health").then(function(h){
+        if(!h) return;
+        var ok=(h.services||[]).filter(function(s){return s.status==="ok";}).length;
+        var total=(h.services||[]).length||4;
+        setKPI("kpiHealth",ok+" 正常","","","kpiHealthSub",ok+"/"+total+" 服务正常");
+        setKPI("kpiSync","OK","","","kpiSyncSub","最近同步: "+(h.lastSync||"--"));
+      }).catch(function(){});
+    }  /* ===== 压倒性焦点：OEE 指挥水球 (蓝图签名钩子#1) ===== */
+  function initCommandOrb() {
+    var el = $('commandOrb'); if (!el || typeof echarts === 'undefined') return;
+    var inst = echarts.init(el, null, { renderer: 'canvas' });
+    charts.commandOrb = inst;
+    updateOrb(0);
+  }
+  function updateOrb(val) {
+    var inst = charts.commandOrb; if (!inst) return;
+    var v = Math.max(0, Math.min(100, parseFloat(val) || 0));
+    // 进阶版:水球色用 TOKEN.rateColor 预解析为 #hex(echarts 不解析 var()),消除硬编码色
+    var color = (window.TOKEN && TOKEN.rateColor) ? TOKEN.rateColor(v, {good:85, warn:70}) : (v >= 85 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444');
+    inst.setOption({
+      series: [{
+        type: 'liquidFill', data: [v / 100, (v / 100) * 0.9, (v / 100) * 0.8],
+        radius: '78%', center: ['50%', '50%'],
+        color: [color, color, color],
+        backgroundStyle: { color: 'transparent', borderColor: 'rgba(1,102,177,0.30)', borderWidth: 1 },
+        outline: { show: true, borderDistance: 3, itemStyle: { borderColor: color, borderWidth: 1.5, shadowBlur: 12, shadowColor: color } },
+        label: { formatter: function(){ return '{val|' + v.toFixed(1) + '%}\n{sub|全域 OEE}'; },
+          rich: { val: { fontSize: 26, fontWeight: 700, color: (window.TOKEN&&TOKEN.textPrimary)||'#eceef1', lineHeight: 30 }, sub: { fontSize: 10, color: (window.TOKEN&&TOKEN.textSecondary)||'#8893a3', lineHeight: 14 } } },
+        itemStyle: { opacity: 0.55 }, waveAnimation: !REDUCED, amplitude: 6, period: function(){ return REDUCED ? 9999 : 2800; }
+      }]
+    });
+  }
+
+  /* ===== LiveNum 数字滚动 (进阶版:薄alias透传 ATTN.liveNum,删除本地 RAF 实现) ===== */
+  function liveNum(el, val) {
+    if (window.ATTN && ATTN.liveNum && el) {
+      // cockpit 历史签名 liveNum(el, val) val 含 %/千分位/文本,交给 ATTN.liveNum 的 format 默认逻辑处理
+      ATTN.liveNum(el, val);
+      return;
+    }
+    if (!el) return;
+    el.textContent = val;
+  }
+
+  /* 卡片状态光效:进阶版透传 ATTN.setFocusState(三态 normal/warn/danger 统一) */
+  function toggleCardState(id, state) {
+    var el = $(id);
+    if (!el) return;
+    var card = el.closest('.kpi-card');
+    if (!card) return;
+    if (window.ATTN && ATTN.setFocusState) { ATTN.setFocusState(card, state || 'normal'); return; }
+    card.classList.remove('state-warn', 'state-alert', 'sev-warn', 'sev-danger');
+    if (state === 'warn') card.classList.add('state-warn');
+    else if (state === 'alert') card.classList.add('state-alert');
+  }
+
+  /* KPI 入场 stagger:进阶版迁移 ATTN.revealCascade(删除本地 setTimeout i*70)。
+     staggerKpiIn 保留为薄壳,内部调 ATTN.revealCascade 统一入场。 */
+  function staggerKpiIn() {
+    if (window.ATTN && ATTN.revealCascade) {
+      try { ATTN.revealCascade('.kpi-row.cockpit .kpi-card', { step: 70, cap: 350 }); } catch(e){}
+    }
+  }
+
+  // 3 级下钻 L2:图表 click → DrillLink 单点直跳 L3(cockpit Drawer 已统一到 WipUI.Drawer,图表直跳 detail)
+  var COCKPIT_DRILL = {
+    chartOutput:   { dimension: 'day',    source: 'bad-records', title: '当日不良记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+    chartPareto:   { dimension: 'defect', source: 'bad-records', title: '该不良项记录' },
+    chartOEE:      { dimension: 'day',    source: 'downtime',    title: '当日停机记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+    chartLine:     { dimension: 'line',   source: 'bad-records', title: '该线不良记录' },
+    chartStage:    { dimension: 'stage',  source: 'bad-records', title: '工艺段不良记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+    chartBadTrend: { dimension: 'day',    source: 'bad-records', title: '当日不良记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+    chartSPC:      { dimension: 'day',    source: 'bad-records', title: '当日不良记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+    chartDowntime: { dimension: 'line',   source: 'downtime',    title: '该线停机记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } }
+  };
+  /* ===== 关键图表 ===== */
+  function loadCharts() {
+    loadChartOutput();
+    loadChartPareto();
+    loadChartOEE();
+    loadChartHealth();
+  }
+
+  // 通用：安全初始化 echarts（主题为 null 即默认，颜色统一走 CHART 修正后的伪数组）
+  function initChart(key, elId) {
+    var el = $(elId); if (!el) return null;
+    if (charts[key]) return charts[key]; // 复用实例, setOption 更新(避免每 60s 重建 8+ 图表的 jank)
+    var c = echarts.init(el, null); // CHART.theme 兼容为 null
+    charts[key] = c;
+    if (window.DrillLink && COCKPIT_DRILL[elId]) DrillLink.bindChart(c, Object.assign({ chartId: elId }, COCKPIT_DRILL[elId]));
+    return c;
+  }
+
+  function loadChartOutput() {
+    var c = initChart('output', 'chartOutput'); if (!c) return;
+    c.showLoading({ text: '加载产出数据...', color: CHART.legendText, maskColor: 'rgba(18,22,30,0.75)' });
+    var _rng = getRange();
+    var _urlTrend = '/api/dashboard-trend?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _urlOeeT = '/api/oee?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    function _drawOutput(d, oeeD){
+      var days = (d && d.current && d.current.days) ? d.current.days : [];
+      var dates = days.map(function(x){ return x.date.slice(5); });
+      c._drillDim = days.map(function(x){ return x.date; });
+      var outputs = days.map(function(x){ return x.output; });
+      var oeeDaily = (oeeD && oeeD.daily) ? oeeD.daily : [];
+      var oeeMap = {}; oeeDaily.forEach(function(o){ oeeMap[o.date] = o.oee; });
+      var oeeVals = days.map(function(x){ var v = oeeMap[x.date]; return v != null ? v : null; });
+      c.hideLoading();
+      c.setOption({
+        tooltip: CHART.tooltip(),
+        legend: { data: ['产出', 'OEE'], textStyle: { color: CHART.legendText, fontSize: 11 } },
+        grid: { left: 50, right: 50, top: 40, bottom: 32 },
+        xAxis: { type: 'category', data: dates.length ? dates : ['--'], axisLine: { lineStyle: { color: CHART.axisLine } }, axisLabel: { color: CHART.axisLabel, fontSize: 11 } },
+        yAxis: [
+          { type: 'value', name: '产出', axisLine: { lineStyle: { color: CHART.axisLine } }, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+          { type: 'value', name: 'OEE%', max: 100, axisLine: { lineStyle: { color: CHART.axisLine } }, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, splitLine: { show: false } }
+        ],
+        series: [
+          { name: '产出', type: 'bar', data: outputs.length ? outputs : [0], itemStyle: { color: CHART.colors[0], borderRadius: [3,3,0,0] }, animationDelay: function(i){ return i*60; } },
+          { name: 'OEE', type: 'line', yAxisIndex: 1, data: oeeVals.length ? oeeVals : [null], smooth: true, connectNulls: true, lineStyle: { color: CHART.colors[1], width: 2.5 }, itemStyle: { color: CHART.colors[1] }, symbolSize: 6, animationDuration: 1200 }
+        ]
+      });
+    }
+    // 秒开: 若两路数据均有缓存, 立即绘制消除白屏
+    var _ckT = window.apiFetch.peek(_urlTrend), _ckO = window.apiFetch.peek(_urlOeeT);
+    if (_ckT) { try { _drawOutput(_ckT.val, _ckO ? _ckO.val : null); } catch(e){} }
+    apiFetch(_urlTrend).then(function(d){
+      // 同时获取OEE趋势(命中3s内存缓存则即时)
+      return apiFetch(_urlOeeT).then(function(oeeD){ _drawOutput(d, oeeD); }).catch(function(){
+        c.hideLoading();
+        c.setOption({ title: { text: '数据加载失败', left: 'center', top: '40%', textStyle: { color: CHART.axisLabel, fontSize: 13 } } });
+      });
+    }).catch(function(){
+      c.hideLoading();
+    });
+  }
+
+  function loadChartPareto() {
+    var c = initChart('pareto', 'chartPareto'); if (!c) return;
+    c.showLoading({ text: '加载不良数据...', color: CHART.legendText, maskColor: 'rgba(18,22,30,0.75)' });
+    var _rng = getRange();
+    var _urlPareto = '/api/bad/pareto?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo+'&groupBy=defect';
+    var _rPareto = function(d){
+      var items = (d && d.data) ? d.data.slice(0, 10) : [];
+      var names = items.map(function(x){ return x.name || x._id || '?'; });
+      var counts = items.map(function(x){ return x.count || 0; });
+      var total = counts.reduce(function(a,b){return a+b;},0);
+      var cumPct = window.paretoCumulative(counts, total);
+      c.hideLoading();
+      if (!names.length) {
+        c.setOption(CHART.emptyState('本期暂无不良数据'), true);
+        return;
+      }
+      c.setOption({
+        tooltip: CHART.tooltip(),
+        grid: { left: 50, right: 50, top: 40, bottom: 32 },
+        xAxis: { type: 'category', data: names, axisLabel: { color: CHART.axisLabel, fontSize: 11, rotate: names.length>5?25:0 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: [
+          { type: 'value', name: '数量', axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+          { type: 'value', name: '累计%', max: 100, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { show: false } }
+        ],
+        series: [
+          { name: '数量', type: 'bar', data: counts, itemStyle: { color: CHART.colors[3], borderRadius: [3,3,0,0] }, animationDelay: function(i){ return i*70; } },
+          { name: '累计%', type: 'line', yAxisIndex: 1, data: cumPct, smooth: true, lineStyle: { color: CHART.colors[1], width: 2 }, itemStyle: { color: CHART.colors[1] }, animationDuration: 1200 }
+        ]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlPareto);
+    if (_ck) { try { _rPareto(_ck.val); } catch(e){} }
+    apiFetch(_urlPareto).then(_rPareto).catch(function(){
+      c.hideLoading();
+      c.setOption({ title: { text: '不良数据加载失败', left: 'center', top: '40%', textStyle: { color: CHART.axisLabel, fontSize: 13 } } });
+    });
+  }
+
+  function loadChartOEE() {
+    var c = initChart('oee', 'chartOEE'); if (!c) return;
+    c.showLoading({ text: '加载OEE数据...', color: CHART.legendText, maskColor: 'rgba(18,22,30,0.75)' });
+    var _rng = getRange();
+    var _urlOee = '/api/oee?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rOee = function(d){
+      var daily = (d && d.daily) ? d.daily : [];
+      var dates = daily.map(function(x){ return (x.date || '').slice(5); });
+      c._drillDim = daily.map(function(x){ return x.date || ''; });
+      var oeeVals = daily.map(function(x){ return x.oee != null ? +x.oee.toFixed(1) : null; });
+      var availVals = daily.map(function(x){ return x.availability != null ? +x.availability.toFixed(1) : null; });
+      var perfVals = daily.map(function(x){ return x.performance != null ? +x.performance.toFixed(1) : null; });
+      var qualVals = daily.map(function(x){ return x.quality != null ? +x.quality.toFixed(1) : null; });
+      c.hideLoading();
+      if (!dates.length) {
+        c.setOption(CHART.emptyState('本期暂无OEE数据'), true);
+        return;
+      }
+      c.setOption({
+        tooltip: CHART.tooltip(),
+        legend: { data: ['OEE','可用率','表现指数','质量指数'], textStyle: { color: CHART.legendText, fontSize: 11 } },
+        grid: { left: 50, right: 50, top: 50, bottom: 32 },
+        xAxis: { type: 'category', data: dates, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', max: 100, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [
+          { name:'OEE',       type:'line', smooth:true, data:oeeVals,   connectNulls:true, lineStyle:{color:CHART.colors[0],width:2.5}, itemStyle:{color:CHART.colors[0]}, symbolSize:6, animationDuration:1200 },
+          { name:'可用率',     type:'line', smooth:true, data:availVals, connectNulls:true, lineStyle:{color:CHART.colors[1],width:1.5}, itemStyle:{color:CHART.colors[1]}, animationDuration:1200, animationDelay:150 },
+          { name:'表现指数',   type:'line', smooth:true, data:perfVals,  connectNulls:true, lineStyle:{color:CHART.colors[2],width:1.5}, itemStyle:{color:CHART.colors[2]}, animationDuration:1200, animationDelay:300 },
+          { name:'质量指数',   type:'line', smooth:true, data:qualVals,  connectNulls:true, lineStyle:{color:CHART.colors[3],width:1.5}, itemStyle:{color:CHART.colors[3]}, animationDuration:1200, animationDelay:450 }
+        ]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlOee);
+    if (_ck) { try { _rOee(_ck.val); } catch(e){} }
+    apiFetch(_urlOee).then(_rOee).catch(function(){
+      c.hideLoading();
+      c.setOption({ title: { text: 'OEE数据加载失败', left: 'center', top: '40%', textStyle: { color: CHART.axisLabel, fontSize: 13 } } });
+    });
+  }
+
+  function loadChartHealth() {
+    var c = initChart('health', 'chartHealth'); if (!c) return;
+    // 无24h历史监控数据,展示当前服务状态(真数据来自 /api/admin/server-status)
+    c.setOption({
+      title: { text: '服务状态 — 当前快照', subtext: '24h历史监控数据暂未采集,显示实时状态', left: 'center', top: 8, textStyle: { color: CHART.legendText, fontSize: 13 }, subtextStyle: { color: CHART.axisLabel, fontSize: 10 } },
+      graphic: [
+        { type:'text', left:'center', top:'35%', style:{ text:'加载中…', fill: CHART.axisLabel, fontSize: 14 } }
+      ]
+    });
+    var _urlStat = '/api/admin/server-status';
+    var _rStat = function(d){
+      if(!d.success){ c.setOption({ graphic:[{ type:'text', left:'center', top:'40%', style:{ text:'状态不可用', fill: CHART.axisLabel, fontSize: 14 } }] }); return; }
+      var s = d.data;
+      c.setOption({
+        graphic: [
+          { type:'text', left:'12%', top:'30%', style:{ text:'运行时间\n'+Math.round(s.uptime/3600)+'h', fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'40%', top:'30%', style:{ text:'内存(RSS)\n'+s.memoryUsage.rss+'MB', fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'65%', top:'30%', style:{ text:'活跃会话\n'+s.activeSessions, fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'12%', top:'55%', style:{ text:'MES连接\n'+(s.mesCookie?'已认证':'未连接'), fill: s.mesCookie?CHART.colors.green:CHART.axisLabel, fontSize: 12 } },
+          { type:'text', left:'40%', top:'55%', style:{ text:'今日同步\n'+s.syncCount+'次', fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'65%', top:'55%', style:{ text:'最后同步\n'+(s.lastSync?new Date(s.lastSync).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):'--'), fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'12%', top:'78%', style:{ text:'WS客户端\n'+(s.wsClients||0), fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'40%', top:'78%', style:{ text:'Node版本\n'+s.nodeVersion, fill: CHART.axisLabel, fontSize: 11 } }
+        ]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlStat);
+    if (_ck) { try { _rStat(_ck.val); } catch(e){} }
+    apiFetch(_urlStat).then(_rStat).catch(function(){
+      c.setOption({ graphic:[{ type:'text', left:'center', top:'40%', style:{ text:'状态查询失败', fill: CHART.axisLabel, fontSize: 14 } }] });
+    });
+  }
+
+  /* ===== Tab 图表懒加载 ===== */
+  function loadTabCharts() {
+    // 不再在 loadAll 时全量初始化；改由 tab 切换时懒加载
+    // 但默认激活的 panelProduction 需要立即初始化
+    setTimeout(function(){ initTabCharts('panelProduction'); _tabInited['panelProduction'] = true; }, 200);
+  }
+
+  function initTabCharts(panelId) {
+    switch(panelId) {
+      case 'panelProduction': initProductionTab(); break;
+      case 'panelQuality':    initQualityTab(); break;
+      case 'panelEquipment':  initEquipmentTab(); break;
+      case 'panelSystem':     initSystemTab(); break;
+    }
+  }
+
+  /* --- 生产总览 Tab --- */
+  function initProductionTab() {
+    var _rng = getRange();
+    // 各线体产出对比
+    var _urlAll = '/api/dashboard-all?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rTabLine = function(d){
+      var c1 = initChart('tabLine', 'chartLine'); if (!c1) return;
+      var lines = (d && d.lineStats) ? d.lineStats : (d && d.line_summary ? d.line_summary.map(function(l){return {line_name:l.name, cnt:l.output};}) : []);
+      var names = lines.map(function(l){ return l.line_name || l.name || '?'; });
+      var vals = lines.map(function(l){ return l.cnt || l.output || 0; });
+      c1.setOption({
+        tooltip: CHART.tooltip(),
+        grid: { left: 55, right: 20, top: 16, bottom: 28 },
+        xAxis: { type: 'category', data: names.length ? names : ['--'], axisLabel: { color: CHART.axisLabel, fontSize: 10, rotate: names.length>4?20:0 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: '过站数', axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [{ type: 'bar', data: vals.length ? vals : [0], itemStyle: { color: CHART.colors[0], borderRadius: [3,3,0,0] }, animationDelay: function(i){ return i*50; } }]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlAll);
+    if (_ck) { try { _rTabLine(_ck.val); } catch(e){} }
+    apiFetch(_urlAll).then(_rTabLine).catch(function(){});
+    // 产出分段（组装/测试/包装）
+    var _urlStage = '/api/production-by-stage?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rTabStage = function(d){
+      var c2 = initChart('tabStage', 'chartStage'); if (!c2) return;
+      var stages = (d && d.stages) ? d.stages : [];
+      var names = stages.map(function(s){ return s.stage || s._id || '?'; });
+      var vals = stages.map(function(s){ return s.count || 0; });
+      c2.setOption({
+        tooltip: Object.assign(CHART.tooltip(), { trigger: 'item' }),
+        legend: { orient: 'vertical', right: 8, top: 'center', textStyle: { color: CHART.legendText, fontSize: 10 } },
+        series: [{
+          type: 'pie', radius: ['45%', '72%'], center: ['38%', '50%'],
+          data: vals.length ? names.map(function(n,i){ return { name: n, value: vals[i] }; }) : [{ name: '暂无数据', value: 1 }],
+          label: { color: CHART.axisLabel, fontSize: 10 },
+          itemStyle: { borderRadius: 2, borderColor: 'var(--surface-1)', borderWidth: 2 },
+          animationType: 'scale', animationEasing: 'elasticOut'
+        }]
+      });
+    };
+    var _ckS = window.apiFetch.peek(_urlStage);
+    if (_ckS) { try { _rTabStage(_ckS.val); } catch(e){} }
+    apiFetch(_urlStage).then(_rTabStage).catch(function(){});
+  }
+
+  /* --- 质量分析 Tab --- */
+  function initQualityTab() {
+    var _rng = getRange();
+    // 不良趋势
+    var _urlBadTrend = '/api/bad/trend?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rTabBadTrend = function(d){
+      var c1 = initChart('tabBadTrend', 'chartBadTrend'); if (!c1) return;
+      var data = (d && d.data) ? d.data : [];
+      var dates = data.map(function(x){ return (x.date || '').slice(5); });
+      c1._drillDim = data.map(function(x){ return x.date || ''; });
+      var badCounts = data.map(function(x){ return x.badCount || 0; });
+      var fpyVals = data.map(function(x){ return x.fpy; });
+      c1.setOption({
+        tooltip: CHART.tooltip(),
+        legend: { data: ['不良数', 'FPY%'], textStyle: { color: CHART.legendText, fontSize: 10 } },
+        grid: { left: 50, right: 50, top: 40, bottom: 28 },
+        xAxis: { type: 'category', data: dates.length ? dates : ['--'], axisLabel: { color: CHART.axisLabel, fontSize: 10 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: [
+          { type: 'value', name: '件', axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+          { type: 'value', name: '%', max: 100, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { show: false } }
+        ],
+        series: [
+          { name: '不良数', type: 'bar', data: badCounts.length ? badCounts : [0], itemStyle: { color: CHART.colors[3], borderRadius: [3,3,0,0] } },
+          { name: 'FPY%', type: 'line', yAxisIndex: 1, data: fpyVals.length ? fpyVals : [null], smooth: true, connectNulls: true, lineStyle: { color: CHART.colors[1], width: 2 }, itemStyle: { color: CHART.colors[1] }, symbolSize: 5 }
+        ]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlBadTrend);
+    if (_ck) { try { _rTabBadTrend(_ck.val); } catch(e){} }
+    apiFetch(_urlBadTrend).then(_rTabBadTrend).catch(function(){});
+    // SPC控制图
+    var _urlSpc = '/api/bad/spc?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rTabSpc = function(d){
+      var c2 = initChart('tabSPC', 'chartSPC'); if (!c2) return;
+      var pts = (d && d.points) ? d.points : [];
+      var dates = pts.map(function(p){ return (p.date || '').slice(5); });
+      c2._drillDim = pts.map(function(p){ return p.date || ''; });
+      var pVals = pts.map(function(p){ return +(p.p*100).toFixed(2); }); // 转百分比
+      var ucl = pts.length>0 ? +(pts[0].ucl*100).toFixed(2) : null;
+      var cl  = pts.length>0 ? +(pts[0].cl*100).toFixed(2) : null;
+      var lcl = pts.length>0 ? +(pts[0].lcl*100).toFixed(2) : null;
+      c2.setOption({
+        tooltip: CHART.tooltip(),
+        grid: { left: 55, right: 25, top: 16, bottom: 28 },
+        xAxis: { type: 'category', data: dates.length ? dates : ['--'], axisLabel: { color: CHART.axisLabel, fontSize: 10 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: '不良率%', axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [
+          { name: '不良率', type: 'line', data: pVals.length ? pVals : [null], smooth: true, connectNulls: true, lineStyle: { color: CHART.colors[3], width: 2 }, itemStyle: { color: CHART.colors[3] }, symbolSize: 5, markLine: {
+            silent: true, symbol: 'none', data: [
+              ucl!=null ? { yAxis: ucl, label: { formatter: 'UCL '+ucl+'%', color: CHART.axisLabel, fontSize: 9 }, lineStyle: { color: 'var(--danger)', type: 'dashed', width: 1 } } : null,
+              cl!=null  ? { yAxis: cl,  label: { formatter: 'CL '+cl+'%',  color: CHART.axisLabel, fontSize: 9 }, lineStyle: { color: CHART.legendText, type: 'dashed', width: 1 } } : null,
+              lcl!=null ? { yAxis: lcl, label: { formatter: 'LCL '+lcl+'%', color: CHART.axisLabel, fontSize: 9 }, lineStyle: { color: 'var(--danger)', type: 'dashed', width: 1 } } : null
+            ].filter(Boolean)
+          } }
+        ]
+      });
+    };
+    var _ckS = window.apiFetch.peek(_urlSpc);
+    if (_ckS) { try { _rTabSpc(_ckS.val); } catch(e){} }
+    apiFetch(_urlSpc).then(_rTabSpc).catch(function(){});
+  }
+
+  /* --- 设备 OEE Tab --- */
+  function initEquipmentTab() {
+    var _rng = getRange();
+    // OEE分解
+    var _urlOeeE = '/api/oee?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rTabOeeDetail = function(d){
+      var c1 = initChart('tabOEEDetail', 'chartOEEDetail'); if (!c1) return;
+      var daily = (d && d.daily) ? d.daily : [];
+      var dates = daily.map(function(x){ return (x.date || '').slice(5); });
+      c1.setOption({
+        tooltip: CHART.tooltip(),
+        legend: { data: ['OEE','可用率','表现指数','质量指数'], textStyle: { color: CHART.legendText, fontSize: 10 } },
+        grid: { left: 50, right: 25, top: 40, bottom: 28 },
+        xAxis: { type: 'category', data: dates.length ? dates : ['--'], axisLabel: { color: CHART.axisLabel, fontSize: 10 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', max: 100, axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [
+          { name:'OEE',       type:'line', smooth:true, connectNulls:true, data:daily.map(function(x){return x.oee!=null?+x.oee.toFixed(1):null;}), lineStyle:{color:CHART.colors[0],width:2}, itemStyle:{color:CHART.colors[0]}, symbolSize:5 },
+          { name:'可用率',     type:'line', smooth:true, connectNulls:true, data:daily.map(function(x){return x.availability!=null?+x.availability.toFixed(1):null;}), lineStyle:{color:CHART.colors[1],width:1.5}, itemStyle:{color:CHART.colors[1]} },
+          { name:'表现指数',   type:'line', smooth:true, connectNulls:true, data:daily.map(function(x){return x.performance!=null?+x.performance.toFixed(1):null;}), lineStyle:{color:CHART.colors[2],width:1.5}, itemStyle:{color:CHART.colors[2]} },
+          { name:'质量指数',   type:'line', smooth:true, connectNulls:true, data:daily.map(function(x){return x.quality!=null?+x.quality.toFixed(1):null;}), lineStyle:{color:CHART.colors[3],width:1.5}, itemStyle:{color:CHART.colors[3]} }
+        ]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlOeeE);
+    if (_ck) { try { _rTabOeeDetail(_ck.val); } catch(e){} }
+    apiFetch(_urlOeeE).then(_rTabOeeDetail).catch(function(){});
+    // 停机时间线
+    var _urlDown = '/api/oee/downtime?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+    var _rTabDowntime = function(d){
+      var c2 = initChart('tabDowntime', 'chartDowntime'); if (!c2) return;
+      var items = Array.isArray(d) ? d : (d && d.items ? d.items : []);
+      var names = items.map(function(x){ return (x.line_display || x.line_name || '?') + ' ' + (x.reason || '').slice(0,8); });
+      c2._drillDim = items.map(function(x){ return x.line_display || x.line_name || ''; });
+      var durations = items.map(function(x){ return x.duration || 0; });
+      c2.setOption({
+        tooltip: CHART.tooltip(),
+        grid: { left: 55, right: 20, top: 16, bottom: 28 },
+        xAxis: { type: 'category', data: names.length ? names : ['--'], axisLabel: { color: CHART.axisLabel, fontSize: 9, rotate: names.length>3?20:0 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: '分钟', axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [{ type: 'bar', data: durations.length ? durations : [0], itemStyle: { color: CHART.colors[2], borderRadius: [3,3,0,0] } }]
+      });
+    };
+    var _ckD = window.apiFetch.peek(_urlDown);
+    if (_ckD) { try { _rTabDowntime(_ckD.val); } catch(e){} }
+    apiFetch(_urlDown).then(_rTabDowntime).catch(function(){});
+  }
+
+  /* --- 系统运维 Tab --- */
+  function initSystemTab() {
+    var c1 = initChart('tabMemory', 'chartMemory'); if (!c1) return;
+    var c2 = initChart('tabResponse', 'chartResponse'); if (!c2) return;
+    var _urlSys = '/api/admin/server-status';
+    var _rSys = function(d){
+      if(!d||!d.success){ return; }
+      var s = d.data;
+      // 内存趋势 — 无历史数据，展示实时快照
+      var memRss = s.memoryUsage ? (s.memoryUsage.rss || 0) : 0;
+      var memHeap = s.memoryUsage ? (s.memoryUsage.heapUsed || 0) : 0;
+      var memTotal = s.memoryUsage ? (s.memoryUsage.heapTotal || 0) : 0;
+      c1.setOption({
+        title: { text: '内存快照 (MB)', left: 'center', top: 6, textStyle: { color: CHART.legendText, fontSize: 12 } },
+        tooltip: CHART.tooltip(),
+        grid: { left: 55, right: 20, top: 40, bottom: 28 },
+        xAxis: { type: 'category', data: ['RSS', 'Heap Used', 'Heap Total'], axisLabel: { color: CHART.axisLabel, fontSize: 10 }, axisLine: { lineStyle: { color: CHART.axisLine } } },
+        yAxis: { type: 'value', name: 'MB', axisLabel: { color: CHART.axisLabel, fontSize: 11 }, axisLine: { lineStyle: { color: CHART.axisLine } }, splitLine: { lineStyle: { color: CHART.splitLine } } },
+        series: [{ type: 'bar', data: [memRss, memHeap, memTotal], itemStyle: { color: CHART.colors[0], borderRadius: [3,3,0,0] },
+          label: { show: true, position: 'top', color: CHART.axisLabel, fontSize: 10, formatter: function(p){ return p.value+'MB'; } }
+        }]
+      });
+      // 服务响应 — 无历史数据，展示关键指标
+      var uptimeH = Math.round((s.uptime || 0) / 3600);
+      c2.setOption({
+        title: { text: '服务运行指标', left: 'center', top: 6, textStyle: { color: CHART.legendText, fontSize: 12 } },
+        graphic: [
+          { type:'text', left:'10%', top:'30%', style:{ text:'运行时间\n'+uptimeH+'h', fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'35%', top:'30%', style:{ text:'活跃会话\n'+(s.activeSessions||0), fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'60%', top:'30%', style:{ text:'WS客户端\n'+(s.wsClients||0), fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'10%', top:'58%', style:{ text:'MES连接\n'+(s.mesCookie?'已认证':'未连接'), fill: s.mesCookie?CHART.colors.green:CHART.axisLabel, fontSize: 12 } },
+          { type:'text', left:'35%', top:'58%', style:{ text:'今日同步\n'+(s.syncCount||0)+'次', fill: CHART.legendText, fontSize: 12 } },
+          { type:'text', left:'60%', top:'58%', style:{ text:'Node版本\n'+(s.nodeVersion||'--'), fill: CHART.axisLabel, fontSize: 11 } }
+        ]
+      });
+    };
+    var _ck = window.apiFetch.peek(_urlSys);
+    if (_ck) { try { _rSys(_ck.val); } catch(e){} }
+    apiFetch(_urlSys).then(_rSys).catch(function(){});
+  }
+
+  /* ===== Drawer (统一委托 WipUI.Drawer) ===== */
+  var DRAWER_TITLES = {
+    oee: 'OEE 设备综合效率 — 明细',
+    output: '今日产出 — 明细',
+    bad: '不良分析 — 明细',
+    fpy: 'FPY 直通率 — 明细',
+    availability: '设备可用率 — 明细',
+    performance: '表现指数 — 明细',
+    health: '服务状态 — 明细',
+    sync: '数据同步 — 明细'
+  };
+
+  function _drawerUrl(type) {
+    var _rng = getRange();
+    switch(type) {
+      case 'oee': case 'availability': case 'performance':
+        return '/api/oee?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+      case 'output':
+        return '/api/production-by-stage?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+      case 'bad': case 'fpy':
+        return '/api/bad/pareto?dateFrom='+_rng.dateFrom+'&dateTo='+_rng.dateTo;
+      case 'health': case 'sync':
+        return '/api/admin/server-status';
+      default: return null;
+    }
+  }
+
+  // 依据 type + 接口数据,构造 WipUI.Drawer.open 的入参 {stats, html, exportData, exportColumns, showExport}
+  function _buildDrawerPayload(type, d) {
+    var stats = [], html = '', exportData = [], exportColumns = [], showExport = true;
+
+    if (type === 'health' || type === 'sync') {
+      var s = (d && d.data) ? d.data : d;
+      stats = [
+        {val: s.memoryUsage ? s.memoryUsage.rss+'MB' : '--', lbl: '内存(RSS)'},
+        {val: Math.round((s.uptime||0)/3600)+'h', lbl: '运行时间'},
+        {val: String(s.syncCount||0), lbl: '今日同步'},
+        {val: s.mesCookie ? '已连接' : '未连接', lbl: 'MES认证'},
+        {val: String(s.activeSessions||0), lbl: '活跃会话'},
+        {val: String(s.wsClients||0), lbl: 'WS客户端'}
+      ];
+      exportData = [{
+        memoryRSS: s.memoryUsage ? s.memoryUsage.rss+'MB' : '--',
+        uptimeH: Math.round((s.uptime||0)/3600),
+        syncCount: s.syncCount||0,
+        mesCookie: s.mesCookie ? '已连接' : '未连接',
+        activeSessions: s.activeSessions||0,
+        wsClients: s.wsClients||0
+      }];
+      exportColumns = [
+        {key:'memoryRSS', label:'内存(RSS)'}, {key:'uptimeH', label:'运行时间(h)'},
+        {key:'syncCount', label:'今日同步'}, {key:'mesCookie', label:'MES认证'},
+        {key:'activeSessions', label:'活跃会话'}, {key:'wsClients', label:'WS客户端'}
+      ];
+    } else if (type === 'oee' || type === 'availability' || type === 'performance') {
+      var oeeVal = (d && d.oee != null) ? d.oee : (d && d.summary ? d.summary.oee : null);
+      var avail = (d && d.availability != null) ? d.availability : null;
+      var perf = (d && d.performance != null) ? d.performance : null;
+      var totalOut = d && d.total_output ? d.total_output : '--';
+      stats = [
+        {val: oeeVal!=null ? oeeVal+'%' : '--', lbl: '综合OEE'},
+        {val: avail!=null ? avail+'%' : '--', lbl: '可用率'},
+        {val: perf!=null ? perf+'%' : '--', lbl: '表现指数'},
+        {val: String(totalOut), lbl: '总产量'}
+      ];
+      html = '';
+      if (d && d.data_quality && d.data_quality.rows) {
+        var rows = d.data_quality.rows.map(function(r){
+          var dq = r.data_quality || null;
+          var tone = (dq && dq.shift === 'default') ? 'var(--warning)' : 'var(--text-secondary)';
+          return '<tr><td>'+(r.line_display||r.line_name)+'</td><td style="color:'+tone+'">'+(dq ? dq.cycle_time+':'+dq.shift : '--')+'</td></tr>';
+        }).join('');
+        html = '<p style="color:var(--text-muted);font-size:11px;margin-top:12px;">按线体数据质量</p>'+
+               '<table style="width:100%;font-size:11px;color:var(--text-secondary)"><thead><tr><th>线体</th><th>节拍/班次</th></tr></thead><tbody>'+rows+'</tbody></table>';
+        exportData = d.data_quality.rows.map(function(r){
+          var dq = r.data_quality || {};
+          return {line: r.line_display||r.line_name||'', cycleTime: dq.cycle_time||'', shift: dq.shift||''};
+        });
+        exportColumns = [{key:'line',label:'线体'},{key:'cycleTime',label:'节拍'},{key:'shift',label:'班次'}];
+      } else {
+        showExport = false;
+      }
+    } else if (type === 'output') {
+      var stages = (d && d.stages) ? d.stages : [];
+      stats = [
+        {val: (d && d.total) ? String(d.total) : '--', lbl: '总过站'},
+        {val: String(stages.length), lbl: '工站数'}
+      ];
+      var srows = stages.map(function(st){
+        return '<tr><td>'+(st.stage||st._id)+'</td><td>'+st.count+'</td><td>'+st.pct+'%</td></tr>';
+      }).join('');
+      html = '<table style="width:100%;font-size:11px;color:var(--text-secondary);margin-top:8px"><thead><tr><th>工站</th><th>过站数</th><th>占比</th></tr></thead><tbody>'+srows+'</tbody></table>';
+      exportData = stages.map(function(st){return {stage: st.stage||st._id||'', count: st.count, pct: st.pct};});
+      exportColumns = [{key:'stage',label:'工站'},{key:'count',label:'过站数'},{key:'pct',label:'占比%'}];
+    } else if (type === 'bad' || type === 'fpy') {
+      var items = (d && d.data) ? d.data.slice(0,10) : [];
+      var brows = items.map(function(b, i){
+        return '<tr><td>'+(i+1)+'</td><td>'+b._id+'</td><td>'+b.count+'</td></tr>';
+      }).join('');
+      html = '<p style="color:var(--text-muted);font-size:11px;">TOP10 不良类别</p>'+
+             '<table style="width:100%;font-size:11px;color:var(--text-secondary)"><thead><tr><th>#</th><th>类别</th><th>数量</th></tr></thead><tbody>'+brows+'</tbody></table>';
+      exportData = items.map(function(b, i){return {rank: i+1, defect: b._id||'', count: b.count};});
+      exportColumns = [{key:'rank',label:'#'},{key:'defect',label:'类别'},{key:'count',label:'数量'}];
+    }
+
+    return {stats: stats, html: html, exportData: exportData, exportColumns: exportColumns, showExport: showExport};
+  }
+
+  function _applyDrawerPayload(type, payload) {
+    if (!(window.WipUI && WipUI.Drawer)) return;
+    WipUI.Drawer.open({
+      title: DRAWER_TITLES[type] || '明细',
+      stats: payload.stats,
+      html: payload.html,
+      exportData: payload.exportData,
+      exportColumns: payload.exportColumns,
+      showExport: payload.showExport
+    });
+  }
+
+  function openDrawer(type) {
+    if (!(window.WipUI && WipUI.Drawer)) { console.warn('[Cockpit.openDrawer] WipUI.Drawer 未加载'); return; }
+    var url = _drawerUrl(type);
+    if (!url) { _applyDrawerPayload(type, _buildDrawerPayload(type, null)); return; }
+
+    // 先用缓存即时打开,再异步刷新
+    var _ck = window.apiFetch.peek(url);
+    if (_ck) {
+      try { _applyDrawerPayload(type, _buildDrawerPayload(type, _ck.val)); } catch(e){}
+    } else {
+      _applyDrawerPayload(type, {stats: [], html: '<p style="color:var(--text-muted);font-size:12px;padding:16px 0;">详细数据加载中…</p>', exportData: [], exportColumns: [], showExport: false});
+    }
+
+    apiFetch(url).then(function(d){
+      try { _applyDrawerPayload(type, _buildDrawerPayload(type, d)); } catch(e){}
+    }).catch(function(){
+      if (window.WipUI && WipUI.Drawer) {
+        var cur = $('drawerTitle') ? $('drawerTitle').textContent : '';
+        WipUI.Drawer.open({
+          title: DRAWER_TITLES[type] || '明细',
+          stats: [],
+          html: '<p style="color:var(--danger);font-size:12px;padding:16px 0;">明细数据加载失败</p>',
+          showExport: false
+        });
+      }
+    });
+  } /* end openDrawer */
+
+  function closeDrawer() {
+    if (window.WipUI && WipUI.Drawer) WipUI.Drawer.close();
+  }
+
+  /* ===== 焦点状态切换:进阶版统一 sev 语义 normal/warn/danger (兼容旧 ok/warn/alert 调用) ===== */
+  function setFocusState(state) {
+    // 旧值映射: ok→normal, alert→danger
+    var sev = state === 'ok' ? 'normal' : state === 'alert' ? 'danger' : (state || 'normal');
+    focusState = sev;
+    var shell = $('focusShell');
+    if (!shell) return;
+    if (window.ATTN && ATTN.setFocusState) { ATTN.setFocusState(shell, sev); }
+    // legacy 类同步(供本地 CSS keyframes 用)
+    shell.classList.remove('state-ok', 'state-warn', 'state-alert');
+    shell.classList.add('state-' + (sev === 'danger' ? 'alert' : sev === 'warn' ? 'warn' : 'ok'));
+    // 联动 Alert Bar
+    if (sev === 'danger') showAlert('全域告警:检测到关键指标超阈值,请立即处理。');
+    else {
+      var al = $('cockpitAlert');
+      if (al) al.classList.remove('show');
+    }
+    // 联动 live-dot
+    var dot = $('liveDot');
+    if (dot) {
+      dot.classList.remove('stale', 'error');
+      if (sev === 'warn') dot.classList.add('stale');
+      if (sev === 'danger') dot.classList.add('error');
+    }
+  }
+
+  function showAlert(msg) {
+    var al = $('cockpitAlert');
+    var m = $('alertMsg');
+    if (!al) return;
+    if (m) m.textContent = msg;
+    al.classList.add('show');
+  }
+
+  /* ===== 时间戳更新 + 闪烁反馈 ===== */
+  function updateTimestamp(txt) {
+    var el = $('updateTime');
+    if (!el) return;
+    el.textContent = txt;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
+  /* ===== 焦点/侧栏数值更新高亮:进阶版透传 ATTN.flash(涨绿跌红) + liveNum 复合 ===== */
+  function flashSet(id, val) {
+    var el = $(id); if (!el) return;
+    var prev = el.textContent;
+    var sval = String(val);
+    // 仅纯数字启用 liveNum 平滑滚动; 混合文本("正常"/"L3 · 78.2%")回退瞬切, 避免丢前缀
+    var pureNum = typeof val === 'number' || /^-?[\d.]+$/.test(sval);
+    if (prev !== val && prev && prev !== '--') {
+      // 透传 ATTN.flash 做跳变高亮(如可用);否则保留本地 .flash 类兜底
+      if (window.ATTN && ATTN.flash) { try { ATTN.flash(el, prev, val); } catch(e){} }
+      el.classList.add('flash');
+      setTimeout(function(){ el.classList.remove('flash'); }, 800);
+    }
+    if (pureNum && window.ATTN && ATTN.liveNum && !REDUCED) {
+      // 数字滚动复合: 从旧值 easeOutExpo 滚到新值, 兑现注释承诺(非常驻、不打断凝视)
+      try { ATTN.liveNum(el, parseFloat(sval)); return; } catch(e){}
+    }
+    el.textContent = val;
+  }
+
+  function setText(id, txt) {
+    var el = $(id); if (el) el.textContent = txt;
+  }
+
+  /* ===== WebSocket：实时推送时让焦点/KPI"活起来" ===== */
+  function connectWS() {
+    if (typeof window.createReconnectingWS !== 'function') return; // common.js 未提供则跳过
+    try {
+      var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = window.createReconnectingWS(proto + '//' + location.host + '/ws/cockpit', {
+        onMessage: function(evt) {
+          try {
+            var d = JSON.parse(evt.data);
+            handlePush(d);
+          } catch(e) { /* 非业务消息忽略 */ }
+        },
+        onStatus: function(s) {
+          var dot = $('liveDot');
+          if (!dot) return;
+          dot.classList.remove('stale', 'error');
+          if (s === 'reconnecting' || s === 'stale') dot.classList.add('stale');
+          if (s === 'error' || s === 'closed') dot.classList.add('error');
+        }
+      });
+    } catch(e) { /* WS 可选，失败不影响主流程 */ }
+  }
+
+  function handlePush(d) {
+    // 收到推送：时间戳闪烁、相关 KPI 数值滚动
+    updateTimestamp('实时更新: ' + new Date().toLocaleTimeString('zh-CN'));
+    if (d && d.kpi) {
+      Object.keys(d.kpi).forEach(function(k){
+        var v = d.kpi[k];
+        if (typeof v === 'object' && v) {
+          setKPI(k, v.value, v.change, v.direction, null, null);
+        }
+      });
+    }
+    if (d && d.focusState) setFocusState(d.focusState);
+  }
+
+  /* ===== 自动刷新 ===== */
+  function startAutoRefresh() {
+    if (refreshTimer) { refreshTimer.stop(); }
+    refreshTimer = window.withVisibilityGuard(function() {
+      if (currentPeriod === 'realtime') loadAll();
+    }, 60000, { noImmediate: true }); // 标签页隐藏时暂停轮询, 可见时补一次并恢复
+  }
+
+  /* ===== 工具 ===== */
+  function resizeCharts() {
+    Object.keys(charts).forEach(function(k){ var c = charts[k]; if (c) { try { c.resize(); } catch(e){} } });
+  }
+
+  function scrollTo(id) {
+    var el = typeof id === 'string' ? $(id) : id;
+    if (el) el.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  function refreshAll() {
+    var el = $('updateTime');
+    if (el) el.textContent = '刷新中...';
+    loadAll();
+  }
+
+  // hex -> rgba（兼容 chart-theme.js 里可能返回的 #hex 或 rgb()）
+  function hexToRgba(color, alpha) {
+    if (!color) return 'rgba(1,102,177,' + alpha + ')';
+    color = color.trim();
+    if (color.charAt(0) === '#') {
+      var hex = color.slice(1);
+      if (hex.length === 3) hex = hex.split('').map(function(c){return c+c;}).join('');
+      var r = parseInt(hex.slice(0,2),16),
+          g = parseInt(hex.slice(2,4),16),
+          b = parseInt(hex.slice(4,6),16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+    // rgb(r,g,b) / rgba(...)
+    if (color.indexOf('rgb') === 0) {
+      var inner = color.replace(/rgba?\(|\)/g, '').split(',');
+      return 'rgba(' + inner[0] + ',' + inner[1] + ',' + inner[2] + ',' + alpha + ')';
+    }
+    return color;
+  }
+
+  // 暴露 API（保持原接口不变）
+  return { init: init, openDrawer: openDrawer, closeDrawer: closeDrawer, scrollTo: scrollTo, refreshAll: refreshAll, resizeCharts: resizeCharts };
+})();
+
+// ===== 启动 =====
+document.addEventListener('DOMContentLoaded', Cockpit.init);
+window.addEventListener('resize', Cockpit.resizeCharts);
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+
+</body>
+</html>

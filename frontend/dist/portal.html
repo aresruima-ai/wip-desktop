@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI数字化平台 · 首页</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <script src="nav.js"></script>
+    <script src="common.js"></script>
+    <script src="libs/echarts.min.js"></script>
+    <script src="chart-theme.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0166B1">
+    <style>
+/* ===== Portal — 数据分析首页 v4.0 (驾驶舱设计语言) ===== */
+body { margin:0; min-height:100vh; display:flex; flex-direction:column; }
+
+/* 区段小标题(弱化衬托) */
+.portal-section-label {
+  display:flex; align-items:center; gap:10px;
+  margin: var(--module-gap) 0 12px;
+  color: var(--text-secondary); font-size: var(--fs-sm);
+  font-weight: 600; letter-spacing: 0.04em;
+}
+.portal-section-label::before {
+  content:''; width:3px; height:14px; border-radius:2px;
+  background: linear-gradient(180deg, var(--brand), var(--purple));
+}
+.portal-section-label .sl-sub {
+  color: var(--text-muted); font-weight:500; font-size: var(--fs-xs);
+  margin-left:4px;
+}
+
+/* 焦点壳:右侧 4 mini 2×2 用 data-cols="2" 变体(见 common.css .focus-side[data-cols="2"]) */
+/* 进阶版:hero 焦点卡升档(Z轴景深最高层) — surface-focus+shadow-2+light-depth+左brand条 */
+.portal-focus .focus-card[data-focal="true"] {
+  background: var(--surface-focus);
+  box-shadow: var(--shadow-2), var(--light-depth-1);
+  border-left: 3px solid var(--brand);
+}
+.portal-focus .focus-prod-meta {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin-top: -4px; margin-bottom: 13px;
+  font-size: var(--fs-sm);
+}
+.portal-focus .focus-prod-offline {
+  margin-left: 0; font-size: var(--fs-sm); color: var(--text-secondary);
+  font-family: var(--font-mono); white-space: nowrap;
+}
+.portal-focus .focus-mini { --mini-h: 96px; display:flex; flex-direction:column; justify-content:center; cursor: pointer; }
+.portal-focus .focus-mini[data-drill-target]:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.portal-focus .focus-mini[data-drill-target]:hover { border-color: var(--line-strong); }
+.portal-focus .delta {
+  margin-top:0; font-size: var(--fs-sm); font-family: var(--font-mono);
+  display:inline-flex; align-items:center; gap:3px;
+}
+.portal-focus .delta.up { color: var(--success); }
+.portal-focus .delta.down { color: var(--danger); }
+.portal-focus .delta.flat { color: var(--text-muted); }
+.portal-focus .focus-mini .value.grade-good { color: var(--success); }
+.portal-focus .focus-mini .value.grade-warn { color: var(--warning); }
+.portal-focus .focus-mini .value.grade-bad { color: var(--danger); }
+.portal-focus .focus-card { cursor: default; }
+
+/* 数据分析区 2×2 网格 */
+.portal-analytics {
+  display:grid; grid-template-columns: 1fr 1fr; gap: var(--module-gap);
+  margin-bottom: var(--module-gap);
+}
+.portal-analytics .panel { padding: 18px 20px; }
+.portal-analytics .chart-panel-title { margin-bottom: 10px; }
+.portal-analytics .chart-box { min-height: 280px; }
+@media (max-width: 1100px) { .portal-analytics { grid-template-columns: 1fr; } }
+/* 进阶版:窄屏 AI 日报 weekly 区收缩(修复 375px weekly-sparks 横向溢出) */
+@media (max-width: 560px) {
+  .weekly-card { padding: 14px 16px; }
+  .weekly-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+  .weekly-sparks { flex-wrap: wrap; gap: 8px; }
+  .weekly-spark-box { min-width: 0; flex: 1 1 100%; }
+  .announce-card { padding: 12px 14px; }
+}
+
+/* 分时产出条 */
+.hour-strip .chart-box { min-height: 200px; }
+
+/* AI 研判卡 */
+.insight-panel .chart-box { min-height: 0; }
+.insight-list { display:flex; flex-direction:column; gap:10px; }
+.insight-card {
+  display:flex; align-items:flex-start; gap:12px;
+  padding: 12px 14px; border-radius: var(--radius);
+  border:1px solid var(--line); background: var(--surface-2);
+  border-left:3px solid var(--text-muted);
+  transition: all var(--dur-base) var(--ease);
+}
+.insight-card:hover { border-color: var(--line-strong); transform: translateX(2px); }
+.insight-card .ic-icon {
+  width:30px; height:30px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:15px;
+}
+.insight-card.lv-success { border-left-color: var(--success); }
+.insight-card.lv-success .ic-icon { background: var(--success-dim); color: var(--success); }
+.insight-card.lv-info { border-left-color: var(--brand); }
+.insight-card.lv-info .ic-icon { background: var(--brand-dim); color: var(--brand); }
+.insight-card.lv-warning { border-left-color: var(--warning); }
+.insight-card.lv-warning .ic-icon { background: var(--warning-dim); color: var(--warning); }
+.insight-card.lv-danger { border-left-color: var(--danger); }
+.insight-card.lv-danger .ic-icon { background: var(--danger-dim); color: var(--danger); }
+.insight-card .ic-body { flex:1; min-width:0; }
+.insight-card .ic-title { font-size: var(--fs-sm); font-weight:700; color: var(--text-primary); margin-bottom:2px; }
+.insight-card .ic-detail { font-size: var(--fs-xs); color: var(--text-secondary); line-height:1.5; }
+.insight-card .ic-suggest { font-size: var(--fs-xs); color: var(--text-muted); margin-top:4px; }
+.insight-card .ic-suggest::before { content:'→ '; color: var(--brand); }
+
+/* 快捷入口卡 */
+/* portal-specific overrides (基础类已由 common.css 提供，见 §29-30) */
+.portal-entry { padding: 16px 18px; border-radius: var(--radius); height: 100%; }
+.portal-entry:hover { border-left-color: var(--brand-hover); }
+.portal-entry .pe-icon { font-size: 18px; }
+.announce-card { border-left-width: 4px; }
+
+/* 公告区 */
+.announce-main { padding: 0 0 24px; flex: 1; }
+.announce-header { display: flex; align-items: center; gap: 10px; margin-bottom: var(--sp-4); }
+.announce-header .ai-badge { background: linear-gradient(135deg, var(--purple), var(--brand)); color: #fff; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+.announce-header h2 { font-size: var(--fs-lg); font-weight: 600; color: var(--text-primary); }
+.announce-timeline { display: flex; flex-direction: column; gap: 12px; }
+/* .announce-card/.announce-level/.highlight-tag/.line-chip 由 common.css §30 提供 */
+/* portal-特有补丁: announce-summary 用 --fs-base (14px) 而非 --fs-sm (12px), 因摘要文本较长 */
+.announce-summary { font-size: var(--fs-base); line-height: 1.6; }
+.announce-defects { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: 10px; }
+.announce-defects strong { color: var(--text-primary); }
+
+/* Weekly Summary */
+.weekly-card { background:linear-gradient(135deg, var(--brand-glow), var(--purple-dim)); border:1px solid var(--brand-border); border-radius:var(--radius-lg); padding:20px 24px; margin-bottom:var(--module-gap); box-shadow:var(--shadow-1); }
+.weekly-title { font-size:var(--fs-md); font-weight:600; color:var(--text-primary); margin-bottom:12px; }
+.weekly-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:12px; margin-bottom:12px; }
+.weekly-stat { text-align:center; }
+.weekly-stat .ws-val { font-size:20px; font-weight:700; color:var(--brand); font-family:var(--font-mono); }
+.weekly-stat .ws-label { font-size:10px; color:var(--text-muted); margin-top:2px; }
+.weekly-sparks { display:flex; gap:12px; }
+.weekly-spark-box { flex:1; }
+.weekly-spark-box .spark-label { font-size:10px; color:var(--text-muted); margin-bottom:4px; }
+.weekly-spark-box .spark-line { height:30px; display:flex; align-items:flex-end; gap:2px; }
+.weekly-spark-box .spark-line .sbar { flex:1; border-radius:2px; min-height:2px; }
+
+/* AI建议条 */
+.suggestions-bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:var(--sp-4); }
+.suggestion-item { font-size:var(--fs-sm); padding:6px 12px; border-radius:var(--radius-sm); display:flex; align-items:center; gap:6px; }
+.suggestion-item.danger { background:var(--danger-dim); border:1px solid var(--danger-border); color:var(--danger); }
+.suggestion-item.warning { background:var(--warning-dim); border:1px solid var(--warning-border); color:var(--warning); }
+.suggestion-item.info { background:var(--brand-dim); border:1px solid var(--brand-border); color:var(--brand); }
+.suggestion-item.success { background:var(--success-dim); border:1px solid var(--success-border); color:var(--success); }
+
+/* 工具栏 + 状态栏 — 进阶版:删除内联 max-width/margin:auto/padding(双padding bug,改由 .page-wrap 统一约束) */
+.portal-util-bar { margin-top:8px; display:flex; align-items:center; justify-content:space-between; }
+.portal-util-right { display:flex; align-items:center; gap:14px; }
+.util-clock { font-size:var(--fs-sm); color:var(--text-secondary); font-family:var(--font-mono); }
+.util-conn { display:flex; align-items:center; gap:5px; font-size:var(--fs-xs); color:var(--success); }
+.util-conn #connDot { width:6px; height:6px; border-radius:50%; background:var(--success); }
+.portal-dq { margin:12px 0 0 !important; }
+.system-status-bar { max-width:var(--content-width); margin:0 auto; display:flex; align-items:center; gap:20px; padding:10px var(--page-pad-x); background:var(--surface-1); border-top:1px solid var(--line); font-size:var(--fs-xs); color:var(--text-muted); }
+.system-status-bar .status-item { display:flex; align-items:center; gap:6px; }
+.status-dot-sm { width:6px; height:6px; border-radius:50%; }
+.status-dot-sm.green { background:var(--success); box-shadow:0 0 4px var(--success-dim); }
+.status-dot-sm.red { background:var(--danger); }
+.status-spacer { flex:1; }
+
+/* 进阶版:入场统一走 ATTN.revealCascade(见脚本段),删除本地 @keyframes cardIn + nth-child delay。
+   reduced-motion 由 ATTN.REDUCED 单一真源守护,不再写本地 @media 块。 */
+</style>
+</head>
+<body>
+    <div class="page-wrap">
+    <!-- 顶部工具条 -->
+    <div class="portal-util-bar">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="location.href='scroll-board.html'" id="carouselBtn" class="btn-logout" title="投屏大屏 · 滚动看板">🖥 投屏大屏</button>
+            <button onclick="manualRefresh()" id="refreshBtn" class="btn-logout" title="手动刷新全部数据" style="border-color:var(--brand-border);color:var(--brand);">🔄 <span id="refreshLabel">刷新</span></button>
+        </div>
+        <div class="portal-util-right">
+            <span id="lastRefresh" class="util-clock" style="color:var(--text-muted);">上次刷新 --</span>
+            <span id="currentTime" class="util-clock"></span>
+            <span class="util-conn"><span id="connDot"></span> 已连接</span>
+        </div>
+    </div>
+    <!-- 数据状态 -->
+    <div id="portalDataQuality" class="data-quality-banner portal-dq" style="display:none;">
+        <strong>数据状态</strong><span id="portalDataQualityText">--</span>
+    </div>
+
+    <!-- ===== 1. 焦点壳:今日健康度 hero ===== -->
+    <div class="focus-shell portal-focus" id="portalKPI">
+        <div class="focus-card" data-focal="true">
+            <div class="focus-content">
+                <div class="focus-eyebrow"><span class="pulse"></span><span>现场关注 · 今日生产</span></div>
+                <div class="focus-title">今日产量 <strong id="pKpiProd">--</strong></div>
+                <div class="focus-prod-meta">
+                    <span id="pKpiProdDelta" class="delta flat"></span>
+                    <span id="pKpiProdOffline" class="focus-prod-offline">下线 --</span>
+                </div>
+                <div class="focus-action" id="pFocusAction">正在读取今日生产状态…</div>
+                <div class="focus-detail">
+                    <div class="focus-detail-block"><div class="label">待处理事项</div><div class="value" id="pKpiTodo">--</div><div class="sub" id="pKpiTodoSub">异常 / 待办</div></div>
+                    <div class="focus-detail-block"><div class="label">风险关注</div><div class="value" id="pKpiRisk" style="font-size:var(--fs-sm);">--</div><div class="sub" id="pKpiRiskSub">停机 / 告警</div></div>
+                </div>
+                <div class="focus-trust"><span>数据源:MES 过站</span><span>口径:今日实时</span><span id="pKpiUpdated">--</span></div>
+                <div class="sparkline-wrap" id="sparkProd" style="margin-top:10px;height:26px;"></div>
+            </div>
+        </div>
+        <div class="focus-side" data-cols="2">
+            <div class="focus-mini" data-drill-target="bad_rate" tabindex="0" role="button" aria-label="直通率FPY,点击查看不良管理"><div class="label">直通率 FPY</div><div class="value" id="pKpiRate">--</div><div class="delta flat" id="pKpiRateDelta"></div></div>
+            <div class="focus-mini" data-drill-target="oee" tabindex="0" role="button" aria-label="综合OEE,点击查看OEE分析"><div class="label">综合 OEE</div><div class="value" id="pKpiOee">--</div><div class="delta flat" id="pKpiOeeDelta"></div></div>
+            <div class="focus-mini" data-drill-target="output" tabindex="0" role="button" aria-label="人均产能UPPH,点击查看WIP追踪"><div class="label">人均产能 UPPH</div><div class="value" id="pKpiUpph">--</div><div class="hint" id="pKpiUpphHint">单位:件/人时</div></div>
+            <div class="focus-mini" data-drill-target="bad_rate" tabindex="0" role="button" aria-label="不良PPM,点击查看不良管理"><div class="label">不良 PPM</div><div class="value" id="pKpiPpm">--</div><div class="hint" id="pKpiPpmHint">越少越好</div></div>
+        </div>
+    </div>
+
+    <!-- ===== 2. 数据分析区(核心) ===== -->
+    <div class="portal-section-label">数据分析 <span class="sl-sub">趋势 · 产线 · 分段 · 不良</span></div>
+    <div class="portal-analytics" id="analyticsGrid">
+        <div class="panel">
+            <div class="chart-panel-title">近 7 天生产趋势<span style="font-size:11px;color:var(--text-muted);font-weight:500;margin-left:8px;">产量 / 直通率</span></div>
+            <div class="chart-box" id="trendChart"></div>
+        </div>
+        <div class="panel">
+            <div class="chart-panel-title">产线产出对比<span style="font-size:11px;color:var(--text-muted);font-weight:500;margin-left:8px;">柱=产出 · 色=OEE</span></div>
+            <div class="chart-box" id="lineChart"></div>
+        </div>
+        <div class="panel">
+            <div class="chart-panel-title">产出分段<span style="font-size:11px;color:var(--text-muted);font-weight:500;margin-left:8px;">组装 / 测试 / 包装</span></div>
+            <div class="chart-box" id="stageChart"></div>
+        </div>
+        <div class="panel">
+            <div class="chart-panel-title">不良 TOP(近 7 天)<span style="font-size:11px;color:var(--text-muted);font-weight:500;margin-left:8px;">帕累托</span></div>
+            <div class="chart-box" id="defectChart"></div>
+        </div>
+    </div>
+
+    <!-- ===== 3. 今日分时产出节奏 ===== -->
+    <div class="portal-section-label">今日节奏 <span class="sl-sub">分时产出 · 识别节拍与低谷</span></div>
+    <div class="full-stack" style="margin-bottom:var(--module-gap);">
+        <div class="panel hour-strip">
+            <div class="chart-panel-title">今日分时产出<span style="font-size:11px;color:var(--text-muted);font-weight:500;margin-left:8px;" id="hourPeakLabel">--</span></div>
+            <div class="chart-box" id="hourChart"></div>
+        </div>
+    </div>
+
+    <!-- ===== 4. AI 智能研判 ===== -->
+    <div class="portal-section-label">AI 智能研判 <span class="sl-sub">规则引擎 · 基于今日实时数据</span></div>
+    <div class="full-stack insight-panel" style="margin-bottom:var(--module-gap);">
+        <div class="panel">
+            <div class="chart-panel-title">今日洞察</div>
+            <div class="chart-box">
+                <div class="insight-list" id="insightList">
+                    <div class="attn-skeleton" id="insightSkeleton"><div class="attn-skel-bar" style="width:90%;height:14px"></div><div class="attn-skel-bar" style="width:75%;height:14px"></div><div class="attn-skel-bar" style="width:82%;height:14px"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 5. 快捷入口 ===== -->
+    <div class="portal-section-label">快捷入口 <span class="sl-sub">直达各分析模块</span></div>
+    <div class="portal-entry-grid" style="margin-bottom:var(--module-gap);">
+        <a class="portal-entry" href="cockpit.html">
+            <div class="pe-head"><span class="pe-icon">🛩</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">全域驾驶舱</div>
+            <div class="pe-desc">综合 OEE / 不良 / 设备 / 服务健康,优先处置异常。</div>
+        </a>
+        <a class="portal-entry" href="oee.html">
+            <div class="pe-head"><span class="pe-icon">⚙️</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">OEE 分析</div>
+            <div class="pe-desc">三因子分解、停机帕累托、MTBF/MTTR 与线体对标。</div>
+        </a>
+        <a class="portal-entry" href="bad.html">
+            <div class="pe-head"><span class="pe-icon">🔍</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">不良管理</div>
+            <div class="pe-desc">不良帕累托、SPC、相关性分析与闭环跟踪。</div>
+        </a>
+        <a class="portal-entry" href="wip.html">
+            <div class="pe-head"><span class="pe-icon">📦</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">WIP 追踪</div>
+            <div class="pe-desc">在制品分布、工序滞留、周期与工单进度。</div>
+        </a>
+        <a class="portal-entry" href="line-balance.html">
+            <div class="pe-head"><span class="pe-icon">⚖️</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">生产线平衡</div>
+            <div class="pe-desc">瓶颈工序、UPH 与节拍,量化产线平衡率。</div>
+        </a>
+        <a class="portal-entry" href="uph.html">
+            <div class="pe-head"><span class="pe-icon">📊</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">UPH 产出统计</div>
+            <div class="pe-desc">机型/线体/工序多维产出,小时至年度多粒度累计与三段末道UPH。</div>
+        </a>
+        <a class="portal-entry" href="factory-3d.html">
+            <div class="pe-head"><span class="pe-icon">🏭</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">数字孪生</div>
+            <div class="pe-desc">工厂三维实时镜像,产线状态全景巡游。</div>
+        </a>
+        <a class="portal-entry" href="admin.html#dataentry">
+            <div class="pe-head"><span class="pe-icon">📝</span><span class="pe-go">入口 →</span></div>
+            <div class="pe-title">数据录入</div>
+            <div class="pe-desc">出勤人数、产品节拍配置,UPPH/OEE 真实计算的数据入口。</div>
+        </a>
+    </div>
+
+    <!-- ===== 6. AI 智能日报(深度回顾) ===== -->
+    <div class="announce-main">
+        <div class="announce-header">
+            <span class="ai-badge">🤖 AI</span>
+            <h2>智能生产日报</h2>
+            <span style="font-size:var(--fs-xs);color:var(--text-muted);margin-left:6px;">多日回顾 · 环比 · 趋势研判</span>
+        </div>
+        <div class="filter-bar">
+            <span class="filter-label">日期范围</span>
+            <input type="date" id="filterFrom">
+            <span class="filter-label">至</span>
+            <input type="date" id="filterTo">
+            <span class="filter-label">状态</span>
+            <select id="filterLevel">
+                <option value="">全部</option>
+                <option value="good">正常</option>
+                <option value="warn">注意</option>
+                <option value="bad">异常</option>
+            </select>
+            <button class="btn btn-sm" onclick="exportAnnouncements()">📷 导出图片</button>
+        </div>
+        <div id="weeklySummary"></div>
+        <div id="aiSuggestions" class="suggestions-bar"></div>
+        <div class="announce-timeline" id="announceTimeline">
+            <div class="attn-skeleton"><div class="attn-skel-bar" style="width:88%;height:16px"></div><div class="attn-skel-bar" style="width:92%;height:16px"></div><div class="attn-skel-bar" style="width:70%;height:16px"></div></div>
+        </div>
+    </div>
+
+    <!-- System Status Bar -->
+    <div class="system-status-bar">
+        <span class="status-item"><span class="status-dot-sm green"></span> 服务运行中</span>
+        <span class="status-item" id="wsStatus"><span class="status-dot-sm green"></span> WS已连接</span>
+        <span class="status-item" id="lastSync">最后同步: --</span>
+        <span class="status-spacer"></span>
+        <span class="status-item">知识城工厂 · AI数字化平台</span>
+    </div>
+<script>
+apiFetch('/api/me').then(d=>{if(d&&d.role==='admin'){const el=document.getElementById('adminNav');if(el)el.style.display='';}}).catch(()=>{});
+function updateTime(){const now=new Date();document.getElementById('currentTime').textContent=now.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+updateTime();setInterval(updateTime,1000);
+
+// escHtml 收口到 common.js (window.escHtml), 本页不再单独定义
+// localDate 收口到 common.js (window.localDate), 本页不再单独定义
+function setPortalQuality(message, level){
+    const box=document.getElementById('portalDataQuality');
+    const text=document.getElementById('portalDataQualityText');
+    if(!box||!text)return;
+    if(!message){box.style.display='none';return;}
+    box.classList.toggle('error', level==='error');
+    text.textContent=message;
+    box.style.display='flex';
+}
+
+// ===== ECharts 实例池 =====
+var charts = {};
+function getChart(id){
+    if(charts[id]) return charts[id];
+    var el = document.getElementById(id);
+    if(!el) return null;
+    charts[id] = echarts.init(el);
+    return charts[id];
+}
+function renderEmpty(id, msg){
+    var c = getChart(id); if(!c) return;
+    c.setOption(CHART.emptyState(msg), true);
+}
+function gradeClass(v, goodT, warnT){
+    // v>=goodT 绿, v>=warnT 橙, 否则红
+    if(v==null || isNaN(v)) return '';
+    return v>=goodT ? 'grade-good' : v>=warnT ? 'grade-warn' : 'grade-bad';
+}
+function oeeGrade(v){ return gradeClass(v,85,60); }
+function fpyGrade(v){ return gradeClass(v,99.5,95); }
+function ppmGrade(v){ // 越少越好
+    if(v==null||isNaN(v)) return '';
+    return v<=1000 ? 'grade-good' : v<=2000 ? 'grade-warn' : 'grade-bad';
+}
+
+// Sparkline helper(焦点卡产量小条)
+function renderSparkline(containerId, values, color) {
+    const container = document.getElementById(containerId);
+    if (!container || !values || values.length === 0) return;
+    container.innerHTML = '';
+    const max = Math.max(...values, 1);
+    values.slice(-8).forEach(v => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(3, (v / max) * 20) + 'px';
+        if (color) bar.style.background = color;
+        container.appendChild(bar);
+    });
+}
+
+// Init date filters
+(function(){
+    const today = localDate(new Date());
+    const weekAgoDate = new Date(); weekAgoDate.setDate(weekAgoDate.getDate()-6);
+    const weekAgo = localDate(weekAgoDate);
+    document.getElementById('filterFrom').value = weekAgo;
+    document.getElementById('filterTo').value = today;
+})();
+
+// ===== 焦点壳渲染 =====
+var prevKpi = null; // 用于 flash 跳变对比
+function renderFocus(kpi, kpiY, dashAll){
+    if(!kpi || kpi.success===false){
+        setPortalQuality('首页 KPI 加载失败,请检查服务或登录状态。','error');
+        return;
+    }
+    var output = kpi.output||0;
+    var fpy = kpi.fpy, oee = kpi.oee, ppm = kpi.ppm, upph = kpi.upph;
+    var prodTotal = dashAll && dashAll.productionTotal!=null ? dashAll.productionTotal : output;
+
+    setPortalQuality(prodTotal > 0 ? '' : '今日暂无 MES 过站数据,首页不回退展示昨日数据。');
+
+    // 产量 hero + 环比
+    var prodEl = document.getElementById('pKpiProd');
+    if(window.ATTN && ATTN.liveNum){
+        ATTN.liveNum(prodEl, prodTotal, {format:function(v){return Math.round(v).toLocaleString();}});
+        if(prevKpi) ATTN.flash(prodEl, prevKpi.output, prodTotal);
+    } else { prodEl.textContent = prodTotal>0 ? prodTotal.toLocaleString() : '--'; }
+
+    // 下线对照(末道工位去重SN = 成品下线台数; 与活跃产出对照, 下线≤活跃)
+    var offlineEl = document.getElementById('pKpiProdOffline');
+    if(offlineEl){
+      var offline = dashAll && dashAll.productionOffline!=null ? dashAll.productionOffline : null;
+      offlineEl.textContent = offline!=null ? '下线 '+Math.round(offline).toLocaleString()+' 台' : '下线 --';
+    }
+
+    // 环比 deltas(vs 昨日):直接写 className+textContent,避免嵌套 span
+    function setDelta(el, cur, prev, unit, reverse){
+        if(!el) return;
+        if(cur==null||prev==null||prev===0||isNaN(prev)){ el.className='delta flat'; el.textContent='--'; return; }
+        var diff = cur-prev;
+        if(Math.abs(diff)<0.01 && unit==='%') diff=0;
+        var pct = prev!==0 ? ((diff/prev)*100) : 0;
+        var cls = reverse ? (diff>0?'down':diff<0?'up':'flat') : (diff>0?'up':diff<0?'down':'flat');
+        var arrow = diff>0?'▲':diff<0?'▼':'—';
+        var txt = unit==='%' ? (diff>0?'+':'')+diff.toFixed(2)+unit : (pct>0?'+':'')+pct.toFixed(1)+'%';
+        el.className = 'delta '+cls;
+        el.textContent = arrow+' '+txt+' 昨日'+prev+unit;
+    }
+    var yOutput = kpiY && kpiY.output ? kpiY.output : null;
+    var yFpy = kpiY && kpiY.fpy!=null ? kpiY.fpy : null;
+    var yOee = kpiY && kpiY.oee!=null ? kpiY.oee : null;
+    setDelta(document.getElementById('pKpiProdDelta'), prodTotal, yOutput, '');
+
+    // 4 mini
+    var rateEl=document.getElementById('pKpiRate');
+    rateEl.textContent = fpy!=null ? fpy.toFixed(2)+'%' : '--';
+    rateEl.title='直通率FPY · 含误测(测试一次未过即计NG)';
+    rateEl.className = 'value '+fpyGrade(fpy);
+    setDelta(document.getElementById('pKpiRateDelta'), fpy, yFpy, '%');
+
+    var oeeEl=document.getElementById('pKpiOee');
+    oeeEl.textContent = oee!=null ? oee.toFixed(1)+'%' : '--';
+    oeeEl.className = 'value '+oeeGrade(oee);
+    // OEE mini 状态色卡
+    var oeeMini = oeeEl.closest('.focus-mini');
+    if(oeeMini){ oeeMini.classList.remove('warn','danger'); if(oee!=null && oee<60) oeeMini.classList.add('danger'); else if(oee!=null && oee<85) oeeMini.classList.add('warn'); }
+    setDelta(document.getElementById('pKpiOeeDelta'), oee, yOee, '%');
+
+    var upphEl=document.getElementById('pKpiUpph');
+    upphEl.textContent = upph!=null ? upph.toFixed(2) : '--';
+    upphEl.className = 'value '+(upph!=null && upph>=15 ? 'grade-good' : upph!=null && upph>=10 ? 'grade-warn' : (upph==null?'':'grade-bad'));
+    var upphHintEl=document.getElementById('pKpiUpphHint');
+    if(upphHintEl) upphHintEl.textContent = upph!=null ? '单位:件/人时' : '缺考勤数据';
+
+    var ppmEl=document.getElementById('pKpiPpm');
+    ppmEl.textContent = ppm!=null ? Math.round(ppm) : '--';
+    ppmEl.title='PPM · 真不良(已排除误测)';
+    ppmEl.className = 'value '+ppmGrade(ppm);
+    document.getElementById('pKpiPpmHint').textContent = ppm!=null ? (ppm<=1000?'达标·排误测':ppm<=2000?'注意·排误测':'超标·排误测') : '越少越好·排误测';
+
+    // 综合研判 focus-action
+    var parts=[];
+    if(prodTotal>0) parts.push('产量 '+prodTotal.toLocaleString());
+    if(fpy!=null) parts.push('直通率 '+fpy.toFixed(2)+'%');
+    if(oee!=null) parts.push('OEE '+oee.toFixed(1)+'%');
+    if(ppm!=null) parts.push('PPM '+Math.round(ppm));
+    var verdict='';
+    if(prodTotal===0) verdict='当日暂无生产过站数据,待 MES 同步后自动更新。';
+    else if(oee!=null && oee<60) verdict='OEE 偏低,建议分析停机与节拍损失。';
+    else if(fpy!=null && fpy<95) verdict='直通率未达 95% 目标,建议排查 TOP 不良项。';
+    else if(ppm!=null && ppm>=2000) verdict='PPM 超标,建议召开品质专项会议。';
+    else verdict='各项指标运行正常,继续保持。';
+    document.getElementById('pFocusAction').textContent = parts.join(' · ')+(parts.length?'。':'')+verdict;
+
+    // 待处理 + 风险
+    var openExc = kpi.openExceptions||0, pendingAct = kpi.pendingActions||0, downCnt = kpi.downtimeCount||0;
+    document.getElementById('pKpiTodo').textContent = (openExc+pendingAct)+' 项';
+    document.getElementById('pKpiTodoSub').textContent = '异常 '+openExc+' / 待办 '+pendingAct;
+    var alertCnt = (window._portalAlertCount||0);
+    document.getElementById('pKpiRisk').textContent = (downCnt+alertCnt)+' 项';
+    document.getElementById('pKpiRiskSub').textContent = '停机 '+downCnt+' / 告警 '+alertCnt;
+
+    document.getElementById('pKpiUpdated').textContent = '更新 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+
+    // 产量 sparkline(7天,数据由 renderTrendChart 写入)
+    if(window._trendOutputSpark) renderSparkline('sparkProd', window._trendOutputSpark, 'rgba(1,102,177,0.55)');
+
+    prevKpi = kpi;
+}
+
+function renderSparklineSafe(){ if(window._trendOutputSpark) renderSparkline('sparkProd', window._trendOutputSpark, 'rgba(1,102,177,0.55)'); }
+
+// ===== 图1: 近7天趋势(产量柱+直通率折线,双轴) =====
+function renderTrendChart(trend){
+    var c = getChart('trendChart');
+    if(!c) return;
+    if(!trend || !trend.current || !trend.current.days || trend.current.days.length===0){
+        renderEmpty('trendChart','暂无趋势数据'); return;
+    }
+    var days = trend.current.days;
+    var dates = days.map(function(d){return d.date.slice(5);});
+    var outputs = days.map(function(d){return d.output;});
+    var rates = days.map(function(d){return d.rate;});
+    window._trendOutputSpark = outputs.slice().reverse();
+    renderSparklineSafe();
+    c.setOption({
+        tooltip: Object.assign(CHART.tooltip(), {trigger:'axis'}),
+        legend: CHART.legend({top:0}),
+        grid: CHART.grid({top:36, bottom:28, left:48, right:48}),
+        xAxis: CHART.xAxis(dates, {fontSize:10}),
+        yAxis: [
+            {type:'value', name:'产量', nameTextStyle:{color:CHART.axisLabel,fontSize:10}, axisLabel:{color:CHART.axisLabel,fontSize:10}, splitLine:{lineStyle:{color:CHART.splitLine}}, axisLine:{show:false}},
+            {type:'value', name:'直通率', min:90, max:100, nameTextStyle:{color:CHART.axisLabel,fontSize:10}, axisLabel:{color:CHART.axisLabel,fontSize:10,formatter:'{value}%'}, splitLine:{show:false}, axisLine:{show:false}}
+        ],
+        series: [
+            {name:'产量', type:'bar', data:outputs, barMaxWidth:22, itemStyle:{color:CHART.gradientBar ? CHART.gradientBar(echarts, CHART.colors.blue, 'rgba(1,102,177,0.25)') : CHART.colors.blue, borderRadius:[3,3,0,0]}, label:{show:true, position:'top', color:CHART.axisLabel, fontSize:10, distance:3, backgroundColor:'rgba(13,17,23,0.78)', padding:[2,5], borderRadius:3}},
+            {name:'直通率', type:'line', data:rates, yAxisIndex:1, smooth:true, symbol:'circle', symbolSize:5, lineStyle:{width:2.5, color:CHART.colors.green}, itemStyle:{color:CHART.colors.green}, label:{show:false}}
+        ]
+    }, true);
+    c._drillDim = days.map(function (d) { return d.date; });
+}
+
+// ===== 图2: 产线产出对比(横向柱,色按OEE) =====
+function renderLineChart(dashAll){
+    var c = getChart('lineChart');
+    if(!c) return;
+    var lines = (dashAll && dashAll.oeeByLine) || [];
+    if(lines.length===0){ renderEmpty('lineChart','暂无线体数据'); return; }
+    lines = lines.slice().sort(function(a,b){return (a.total_output||0)-(b.total_output||0);});
+    var names = lines.map(function(l){return l.line_display||l.line_name||'?';});
+    var outs = lines.map(function(l){return l.total_output||0;});
+    var colors = lines.map(function(l){
+        var o=l.oee;
+        if(o==null) return CHART.colors.blue;
+        return o>=85?CHART.colors.green : o>=60?CHART.colors.orange : CHART.colors.red;
+    });
+    var oeeVals = lines.map(function(l){return l.oee!=null?+l.oee.toFixed(1):null;});
+    c.setOption({
+        tooltip: Object.assign(CHART.tooltip(), {trigger:'axis', axisPointer:{type:'shadow'}, formatter:function(p){
+            var i=p[0].dataIndex; var o=oeeVals[i];
+            return '<b>'+names[i]+'</b><br/>产出: '+outs[i].toLocaleString()+'<br/>OEE: '+(o!=null?o+'%':'--');
+        }}),
+        grid: CHART.grid({top:16, bottom:24, left:70, right:48}),
+        xAxis: {type:'value', axisLabel:{color:CHART.axisLabel,fontSize:10}, splitLine:{lineStyle:{color:CHART.splitLine}}, axisLine:{show:false}},
+        yAxis: {type:'category', data:names, axisLabel:{color:CHART.axisLabel,fontSize:10}, axisLine:{lineStyle:{color:CHART.axisLine}}, axisTick:{show:false}},
+        series: [{
+            type:'bar', data: outs.map(function(v,i){return {value:v, itemStyle:{color:colors[i], borderRadius:[0,4,4,0]}};}),
+            barMaxWidth:18, label:{show:true, position:'right', color:CHART.axisLabel, fontSize:10, formatter:function(p){return p.value.toLocaleString();}}
+        }]
+    }, true);
+}
+
+// ===== 图3: 产出分段(组装/测试/包装 柱+良率折线) =====
+function renderStageChart(stage){
+    var c = getChart('stageChart');
+    if(!c) return;
+    if(!stage || !stage.stages || stage.stages.length===0){ renderEmpty('stageChart','暂无分段数据'); return; }
+    var st = stage.stages;
+    var labels = st.map(function(s){return s.label||s.stage;});
+    var outs = st.map(function(s){return s.output||0;});
+    var bads = st.map(function(s){return s.bad||0;});
+    var fpys = st.map(function(s){return s.fpy!=null?+s.fpy.toFixed(2):null;});
+    c.setOption({
+        tooltip: Object.assign(CHART.tooltip(), {trigger:'axis'}),
+        legend: CHART.legend({top:0}),
+        grid: CHART.grid({top:36, bottom:28, left:48, right:48}),
+        xAxis: CHART.xAxis(labels, {fontSize:11}),
+        yAxis: [
+            {type:'value', name:'产出', nameTextStyle:{color:CHART.axisLabel,fontSize:10}, axisLabel:{color:CHART.axisLabel,fontSize:10}, splitLine:{lineStyle:{color:CHART.splitLine}}, axisLine:{show:false}},
+            {type:'value', name:'良率', min:90, max:100, nameTextStyle:{color:CHART.axisLabel,fontSize:10}, axisLabel:{color:CHART.axisLabel,fontSize:10,formatter:'{value}%'}, splitLine:{show:false}, axisLine:{show:false}}
+        ],
+        series: [
+            {name:'产出', type:'bar', data:outs, barMaxWidth:42, itemStyle:{color:CHART.colors.blue, borderRadius:[3,3,0,0]}, label:{show:true,position:'top',color:CHART.axisLabel,fontSize:10}},
+            {name:'不良', type:'bar', data:bads, barMaxWidth:42, itemStyle:{color:CHART.colors.red, borderRadius:[3,3,0,0]}, label:{show:true,position:'top',color:CHART.axisLabel,fontSize:10}},
+            {name:'良率', type:'line', data:fpys, yAxisIndex:1, smooth:true, symbol:'circle', symbolSize:5, lineStyle:{width:2.5, color:CHART.colors.green}, itemStyle:{color:CHART.colors.green}, label:{show:true,position:'top',color:CHART.colors.green,fontSize:10,formatter:function(p){return p.value!=null?p.value+'%':'';}}}
+        ]
+    }, true);
+    c._drillDim = st.map(function (s) { return s.stage; });
+}
+
+// ===== 图4: 不良TOP 帕累托(近7天) =====
+function renderDefectChart(pareto){
+    var c = getChart('defectChart');
+    if(!c) return;
+    var data = (pareto && pareto.data) || [];
+    if(data.length===0){ renderEmpty('defectChart','近7天无不良记录'); return; }
+    data = data.slice().sort(function(a,b){return b.count-a.count;}).slice(0,7);
+    var total = data.reduce(function(s,d){return s+d.count;},0);
+    var names = data.map(function(d){return d.name&&d.name.length>14?d.name.slice(0,13)+'…':(d.name||'?');});
+    var counts = data.map(function(d){return d.count;});
+    var cum=0, cumPct = data.map(function(d){cum+=d.count; return +(cum/total*100).toFixed(1);});
+    c.setOption({
+        tooltip: Object.assign(CHART.tooltip(), {trigger:'axis', formatter:function(p){
+            var i=p[0].dataIndex;
+            return '<b>'+escHtml(data[i].name)+'</b><br/>次数: '+counts[i]+'<br/>累计: '+cumPct[i]+'%';
+        }}),
+        legend: CHART.legend({top:0}),
+        grid: CHART.grid({top:36, bottom:56, left:40, right:44}),
+        xAxis: CHART.xAxis(names, {fontSize:10, rotate:28, interval:0}),
+        yAxis: [
+            {type:'value', name:'次数', nameTextStyle:{color:CHART.axisLabel,fontSize:10}, axisLabel:{color:CHART.axisLabel,fontSize:10}, splitLine:{lineStyle:{color:CHART.splitLine}}, axisLine:{show:false}},
+            {type:'value', name:'累计%', max:100, nameTextStyle:{color:CHART.axisLabel,fontSize:10}, axisLabel:{color:CHART.axisLabel,fontSize:10,formatter:'{value}%'}, splitLine:{show:false}, axisLine:{show:false}}
+        ],
+        series: [
+            {name:'次数', type:'bar', data:counts, barMaxWidth:24, itemStyle:{color:CHART.colors.orange, borderRadius:[3,3,0,0]}, label:{show:true, position:'top', color:CHART.axisLabel, fontSize:10}},
+            {name:'累计占比', type:'line', data:cumPct, yAxisIndex:1, smooth:true, symbol:'circle', symbolSize:5, lineStyle:{width:2.5, color:CHART.colors.red}, itemStyle:{color:CHART.colors.red}, label:{show:true, position:'top', color:CHART.axisLabel, fontSize:10, formatter:'{c}%'}}
+        ]
+    }, true);
+    c._drillDim = data.map(function (d) { return d.name; });
+}
+
+// ===== 图5: 今日分时产出 =====
+function renderHourChart(dashAll){
+    var c = getChart('hourChart');
+    if(!c) return;
+    var hours = (dashAll && dashAll.hourStats) || [];
+    if(hours.length===0){ renderEmpty('hourChart','今日暂无分时数据'); return; }
+    hours = hours.slice().sort(function(a,b){return a.hour-b.hour;});
+    var labels = hours.map(function(h){return h.hour+':00';});
+    var cnts = hours.map(function(h){return h.cnt||0;});
+    var peak = hours.reduce(function(m,h){return h.cnt>m.cnt?h:m;},{cnt:0,hour:0});
+    document.getElementById('hourPeakLabel').textContent = '峰值 '+peak.cnt.toLocaleString()+' @ '+peak.hour+':00';
+    var colors = hours.map(function(h){
+        if(h.cnt===0) return 'rgba(78,90,106,0.3)';
+        if(h.hour>=12 && h.hour<=13) return CHART.colors.orange; // 午休低谷高亮
+        return CHART.colors.blue;
+    });
+    c.setOption({
+        tooltip: Object.assign(CHART.tooltip(), {trigger:'axis', formatter:function(p){return '<b>'+p[0].name+'</b><br/>产出: '+p[0].value.toLocaleString();}}),
+        grid: CHART.grid({top:18, bottom:24, left:44, right:24}),
+        xAxis: CHART.xAxis(labels, {fontSize:10, interval:0}),
+        yAxis: {type:'value', axisLabel:{color:CHART.axisLabel,fontSize:10}, splitLine:{lineStyle:{color:CHART.splitLine}}, axisLine:{show:false}},
+        series: [{
+            type:'bar', data: cnts.map(function(v,i){return {value:v, itemStyle:{color:colors[i], borderRadius:[3,3,0,0]}};}),
+            barMaxWidth:28, label:{show:true, position:'top', color:CHART.axisLabel, fontSize:9, formatter:function(p){return p.value>0?p.value:'';}}
+        }]
+    }, true);
+}
+
+// ===== AI 研判卡 =====
+function renderInsights(insights){
+    var el = document.getElementById('insightList');
+    if(!insights || !insights.insights || insights.insights.length===0){
+        el.innerHTML = ATTN.emptyHTML({msg:'暂无研判'}); return;
+    }
+    var icons = {success:'✓', info:'💡', warning:'⚠', danger:'🚨'};
+    el.innerHTML = insights.insights.map(function(s){
+        var lv = s.level||'info';
+        return '<div class="insight-card lv-'+lv+'">'+
+            '<div class="ic-icon">'+(icons[lv]||'💡')+'</div>'+
+            '<div class="ic-body">'+
+                '<div class="ic-title">'+escHtml(s.title)+'</div>'+
+                '<div class="ic-detail">'+escHtml(s.detail)+'</div>'+
+                (s.suggestion?'<div class="ic-suggest">'+escHtml(s.suggestion)+'</div>':'')+
+            '</div></div>';
+    }).join('');
+}
+
+// ===== 主加载:并行拉取所有今日数据 =====
+// 3 级下钻 L2:图表 click → DrillLink 单点直跳 L3
+var PORTAL_DRILL = {
+  trendChart:  { dimension: 'day',    source: 'bad-records', title: '当日不良记录',   pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+  lineChart:   { dimension: 'line',   source: 'bad-records', title: '该线不良记录' },
+  stageChart:  { dimension: 'stage',  source: 'bad-records', title: '工艺段不良记录', pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+  defectChart: { dimension: 'defect', source: 'bad-records', title: '该不良项记录',   pickDim: function (p, c) { return c._drillDim ? c._drillDim[p.dataIndex] : p.name; } },
+  hourChart:   { dimension: 'hour',   source: 'output-sn',   title: '该时段产出明细' }
+};
+function bindAllDrillPortal() {
+  if (!window.DrillLink) return;
+  Object.keys(PORTAL_DRILL).forEach(function (id) {
+    var el = document.getElementById(id);
+    var chart = window.echarts && el ? echarts.getInstanceByDom(el) : null;
+    if (chart) DrillLink.bindChart(chart, Object.assign({ chartId: id }, PORTAL_DRILL[id]));
+  });
+}
+
+async function loadPortalData(){
+    try {
+        var today = localDate(new Date());
+        var yestD = new Date(); yestD.setDate(yestD.getDate()-1);
+        var yest = localDate(yestD);
+        var weekAgoD = new Date(); weekAgoD.setDate(weekAgoD.getDate()-6);
+        var weekAgo = localDate(weekAgoD);
+
+        // 秒开:逐点 peek 即时绘制(各 renderFn 均为幂等覆盖式,setOption(...,true) + DOM 重写)
+        var _uAll = '/api/dashboard-all?dateFrom='+today+'&dateTo='+today;
+        var _uKpi = '/api/dashboard-kpi?dateFrom='+today+'&dateTo='+today;
+        var _uKpiY = '/api/dashboard-kpi?dateFrom='+yest+'&dateTo='+yest;
+        var _uTrend = '/api/dashboard-trend?dateFrom='+weekAgo+'&dateTo='+today;
+        var _uStage = '/api/production-by-stage?dateFrom='+today+'&dateTo='+today;
+        var _uPareto = '/api/bad/pareto?dateFrom='+weekAgo+'&dateTo='+today;
+        var _uInsights = '/api/ai-insights?dateFrom='+today+'&dateTo='+today;
+        var _ckAll = window.apiFetch.peek(_uAll);
+        var _ckKpi = window.apiFetch.peek(_uKpi);
+        var _ckKpiY = window.apiFetch.peek(_uKpiY);
+        if(_ckKpi){ try { renderFocus(_ckKpi.val, _ckKpiY?_ckKpiY.val:null, _ckAll?_ckAll.val:null); } catch(e){} }
+        var _ckTrend = window.apiFetch.peek(_uTrend);
+        if(_ckTrend){ try { renderTrendChart(_ckTrend.val); } catch(e){} }
+        if(_ckAll){ try { renderLineChart(_ckAll.val); } catch(e){} try { renderHourChart(_ckAll.val); } catch(e){} }
+        var _ckStage = window.apiFetch.peek(_uStage);
+        if(_ckStage){ try { renderStageChart(_ckStage.val); } catch(e){} }
+        var _ckPareto = window.apiFetch.peek(_uPareto);
+        if(_ckPareto){ try { renderDefectChart(_ckPareto.val); } catch(e){} }
+        var _ckInsights = window.apiFetch.peek(_uInsights);
+        if(_ckInsights){ try { renderInsights(_ckInsights.val); } catch(e){} }
+
+        var results = await Promise.all([
+            apiFetch(_uAll).catch(()=>null),
+            apiFetch(_uKpi).catch(()=>null),
+            apiFetch(_uKpiY).catch(()=>null),
+            apiFetch(_uTrend).catch(()=>null),
+            apiFetch(_uStage).catch(()=>null),
+            apiFetch(_uPareto).catch(()=>null),
+            apiFetch(_uInsights).catch(()=>null)
+        ]);
+        var dashAll=results[0], kpi=results[1], kpiY=results[2], trend=results[3], stage=results[4], pareto=results[5], insights=results[6];
+
+        renderFocus(kpi, kpiY, dashAll);
+        renderTrendChart(trend);
+        renderLineChart(dashAll);
+        renderStageChart(stage);
+        renderDefectChart(pareto);
+        renderHourChart(dashAll);
+        bindAllDrillPortal();
+        renderInsights(insights);
+    } catch(e){
+        console.error('Portal load error:', e);
+        setPortalQuality('首页数据加载失败,请检查服务或登录状态。','error');
+    }
+}
+
+// ===== AI 日报(原有,保留) =====
+function renderWeekly(weekly) {
+    const el = document.getElementById('weeklySummary');
+    if (!weekly) { el.innerHTML = ''; return; }
+    const trendIcon = weekly.outputTrend === 'up' ? '📈' : weekly.outputTrend === 'down' ? '📉' : '➡️';
+    function miniSpark(values, color) {
+        if (!values || values.length === 0) return '';
+        const max = Math.max(...values, 1);
+        return '<div class="spark-line">' + values.map(v => '<div class="sbar" style="height:'+Math.max(2,(v/max)*28)+'px;background:'+color+'"></div>').join('') + '</div>';
+    }
+    el.innerHTML = '<div class="weekly-card">' +
+        '<div class="weekly-title">'+trendIcon+' 本周汇总(近'+weekly.days+'天)</div>' +
+        '<div class="weekly-stats">' +
+            '<div class="weekly-stat"><div class="ws-val">'+weekly.totalOutput.toLocaleString()+'</div><div class="ws-label">总产量</div></div>' +
+            '<div class="weekly-stat"><div class="ws-val">'+weekly.avgFpy+'%</div><div class="ws-label">平均直通率</div></div>' +
+            '<div class="weekly-stat"><div class="ws-val">'+weekly.avgOee+'%</div><div class="ws-label">平均OEE</div></div>' +
+            '<div class="weekly-stat"><div class="ws-val">'+weekly.totalNG+'</div><div class="ws-label">总不良</div></div>' +
+            '<div class="weekly-stat"><div class="ws-val" style="color:var(--success)">'+weekly.goodDays+'</div><div class="ws-label">正常天数</div></div>' +
+            '<div class="weekly-stat"><div class="ws-val" style="color:var(--danger)">'+(weekly.warnDays+weekly.badDays)+'</div><div class="ws-label">异常天数</div></div>' +
+        '</div>' +
+        '<div class="weekly-sparks">' +
+            '<div class="weekly-spark-box"><div class="spark-label">产量趋势</div>'+miniSpark(weekly.sparkOutput,'rgba(1,102,177,0.6)')+'</div>' +
+            '<div class="weekly-spark-box"><div class="spark-label">直通率趋势</div>'+miniSpark(weekly.sparkFpy,'rgba(16,212,142,0.6)')+'</div>' +
+            '<div class="weekly-spark-box"><div class="spark-label">OEE趋势</div>'+miniSpark(weekly.sparkOee,'rgba(167,139,250,0.6)')+'</div>' +
+        '</div>' +
+    '</div>';
+}
+
+function renderSuggestions(suggestions) {
+    const el = document.getElementById('aiSuggestions');
+    if (!suggestions || suggestions.length === 0) { el.innerHTML = ''; return; }
+    const icons = {danger:'🚨',warning:'⚠️',info:'💡',success:'✅'};
+    el.innerHTML = suggestions.map(s => '<div class="suggestion-item '+(s.level||'info')+'">'+(icons[s.level]||'💡')+' '+escHtml(s.text)+'</div>').join('');
+}
+
+let allAnnouncements = [];
+
+async function loadAnnouncements() {
+    const container = document.getElementById('announceTimeline');
+    try {
+        const from = document.getElementById('filterFrom').value;
+        const to = document.getElementById('filterTo').value;
+        const days = from && to ? Math.ceil((new Date(to) - new Date(from)) / 86400000) + 1 : 7;
+        // 秒开:用上次缓存公告即时绘制(renderWeekly/renderSuggestions/renderAnnouncements 均为幂等覆盖式)
+        var _uAnn = '/api/announcements?days='+days;
+        try {
+            var _ckAnn = window.apiFetch.peek(_uAnn);
+            if (_ckAnn && _ckAnn.val && _ckAnn.val.success && _ckAnn.val.announcements && _ckAnn.val.announcements.length) {
+                allAnnouncements = _ckAnn.val.announcements;
+                renderWeekly(_ckAnn.val.weekly);
+                renderSuggestions(_ckAnn.val.suggestions);
+                renderAnnouncements();
+                var _alertCount = _ckAnn.val.announcements.filter(function(a){ return a.level === 'bad'; }).length;
+                window._portalAlertCount = _alertCount;
+                if(prevKpi){ var _downCnt = prevKpi.downtimeCount||0; document.getElementById('pKpiRisk').textContent = (_downCnt+_alertCount)+' 项'; document.getElementById('pKpiRiskSub').textContent = '停机 '+_downCnt+' / 告警 '+_alertCount; }
+            }
+        } catch(e){}
+        const r = await apiFetch(_uAnn);
+        if (!r.success || !r.announcements || r.announcements.length === 0) {
+            container.innerHTML = ATTN.emptyHTML({msg:'暂无公告数据'});
+            renderWeekly(null); renderSuggestions([]);
+            window._portalAlertCount = 0;
+            return;
+        }
+        allAnnouncements = r.announcements;
+        renderWeekly(r.weekly);
+        renderSuggestions(r.suggestions);
+        renderAnnouncements();
+        var alertCount = r.announcements.filter(a => a.level === 'bad').length;
+        window._portalAlertCount = alertCount;
+        // 若 KPI 已加载,刷新风险块
+        if(prevKpi){
+            var downCnt = prevKpi.downtimeCount||0;
+            document.getElementById('pKpiRisk').textContent = (downCnt+alertCount)+' 项';
+            document.getElementById('pKpiRiskSub').textContent = '停机 '+downCnt+' / 告警 '+alertCount;
+        }
+    } catch(e) {
+        container.innerHTML = ATTN.emptyHTML({msg:'公告加载失败', action:'<button onclick="loadAnnouncements()" style="margin-top:8px;padding:5px 16px;border:1px solid var(--brand-border);color:var(--brand);background:var(--brand-glow);border-radius:var(--radius-sm);font-size:var(--fs-sm);cursor:pointer">重试</button>'});
+        console.error('Announcements error:', e);
+    }
+}
+
+function renderAnnouncements() {
+    const container = document.getElementById('announceTimeline');
+    const levelFilter = document.getElementById('filterLevel').value;
+    const from = document.getElementById('filterFrom').value;
+    const to = document.getElementById('filterTo').value;
+    let items = allAnnouncements;
+    if (levelFilter) items = items.filter(a => a.level === levelFilter);
+    if (from) items = items.filter(a => a.date >= from);
+    if (to) items = items.filter(a => a.date <= to);
+    if (items.length === 0) { container.innerHTML = ATTN.emptyHTML({msg:'无匹配公告'}); return; }
+    container.innerHTML = '';
+    const levelLabels = {good:'正常',warn:'注意',bad:'异常',neutral:'无数据'};
+    items.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'announce-card level-' + (item.level||'neutral');
+        card.setAttribute('tabindex','0'); card.setAttribute('role','button'); card.setAttribute('aria-label', item.title||'公告');
+        card.onclick = () => { window.location.href = 'cockpit.html?dateFrom='+item.date+'&dateTo='+item.date; };
+
+        let compHtml = '';
+        if (item.comparison && item.comparison.length > 0) {
+            compHtml = '<div class="announce-comparison">' +
+                item.comparison.map(c => {
+                    const arrow = c.direction === 'up' ? '↑' : '↓';
+                    const cls = c.direction === 'up' ? 'arrow-up' : 'arrow-down';
+                    const val = c.unit ? (c.diff>0?'+':'')+c.diff+c.unit : (c.pct>0?'+':'')+c.pct+'%';
+                    return '<span class="comp-item"><span class="comp-label">'+escHtml(c.metric)+'</span><span class="comp-val '+cls+'"><span class="'+cls+'">'+arrow+'</span>'+val+'</span></span>';
+                }).join('') + '</div>';
+        }
+        let defectsHtml = '';
+        if (item.topDefects && item.topDefects.length > 0) {
+            defectsHtml = '<div class="announce-defects"><strong>TOP不良:</strong>' +
+                item.topDefects.map(d => escHtml(d.name)+'('+d.count+')').join('、') + '</div>';
+        }
+        let highlightsHtml = '';
+        if (item.highlights && item.highlights.length > 0) {
+            highlightsHtml = '<div class="announce-highlights">' +
+                item.highlights.map(h => {
+                    let href = 'cockpit.html?dateFrom='+item.date+'&dateTo='+item.date;
+                    if (/直通率|不良|PPM/.test(h.text)) href = 'bad.html?dateFrom='+item.date+'&dateTo='+item.date;
+                    else if (/OEE/.test(h.text)) href = 'oee.html?dateFrom='+item.date+'&dateTo='+item.date;
+                    return '<a class="highlight-tag '+(h.color||'blue')+'" href="'+href+'" onclick="event.stopPropagation()" style="text-decoration:none">'+(h.icon||'')+' '+escHtml(h.text)+'</a>';
+                }).join('') + '</div>';
+        }
+        let linesHtml = '';
+        if (item.lines && item.lines.length > 0) {
+            linesHtml = '<div class="announce-lines">' +
+                item.lines.map(l => '<span class="line-chip"><span class="line-dot '+(l.status||'neutral')+'"></span>'+escHtml(l.name)+' '+l.output+'</span>').join('') +
+                '</div>';
+        }
+        card.innerHTML =
+            '<div class="announce-card-head">' +
+                '<span class="announce-date">' + escHtml(item.date) + '</span>' +
+                '<span class="announce-level '+(item.level||'neutral')+'">' + (levelLabels[item.level]||'--') + '</span>' +
+            '</div>' +
+            '<div class="announce-title">' + escHtml(item.title) + '</div>' +
+            compHtml +
+            '<div class="announce-summary">' + escHtml(item.summary) + '</div>' +
+            defectsHtml + highlightsHtml + linesHtml;
+        container.appendChild(card);
+    });
+    if(window.ATTN && ATTN.revealCascade) ATTN.revealCascade('#announceTimeline .announce-card', {step:60, cap:300});
+}
+
+document.getElementById('filterLevel').onchange = renderAnnouncements;
+document.getElementById('filterFrom').onchange = loadAnnouncements;
+document.getElementById('filterTo').onchange = loadAnnouncements;
+
+function exportAnnouncements() {
+    const target = document.querySelector('.announce-main');
+    if (!target) return;
+    const doShot = () => {
+        if (!window.html2canvas) { if(window.Toast) Toast.error('导出库未就绪'); else alert('导出库未就绪'); return; }
+        // 用共享件 captureDashboard: 公告卡有 revealCascade 入场动画 → html2canvas 空白, 关停动画即修复
+        captureDashboard(target).then(c => {
+            downloadCanvas(c, 'AI公告_' + localDate(new Date()) + '.png');
+        }).catch(e => { if(window.Toast) Toast.error('导出失败: '+(e&&e.message||'')); else alert('导出失败'); });
+    };
+    if (window.html2canvas) { doShot(); return; }
+    // 动态加载 html2canvas CDN; 加 onerror 降级提示, 避免CDN不可用时按钮静默无响应
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    s.onload = doShot;
+    s.onerror = () => { if(window.Toast) Toast.error('导出库加载失败,请检查网络'); else alert('导出库加载失败,请检查网络'); };
+    document.head.appendChild(s);
+}
+
+// WebSocket for real-time updates — 进阶版:连接状态 shim(联动 #connDot/#wsStatus + EventBus)
+function setConn(state){
+    const dot=document.getElementById('connDot');
+    if(dot){ dot.style.background = state==='live'?'var(--success)':state==='reconn'?'var(--warning)':'var(--danger)'; }
+    document.querySelectorAll('#wsStatus .status-dot-sm').forEach(function(d){ d.classList.toggle('red', state!=='live'); d.classList.toggle('green', state==='live'); });
+    if(window.EventBus){ EventBus.emit(state==='live'?'ws:connected':'ws:disconnected'); }
+}
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(proto + '://' + location.host);
+    ws.onopen = () => { setConn('live'); };
+    ws.onmessage = (e) => {
+        try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'announcement-update' || msg.type === 'dashboard-update') {
+                loadAnnouncements();
+                loadPortalData();
+            }
+            if (msg.type === 'alert' && window.DesktopAlert) {
+                DesktopAlert.notify('⚠️ 生产异常', msg.message || msg.title || '检测到异常指标', {tag:'prod-alert', url:'/cockpit.html'});
+                window._portalAlertCount = (window._portalAlertCount||0)+1;
+                if(prevKpi){ var downCnt=prevKpi.downtimeCount||0; document.getElementById('pKpiRisk').textContent=(downCnt+window._portalAlertCount)+' 项'; document.getElementById('pKpiRiskSub').textContent='停机 '+downCnt+' / 告警 '+window._portalAlertCount; }
+            }
+        } catch(err){}
+    };
+    ws.onclose = () => { setConn('dead'); setTimeout(connectWS, 5000); };
+    ws.onerror = () => { ws.close(); };
+}
+
+// 投屏大屏入口:按钮直接跳 scroll-board.html(旧切页轮播已淘汰)
+
+function updateSystemStatus() {
+    document.getElementById('lastSync').textContent = '最后同步: ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+    var lr = document.getElementById('lastRefresh');
+    if(lr) lr.textContent = '上次刷新 ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// 手动刷新:主动拉取全量数据 + 日报
+function manualRefresh(){
+    var btn = document.getElementById('refreshBtn');
+    var lbl = document.getElementById('refreshLabel');
+    if(btn){ btn.disabled = true; btn.style.opacity = 0.6; }
+    if(lbl) lbl.textContent = '刷新中…';
+    Promise.all([loadPortalData(), loadAnnouncements()]).then(function(){
+        updateSystemStatus();
+    }).catch(function(){}).then(function(){
+        if(btn){ btn.disabled = false; btn.style.opacity = 1; }
+        if(lbl) lbl.textContent = '刷新';
+    });
+}
+
+// resize 所有图表
+window.addEventListener('resize', function(){
+    Object.keys(charts).forEach(function(id){ if(charts[id]) charts[id].resize(); });
+});
+
+// ===== 启动 =====
+loadPortalData();
+loadAnnouncements();
+updateSystemStatus();
+connectWS();
+
+// 注意力钩子:焦点卡光晕 + 分析卡级联入场
+if(window.ATTN){
+    try {
+        var fc = document.querySelector('.portal-focus .focus-card');
+        if(fc) ATTN.spotlight(fc);
+        ATTN.revealCascade('#analyticsGrid .panel, .hour-strip, .insight-panel .panel, .portal-entry-grid .portal-entry', {step:50, cap:220});
+    } catch(e){}
+}
+// 进阶版:4 mini 下钻激活(KPILinkage 认 data-drill-target) + 键盘 Enter 触发(a11y)
+if(window.KPILinkage){ try{ KPILinkage.init('.portal-focus .focus-side'); }catch(e){} }
+document.querySelectorAll('.portal-focus .focus-mini[data-drill-target]').forEach(function(el){
+    el.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); } });
+});
+
+window.withVisibilityGuard(() => {
+    loadPortalData();
+    updateSystemStatus();
+}, 60000, { noImmediate: true }); // 标签页隐藏时暂停, 可见时补一次并恢复
+
+// 全站联动: 注意力钩子 + 连接状态
+if (window.ATTN && ATTN.autoInit) {
+    ATTN.autoInit({ staggerStep: 40, scarcityDelay: 1200 });
+}
+if (window._setConnState) window._setConnState('live');
+if (window.EventBus) {
+    EventBus.on('ws:connected', function() { if (window._setConnState) window._setConnState('live'); });
+    EventBus.on('ws:disconnected', function() { if (window._setConnState) window._setConnState('dead'); });
+}
+</script>
+    </div><!-- /page-wrap -->
+    <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+</body>
+</html>

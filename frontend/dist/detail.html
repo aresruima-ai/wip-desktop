@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据明细 - AI数字化看板</title>
+<link rel="stylesheet" href="common.css">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<script src="nav.js"></script>
+<script src="common.js"></script>
+<script src="wip-ui.js"></script>
+<script src="filter-bar.js"></script>
+<script src="detail-table.js"></script>
+<style>
+  /* 全屏 overlay 模式(参照 factory-3d,触发 nav.js overlay 顶栏) */
+  html, body { margin:0; }
+  body { overflow:hidden; }
+  .page-wrap { width:100% !important; height:calc(100vh - 48px); display:flex; flex-direction:column; overflow:hidden; padding:0; }
+
+  .detail-header { display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid var(--line); background:var(--surface-1); }
+  .detail-back { background:var(--surface-2); border:1px solid var(--line); color:var(--text-secondary); padding:5px 12px; border-radius:var(--radius); font-size:12px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+  .detail-back:hover { color:var(--text-primary); border-color:var(--text-muted); }
+  .detail-title-wrap { flex:1; min-width:0; }
+  .detail-title-wrap h1 { margin:0; font-size:16px; font-weight:600; color:var(--text-primary); }
+  .detail-breadcrumb { font-size:11px; color:var(--text-muted); margin-top:2px; font-family:var(--font-mono); }
+  .detail-breadcrumb .crumb-sep { margin:0 6px; opacity:.5; }
+  .detail-breadcrumb .crumb-dim { color:var(--brand); }
+  .detail-breadcrumb .crumb-link { color:var(--text-secondary); cursor:pointer; transition:color .15s; }
+  .detail-breadcrumb .crumb-link:hover { color:var(--brand); text-decoration:underline; }
+  .detail-toolbar { display:flex; gap:6px; align-items:center; }
+  .detail-toolbar .refresh-btn { background:var(--surface-2); border:1px solid var(--line); color:var(--text-secondary); padding:5px 10px; border-radius:var(--radius); font-size:11px; cursor:pointer; transition:all .2s; }
+  .detail-toolbar .refresh-btn:hover { color:var(--text-primary); border-color:var(--text-muted); }
+
+  .detail-filter { display:flex; justify-content:space-between; align-items:center; padding:8px 24px; gap:12px; border-bottom:1px solid var(--line); }
+  .detail-filter-left { display:flex; gap:14px; align-items:center; font-size:12px; color:var(--text-muted); }
+  .detail-filter-left label { display:flex; gap:6px; align-items:center; }
+  .detail-filter-left select { background:var(--surface-2); border:1px solid var(--line); color:var(--text-primary); padding:3px 8px; border-radius:var(--radius); font-size:12px; }
+  .detail-range { font-family:var(--font-mono); }
+  .detail-filter-right { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); }
+
+  .detail-table-wrap { flex:1; overflow:auto; padding:8px 24px 0; }
+  .detail-table-wrap .sn-table { width:100%; }
+  .detail-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; color:var(--text-muted); font-size:14px; padding:60px 24px; }
+  .detail-empty .empty-icon { font-size:40px; opacity:.5; }
+  .detail-loading { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
+  .detail-loading .dl-spinner { display:inline-block; width:18px; height:18px; margin-right:8px; border:2px solid var(--line); border-top-color:var(--brand); border-radius:50%; vertical-align:-3px; animation:detail-spin .8s linear infinite; }
+  @keyframes detail-spin { to { transform:rotate(360deg); } }
+
+  .pagination { padding:10px 24px; display:flex; justify-content:flex-end; gap:4px; align-items:center; border-top:1px solid var(--line); }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .badge.closed { background:var(--success-dim); color:var(--success); }
+  .badge.open { background:var(--danger-dim); color:var(--danger); }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="detail-header">
+    <button class="detail-back" onclick="goBack()" title="返回来源页">← 返回</button>
+    <div class="detail-title-wrap">
+      <h1 id="detailTitle">数据明细</h1>
+      <div class="detail-breadcrumb" id="detailBreadcrumb"></div>
+    </div>
+    <div class="detail-toolbar" id="detailToolbar">
+      <button class="refresh-btn" onclick="loadData()" title="刷新">↻ 刷新</button>
+      <button class="refresh-btn" onclick="exportData()" title="导出 CSV">⬇ 导出</button>
+    </div>
+  </div>
+  <div class="detail-filter">
+    <div class="detail-filter-left">
+      <label>线体
+        <select id="lineSelect" onchange="onLineChange()"><option value="">全部线体</option></select>
+      </label>
+      <span class="detail-range" id="rangeInfo"></span>
+    </div>
+    <div class="detail-filter-right" id="tableInfo">共 0 条</div>
+  </div>
+  <div class="detail-table-wrap" id="tableWrap">
+    <table class="sn-table">
+      <thead><tr id="detailHead"></tr></thead>
+      <tbody id="detailBody"><tr><td class="detail-loading"><span class="dl-spinner"></span>加载中...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Drawer (WipUI.Drawer,L3 行点击可开 SN 详情) -->
+<div class="drawer-mask" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h3 id="drawerTitle">--</h3>
+    <div style="display:flex;gap:8px">
+      <button class="refresh-btn" id="drawerExport">⬇ 导出</button>
+      <button class="drawer-close" id="drawerCloseBtn" onclick="WipUI.Drawer.close()">×</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-stats" id="drawerStats"></div>
+    <div id="drawerContent"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// detail.html — L3 全屏明细页调度
+// 读 URL(drill_ctx query)→ 按 source 路由 API+列 → DetailTable 渲染
+// ═══════════════════════════════════════════════════════════════
+var SOURCE_MAP = {
+  'bad-records': {
+    label: '不良记录', api: '/api/bad/fast', dataPath: 'badItems',
+    dimField: { line:'lineName', defect:'badItems', process:'workOprationName', model:'productModel', operation:'workOprationName', day:'testDate' },
+    columns: [
+      { key:'barcode', label:'条码', cellStyle:'font-family:Consolas,monospace;font-size:11px' },
+      { key:'lineName', label:'线体' },
+      { key:'productModel', label:'型号' },
+      { key:'workOprationName', label:'工序' },
+      { key:'badItems', label:'不良项', cellStyle:'color:var(--danger)' },
+      { key:'categoryName', label:'不良类别' },
+      { key:'contentName', label:'维修内容' },
+      { key:'causesName', label:'原因' },
+      { key:'repairMan', label:'维修人' },
+      { key:'moLotNo', label:'批次号' },
+      { key:'repairStateCode', label:'状态', html:true, fmt:function(v){ return (parseInt(v)||0)===20 ? '<span class="badge closed">已闭环</span>' : '<span class="badge open">待处理</span>'; } },
+      { key:'testTime', label:'时间', fmt:function(v){ return v ? new Date(v).toLocaleString('zh-CN',{hour12:false}) : ''; }, cellStyle:'font-size:11px;color:var(--text-secondary)' }
+    ]
+  },
+  'downtime': {
+    label: '停机记录', api: '/api/oee/downtime', dataPath: null,
+    dimField: { line:'line_display', type:'downtime_category', day:'date' },
+    columns: [
+      { key:'date', label:'日期' },
+      { key:'line_name', label:'线体' },
+      { key:'downtime_category', label:'类型' },
+      { key:'duration', label:'时长(分)' },
+      { key:'reason', label:'原因' },
+      { key:'start_time', label:'开始时间', fmt:function(v){ return v ? new Date(v).toLocaleString('zh-CN',{hour12:false}) : ''; } },
+      { key:'source', label:'来源' }
+    ]
+  },
+  'wip-sn': {
+    label: 'WIP 在制 SN', api: '/api/wip/detail', dataPath: 'items',
+    dimField: { line:'line_code', operation:'work_operation_code' },
+    columns: [
+      { key:'barcode', label:'条码', cellStyle:'font-family:Consolas,monospace;font-size:11px' },
+      { key:'product_model', label:'型号' },
+      { key:'task_order_no', label:'工单' },
+      { key:'line_code', label:'线体' },
+      { key:'work_operation_code', label:'工序' },
+      { key:'last_time', label:'最后过站', fmt:function(v){ return v ? new Date(v).toLocaleString('zh-CN',{hour12:false}) : ''; } },
+      { key:'wait_minutes', label:'等待(分)' },
+      { key:'wait_display', label:'等待' }
+    ]
+  },
+  'work-orders': {
+    label: '工单明细', api: '/api/work-order-progress', dataPath: null,
+    dimField: { line:'line_code', order:'task_no' },
+    columns: [
+      { key:'task_no', label:'工单号', cellStyle:'font-family:Consolas,monospace;font-size:11px' },
+      { key:'mo_lot_no', label:'制造单号' },
+      { key:'product_model', label:'型号' },
+      { key:'qty', label:'计划量' },
+      { key:'completed', label:'完成量' },
+      { key:'progress', label:'进度', fmt:function(v){ return v != null ? v + '%' : '-'; } },
+      { key:'status', label:'状态' },
+      { key:'line_code', label:'线体' },
+      { key:'current_operation', label:'当前工序' }
+    ]
+  },
+  'exceptions': {
+    label: '异常列表', api: '/api/exceptions', dataPath: 'rows',
+    dimField: { line:'line_name' },
+    columns: [
+      { key:'line_name', label:'线体' },
+      { key:'category', label:'类别' },
+      { key:'level', label:'级别' },
+      { key:'title', label:'标题' },
+      { key:'status', label:'状态' },
+      { key:'createdAt', label:'时间', fmt:function(v){ return v ? new Date(v).toLocaleString('zh-CN',{hour12:false}) : ''; } }
+    ]
+  },
+  'insights': {
+    label: 'AI 洞察', api: '/api/ai-insights', dataPath: 'insights',
+    dimField: { level:'level',page:'page' },
+    columns: [
+      { key:'level', label:'级别' },
+      { key:'page', label:'来源页' },
+      { key:'title', label:'洞察' },
+      { key:'message', label:'描述' },
+      { key:'time', label:'时间', fmt:function(v){ return v ? new Date(v).toLocaleString('zh-CN',{hour12:false}) : ''; } }
+    ]
+  },
+  'stations': {
+    label: '工位明细', api: '/api/line-balance', dataPath: 'stations',
+    dimField: { station:'operation' },
+    columns: [
+      { key:'operation', label:'工站代码', cellStyle:'font-family:Consolas,monospace;font-size:11px' },
+      { key:'operation_name', label:'工站' },
+      { key:'wip_count', label:'WIP' },
+      { key:'uph', label:'UPH' },
+      { key:'ct_seconds', label:'节拍(秒)' },
+      { key:'is_ct_bottleneck', label:'瓶颈', fmt:function(v){ return v ? '是' : ''; }, cellStyle:'color:var(--warning)' }
+    ]
+  },
+  'output-sn': {
+    label: '产量 SN 流水', api: '/api/output/sns', dataPath: 'data',
+    dimField: { line: 'line_name' },
+    columns: [
+      { key: 'barcode', label: '条码', cellStyle: 'font-family:Consolas,monospace;font-size:11px' },
+      { key: 'line_name', label: '线体' },
+      { key: 'product_model', label: '型号' },
+      { key: 'first_time', label: '首过站', fmt: function (v) { return v ? new Date(v).toLocaleString('zh-CN', { hour12: false }) : ''; } },
+      { key: 'last_time', label: '末过站', fmt: function (v) { return v ? new Date(v).toLocaleString('zh-CN', { hour12: false }) : ''; } }
+    ]
+  },
+  'sn-trace': {
+    label: 'SN 过站轨迹', api: '/api/sn/trace', dataPath: 'data',
+    dimField: {},
+    columns: [
+      { key: 'work_operation_code', label: '工序', cellStyle: 'font-family:Consolas,monospace;font-size:11px' },
+      { key: 'move_out_time', label: '过站时间', fmt: function (v) { return v ? new Date(v).toLocaleString('zh-CN', { hour12: false }) : ''; } },
+      { key: 'line_name', label: '线体' },
+      { key: 'sort_no', label: '顺序' }
+    ]
+  },
+  'rework': {
+    label: '返工明细', api: '/api/rework/records', dataPath: 'data',
+    dimField: { line: 'line_name' },
+    columns: [
+      { key: 'barcode', label: '条码', cellStyle: 'font-family:Consolas,monospace;font-size:11px' },
+      { key: 'line_name', label: '线体' },
+      { key: 'repair_total', label: '返工次数' },
+      { key: 'product_model', label: '型号' }
+    ]
+  },
+  'bad-shift': {
+    label: '班次不良分布', api: '/api/bad/by-shift', dataPath: 'data',
+    dimField: { shift: 'shift' },
+    columns: [
+      { key: 'shift', label: '班次' },
+      { key: 'count', label: '不良数' },
+      { key: 'rate', label: '不良率', fmt: function (v) { return v != null ? v + '%' : '-'; } }
+    ]
+  },
+  'output-shift': {
+    label: '班次产量分布', api: '/api/output/by-shift', dataPath: 'data',
+    dimField: { shift: 'shift' },
+    columns: [
+      { key: 'shift', label: '班次' },
+      { key: 'count', label: '产量' },
+      { key: 'rate', label: '占比', fmt: function (v) { return v != null ? v + '%' : '-'; } }
+    ]
+  }
+};
+
+var ctx = window.DrillCtx ? DrillCtx.fromQuery() : {};
+var currentCfg = null;
+var currentLine = '';
+var currentPage = 1;
+
+function goBack() {
+  if (window.history.length > 1) { window.history.back(); }
+  else { window.location.href = ctx.from ? ctx.from : 'portal.html'; }
+}
+
+function init() {
+  var source = ctx.source;
+  if (!source || !SOURCE_MAP[source]) { showEmpty('未指定明细类型或类型未知', '请从看板页图表下钻进入'); return; }
+  var cfg = SOURCE_MAP[source];
+  currentCfg = cfg;
+  document.title = cfg.label + ' - 数据明细';
+  document.getElementById('detailTitle').textContent = cfg.label;
+  renderBreadcrumb(cfg);
+
+  if (cfg.pending) { showEmpty('「' + cfg.label + '」明细接口开发中', '该维度明细数据接口将在后续阶段提供,暂未上线'); return; }
+
+  // 范围信息
+  var f = ctx.filter || {};
+  document.getElementById('rangeInfo').textContent = (f.dateFrom || '?') + ' ~ ' + (f.dateTo || '?');
+
+  // 服务端分页配置: 仅对支持分页的 source 开启
+  var PAGED_SOURCES = ['bad-records', 'downtime', 'wip-sn', 'output-sn', 'rework'];
+  cfg._paged = PAGED_SOURCES.indexOf(source) >= 0;
+
+  DetailTable.mount({
+    tbodyId: 'detailBody', theadId: 'detailHead', paginationId: 'pagination', infoId: 'tableInfo',
+    columns: cfg.columns, pageSize: 50,
+    serverPaging: cfg._paged,
+    onPageChange: cfg._paged ? function (page) { currentPage = page; loadData(page); } : null,
+    onRowClick: cfg.rowClick || defaultRowClick
+  });
+
+  loadLineOptions();
+  loadData(1);
+}
+
+function renderBreadcrumb(cfg) {
+  var el = document.getElementById('detailBreadcrumb');
+  var parts = [];
+  var fromLabel = { 'portal.html':'经营首页', 'cockpit.html':'驾驶舱', 'oee.html':'OEE分析', 'wip.html':'WIP追踪', 'bad.html':'不良管理', 'line-balance.html':'线平衡', 'kanban.html':'生产看板', 'ai-center.html':'AI中心', 'detail.html':'数据明细' }[ctx.from] || ctx.from || '看板';
+  // 来源页可点击返回(与"返回"按钮等价),dimValue/cfg.label 仅展示
+  if (ctx.from) {
+    parts.push('<span class="crumb-link" title="返回' + escSafe(fromLabel) + '" onclick="goBack()">' + escSafe(fromLabel) + '</span>');
+  } else {
+    parts.push('<span>' + escSafe(fromLabel) + '</span>');
+  }
+  parts.push('<span class="crumb-sep">›</span>');
+  parts.push('<span>' + cfg.label + '</span>');
+  if (ctx.dimValue) {
+    var dimLabel = (window.DrillLink && DrillLink.DIM_LABELS[ctx.dimension]) || ctx.dimension || '';
+    parts.push('<span class="crumb-sep">›</span>');
+    parts.push('<span class="crumb-dim">' + (dimLabel ? escSafe(dimLabel) + ': ' : '') + escSafe(ctx.dimValue) + '</span>');
+  }
+  el.innerHTML = parts.join('');
+}
+
+function loadLineOptions() {
+  apiFetch('/api/lines').then(function (res) {
+    if (!res) return;
+    var items = res.items || res.data || res || [];
+    if (!Array.isArray(items)) return;
+    var sel = document.getElementById('lineSelect');
+    items.forEach(function (it) {
+      var name = it.line_name || it.name || it.lineName || it;
+      var val = it.line_code || it.code || name;
+      var opt = document.createElement('option');
+      opt.value = val; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    // 预选 ctx.filter.line
+    if (ctx.filter && ctx.filter.line) { sel.value = ctx.filter.line; currentLine = ctx.filter.line; }
+  });
+}
+
+function onLineChange() {
+  currentLine = document.getElementById('lineSelect').value;
+  currentPage = 1;
+  loadData(1);
+}
+
+function buildQuery(cfg) {
+  var f = ctx.filter || {};
+  var p = new URLSearchParams();
+  if (f.dateFrom) p.set('dateFrom', f.dateFrom);
+  if (f.dateTo) p.set('dateTo', f.dateTo);
+  // 线体:URL 预设 > 页内选择
+  var line = currentLine || (f.line || '');
+  if (line) { p.set('line', line); p.set('lineName', line); } // 部分端点用 lineName
+  // wip-sn 必传 operation
+  if (ctx.source === 'wip-sn' && ctx.dimValue) p.set('operation', ctx.dimValue);
+  // output-sn 按小时:dimValue 形如 "8:00",API +hour 转数字
+  if (ctx.source === 'output-sn' && ctx.dimValue) p.set('hour', parseInt(ctx.dimValue, 10));
+  // sn-trace 按 barcode
+  if (ctx.source === 'sn-trace' && ctx.dimValue) p.set('barcode', ctx.dimValue);
+  return p.toString();
+}
+
+function loadData(page) {
+  if (!currentCfg || currentCfg.pending) return;
+  if (page == null) page = currentPage || 1;
+  currentPage = page;
+  document.getElementById('detailBody').innerHTML = '<tr><td class="detail-loading"><span class="dl-spinner"></span>加载中...</td></tr>';
+  var qs = buildQuery(currentCfg);
+  // 服务端分页: 带 page/pageSize
+  if (currentCfg._paged) {
+    qs += (qs ? '&' : '') + 'page=' + page + '&pageSize=' + (DetailTable.getPageSize ? DetailTable.getPageSize() : 50);
+  }
+  var url = currentCfg.api + (currentCfg.api.indexOf('?') >= 0 ? '&' : '?') + qs;
+  apiFetch(url).then(function (res) {
+    if (!res) { document.getElementById('detailBody').innerHTML = '<tr><td class="detail-loading">加载失败,请重试</td></tr>'; return; }
+    var items = extractItems(res, currentCfg);
+    var serverTotal = (items && items.__total != null) ? items.__total : null;
+    // 服务端分页时不在前端再按 dim 过滤(API 已按 line 过滤;dimValue 仅作 breadcrumb 展示)
+    if (!currentCfg._paged) items = filterByDim(items, currentCfg);
+    if (currentCfg._paged) {
+      DetailTable.setItems(items, { total: serverTotal != null ? serverTotal : items.length, keepPage: true });
+    } else {
+      DetailTable.setItems(items);
+    }
+    // 空态引导: 筛选范围内该维度值无记录时,展示带维度标签的引导文案(覆盖"暂无数据")
+    if (!DetailTable.getItems().length && ctx.dimValue) {
+      var dimLabel = (window.DrillLink && DrillLink.DIM_LABELS[ctx.dimension]) || ctx.dimension || '';
+      var tip = dimLabel ? '该 ' + dimLabel + ':' + ctx.dimValue + ' 在当前筛选范围内无记录'
+                         : '当前筛选范围内无记录';
+      document.getElementById('detailBody').innerHTML =
+        '<tr><td colspan="' + Math.max(currentCfg.columns.length, 1) + '" style="text-align:center;color:var(--text-muted);padding:30px;">' + escSafe(tip) + '</td></tr>';
+    }
+  });
+}
+
+// extractItems: 兼容旧裸数组/旧 {data:[...]} 与新统一 envelope {success,data:{items,total,page,pageSize}}
+// 同时通过返回的 .__total 透传服务端 total(供 setTotal)
+function extractItems(res, cfg) {
+  // 优先识别新 envelope: res.data 是对象且含 items 数组 (output-sn/rework/downtime/wip-sn 分页态)
+  if (res && res.data && !Array.isArray(res.data) && Array.isArray(res.data.items)) {
+    return withTotal(res.data.items, res.data.total);
+  }
+  if (cfg.dataPath) {
+    var parts = cfg.dataPath.split('.');
+    var v = res;
+    for (var i = 0; i < parts.length; i++) { v = v && v[parts[i]]; }
+    // dataPath 命中的节点本身也可能是新 envelope {items,total}
+    if (v && !Array.isArray(v) && Array.isArray(v.items)) {
+      return withTotal(v.items, v.total);
+    }
+    if (Array.isArray(v)) {
+      // bad-records 等带 badItemsTotal 的端点: 透传 total
+      var t = (res && res.badItemsTotal != null) ? res.badItemsTotal : null;
+      return withTotal(v, t);
+    }
+    return [];
+  }
+  // dataPath=null:res 本身可能是数组,或在 res.data
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray(res.data)) return res.data;
+  if (res && Array.isArray(res.items)) return res.items;
+  return [];
+}
+// 把 total 挂到数组上(非标准但够用;extractItems 调用方读取 .__total)
+function withTotal(arr, total) {
+  if (Array.isArray(arr)) { arr.__total = (total != null) ? total : arr.length; }
+  return arr;
+}
+
+function filterByDim(items, cfg) {
+  if (!ctx.dimValue || !cfg.dimField) return items;
+  var field = cfg.dimField[ctx.dimension];
+  if (!field) return items;
+  return items.filter(function (it) {
+    var v = it[field];
+    return v != null && String(v) === String(ctx.dimValue);
+  });
+}
+
+function defaultRowClick(row) {
+  // 默认行点击:若有 barcode,开 Drawer 显示该行详情(未来可跳 sn-trace)
+  if (!row) return;
+  // L4:有 barcode 的行 → 跳 SN 过站轨迹(sn-trace);无 barcode → 开 Drawer 显示行字段
+  if (row.barcode && window.DrillLink && ctx.source !== 'sn-trace') {
+    DrillLink.openL3('sn-trace', row.barcode, null, { dimension: 'barcode', chart: ctx.source });
+    return;
+  }
+  var html = '<table class="sn-table" style="font-size:12px"><tbody>';
+  Object.keys(row).forEach(function (k) {
+    html += '<tr><td style="color:var(--text-muted);width:120px">' + k + '</td><td>' + escSafe(row[k]) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  if (window.WipUI && WipUI.Drawer) {
+    WipUI.Drawer.open({ title: '明细详情', stats: [], html: html, showExport: false });
+  }
+}
+
+function exportData() {
+  if (!currentCfg || currentCfg.pending) return;
+  var items = DetailTable.getItems();
+  if (!items.length) { if (window.Toast) Toast.info('暂无数据可导出'); return; }
+  // 文件名净化: 仅保留中文/字母/数字/_-. (空格与特殊字符替换为_, 长度上限50)
+  var datePart = (ctx.filter && ctx.filter.dateFrom) ? sanitizeFilename(ctx.filter.dateFrom) : '';
+  var dimPart = ctx.dimValue ? '_' + sanitizeFilename(ctx.dimValue) : '';
+  var name = sanitizeFilename(currentCfg.label) + '_' + datePart + dimPart;
+  DetailTable.exportCSV(name);
+}
+
+// 文件名净化: 白名单 [中文一-龥 A-Za-z0-9 _ - .], 空格/路径分隔/特殊字符替换为 _, 长度上限50
+function sanitizeFilename(v) {
+  var s = String(v == null ? '' : v);
+  if (s.length > 50) s = s.slice(0, 50);
+  return s.replace(/[^一-龥A-Za-z0-9_.\-]/g, '_');
+}
+
+function showEmpty(title, sub) {
+  var wrap = document.getElementById('tableWrap');
+  wrap.innerHTML = '<div class="detail-empty"><div class="empty-icon">📋</div><div>' + title + '</div><div style="font-size:12px">' + sub + '</div></div>';
+  document.getElementById('pagination').innerHTML = '';
+  document.getElementById('tableInfo').textContent = '';
+}
+
+function escSafe(s) {
+  if (s == null) return '';
+  if (typeof window.escHtml === 'function') return window.escHtml(s);
+  return String(s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; });
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+</script>
+</body>
+</html>
