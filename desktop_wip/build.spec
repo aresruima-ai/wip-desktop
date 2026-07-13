@@ -68,7 +68,8 @@ a = Analysis(
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 if _IS_MAC:
-    # macOS:onedir + COLLECT → 自动出 WipDesktop.app bundle(可双击运行)
+    # macOS:onedir + COLLECT + BUNDLE → WipDesktop.app(可双击运行)
+    # .spec 文件需显式 BUNDLE() 才出 .app(命令行 --windowed 会自动加,spec 不会)
     exe = EXE(
         pyz,
         a.scripts, [],
@@ -77,7 +78,7 @@ if _IS_MAC:
         debug=False,
         strip=False,
         upx=False,             # Mac 上 upx 无效
-        console=False,         # windowed → Mac 自动出 .app bundle
+        console=False,         # windowed
         disable_windowed_traceback=False,
         target_arch=None,
         codesign_identity=None,
@@ -89,6 +90,19 @@ if _IS_MAC:
         a.zipfiles,
         a.datas,
         name='WipDesktop',
+    )
+    app = BUNDLE(
+        coll,
+        name='WipDesktop.app',
+        icon=None,                           # Mac 用 .icns,此处用默认图标
+        bundle_identifier='com.cviauto.wipdesktop',
+        info_plist={
+            'CFBundleName': 'WIP 在制品追踪',
+            'CFBundleDisplayName': 'WIP 在制品追踪',
+            'CFBundleShortVersionString': '1.0.0',
+            'NSHighResolutionCapable': True,
+            'LSMinimumSystemVersion': '10.13',
+        },
     )
 else:
     # Windows:onefile 单文件 WipDesktop.exe
