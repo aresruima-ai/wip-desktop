@@ -437,6 +437,8 @@ const WIP_DESKTOP_WHITELIST = new Set([
   '/wip.html',
   '/api/wip',
   '/api/wip/overview',
+  '/api/wip/by-batch',
+  '/api/wip/sns-by-order',
   '/api/wip/detail',
   '/api/wip/cycle-detail',
   '/api/wip/snapshots',
@@ -1066,7 +1068,7 @@ async function getWipSnDetail(dateFrom, dateTo, opCode, lineName) {
   const snLastOp = await prodCol.aggregate([
     { $match: db.prefixAi(match) },
     { $sort: { ai_move_out_time: 1 } },
-    { $group: { _id: '$ai_barcode', last_op: { $last: '$ai_work_operation_code' }, last_sort: { $last: '$ai_sort_no' }, line_name: { $last: '$ai_line_name' }, line_id: { $last: '$ai_line_id' }, product_model: { $last: '$ai_product_model' }, task_order_no: { $last: '$ai_task_order_no' }, work_operation_id: { $last: '$ai_work_operation_id' }, next_work_operation_code: { $last: '$ai_next_work_operation_code' }, last_time: { $last: '$ai_move_out_time' } } }
+    { $group: { _id: '$ai_barcode', last_op: { $last: '$ai_work_operation_code' }, last_sort: { $last: '$ai_sort_no' }, line_name: { $last: '$ai_line_name' }, line_id: { $last: '$ai_line_id' }, product_model: { $last: '$ai_product_model' }, task_order_no: { $last: '$ai_task_order_no' }, mo_lot_no: { $last: '$ai_mo_lot_no' }, work_operation_id: { $last: '$ai_work_operation_id' }, next_work_operation_code: { $last: '$ai_next_work_operation_code' }, last_time: { $last: '$ai_move_out_time' } } }
   ]).toArray();
 
   // 工艺路线
@@ -1091,6 +1093,7 @@ async function getWipSnDetail(dateFrom, dateTo, opCode, lineName) {
       barcode: sn._id,
       product_model: sn.product_model,
       task_order_no: sn.task_order_no || '',
+      mo_lot_no: sn.mo_lot_no || '',
       line_code: sn.line_name || '',
       line_name: lineNameMap[sn.line_name] || sn.line_name,
       line_id: sn.line_id || '',
@@ -1106,6 +1109,17 @@ async function getWipSnDetail(dateFrom, dateTo, opCode, lineName) {
 
   // 按滞留时间降序排
   sns.sort((a,b) => b.wait_minutes - a.wait_minutes);
+  // 批次号:ai_production 的 ai_mo_lot_no 通常为空,通过 task_order_no 关联 ai_task_orders 工单表取 mo_lot_no
+  const taskNos = [...new Set(sns.map(s=>s.task_order_no).filter(Boolean))];
+  const moLotMap = {};
+  if (taskNos.length) {
+    const taskCol = mongodb.collection('ai_task_orders');
+    try {
+      const taskRows = db.stripAi(await taskCol.find(db.prefixAi({task_no:{$in:taskNos}}), {projection:{_id:0,ai_task_no:1,ai_mo_lot_no:1}}).toArray());
+      taskRows.forEach(r=>{ if(r.mo_lot_no) moLotMap[r.task_no]=r.mo_lot_no; });
+    } catch(e) { console.error('[WipDetail] task_orders 关联批次号失败:', e.message); }
+  }
+  sns.forEach(s=>{ s.mo_lot_no = s.mo_lot_no || moLotMap[s.task_order_no] || ''; });
   const orderMap = {};
   for (const sn of sns) {
     const key = sn.task_order_no || '未关联工单';
@@ -1136,13 +1150,14 @@ async function getWipSnDetail(dateFrom, dateTo, opCode, lineName) {
 }
 
 // ===== Compute WIP =====
-async function computeWIP(dateFrom, dateTo, lineName) {
+async function computeWIP(dateFrom, dateTo, lineName, productModel) {
   const mongodb = db.getDb();
   const prodCol = mongodb.collection('ai_production');
   const routeCol = mongodb.collection('ai_process_routes');
 
   const match = { move_out_date: { $gte: dateFrom, $lte: dateTo } };
   if (lineName) match.line_name = lineName;
+  if (productModel) match.product_model = productModel;  // 机型过滤:只统计该机型 SN 的 WIP
 
   // 每个SN最后过的工序
   const snLastOp = await prodCol.aggregate([
@@ -1214,7 +1229,96 @@ async function computeWIP(dateFrom, dateTo, lineName) {
   };
 }
 
-// ===== 12-KPI Phase1: 质量域计算 (直通率/返工率) =====
+// ===== 批次维度 WIP(计划工程师:每批次在制 SN 数 + 卡在哪工序 + 最久滞留)=====
+async function computeWipByBatch(dateFrom, dateTo, lineName) {
+  const mongodb = db.getDb();
+  const prodCol = mongodb.collection('ai_production');
+  const routeCol = mongodb.collection('ai_process_routes');
+  const taskCol = mongodb.collection('ai_task_orders');
+
+  // 工序中文名映射(复用引用缓存 db.getWorkOperations)
+  const opMap = {};
+  try { (await db.getWorkOperations()).forEach(o => { opMap[o.code] = o.name; }); } catch(e) {}
+
+  const match = { move_out_date: { $gte: dateFrom, $lte: dateTo } };
+  if (lineName) match.line_name = lineName;
+
+  // 每个 SN 最后工序 + 带 mo_lot_no(从 ai_production 取;为空则后续按 task_order_no 关联工单表补)
+  const snLastOp = await prodCol.aggregate([
+    { $match: db.prefixAi(match) },
+    { $sort: { ai_move_out_time: 1 } },
+    { $group: {
+      _id: '$ai_barcode',
+      last_op: { $last: '$ai_work_operation_code' },
+      last_sort: { $last: '$ai_sort_no' },
+      line_name: { $last: '$ai_line_name' },
+      product_model: { $last: '$ai_product_model' },
+      task_order_no: { $last: '$ai_task_order_no' },
+      mo_lot_no: { $last: '$ai_mo_lot_no' },
+      last_time: { $last: '$ai_move_out_time' }
+    }}
+  ]).toArray();
+
+  // 工艺路线(判断 WIP vs 完工)
+  const routes = db.stripAi(await routeCol.find(db.prefixAi(lineName ? {line_name:lineName} : {})).toArray());
+  const routeMap = {};
+  for (const r of routes) routeMap[r.line_name+'|'+r.product_model] = r.operations;
+
+  // mo_lot_no 缺失的,通过 task_order_no 关联 ai_task_orders 补
+  const taskNos = [...new Set(snLastOp.filter(s=>!s.mo_lot_no && s.task_order_no).map(s=>s.task_order_no))];
+  const moLotMap = {};
+  if (taskNos.length) {
+    const taskRows = db.stripAi(await taskCol.find(db.prefixAi({task_no:{$in:taskNos}}), {projection:{_id:0,ai_task_no:1,ai_mo_lot_no:1}}).toArray());
+    taskRows.forEach(r=>{ if(r.mo_lot_no) moLotMap[r.task_no]=r.mo_lot_no; });
+  }
+
+  // 按批次聚合 WIP(未完工 SN:最后工序≠路线末工序)
+  const now = new Date();
+  const batchMap = {};  // mo_lot_no -> {mo_lot_no, wip:[], by_op:{}, max_wait_min}
+  for (const sn of snLastOp) {
+    const ops = routeMap[sn.line_name+'|'+sn.product_model] || [];
+    const lastRouteOp = ops.length>0 ? ops[ops.length-1].name : null;
+    // 完工(SN 已到末工序)不计入 WIP
+    if (lastRouteOp && sn.last_op === lastRouteOp) continue;
+    const lot = sn.mo_lot_no || moLotMap[sn.task_order_no] || '';
+    const key = lot || '(无批次)';
+    if (!batchMap[key]) batchMap[key] = { mo_lot_no: lot, task_order_nos: new Set(), by_op: {}, wip_count: 0, max_wait_min: 0, line_names: new Set(), product_models: new Set() };
+    const b = batchMap[key];
+    b.wip_count++;
+    if (sn.task_order_no) b.task_order_nos.add(sn.task_order_no);
+    if (sn.line_name) b.line_names.add(sn.line_name);
+    if (sn.product_model) b.product_models.add(sn.product_model);
+    const opName = sn.last_op || '未知';
+    b.by_op[opName] = (b.by_op[opName]||0) + 1;
+    if (sn.last_time) {
+      const waitMin = Math.round((now - new Date(sn.last_time)) / 60000);
+      if (waitMin > b.max_wait_min) b.max_wait_min = waitMin;
+    }
+  }
+
+  // 转数组 + 派生:主要卡点工序(max by_op)、涉及工单数/产线/型号
+  const batches = Object.values(batchMap).map(b => {
+    const ops = Object.entries(b.by_op).sort((a,c)=>c[1]-a[1]);
+    return {
+      mo_lot_no: b.mo_lot_no,
+      wip_count: b.wip_count,
+      task_order_count: b.task_order_nos.size,
+      task_order_nos: [...b.task_order_nos],
+      line_names: [...b.line_names],
+      product_models: [...b.product_models],
+      by_operation: ops.map(([op,c])=>({operation:op,operation_name:opMap[op]||op,count:c})),
+      primary_operation: ops.length ? (opMap[ops[0][0]]||ops[0][0]) : '--',   // 卡住最多 SN 的工序(中文名)
+      max_wait_min: b.max_wait_min
+    };
+  }).sort((a,b)=>b.wip_count-a.wip_count || b.max_wait_min-a.max_wait_min);  // 在制多/滞留久在前
+
+  return {
+    total_batches: batches.length,
+    total_wip: batches.reduce((s,b)=>s+b.wip_count,0),
+    batches: batches.slice(0, 50)  // 截顶 50 批(计划工程师关注 Top 在制)
+  };
+}
+
 async function computeQuality(dateFrom, dateTo, lineName='') {
   const mdb = db.getDb();
   const lineFilter = lineName ? { line_name: lineName } : {};
@@ -1262,6 +1366,13 @@ async function computeDelivery(dateFrom, dateTo, lineName='') {
   // 工单(MoOrder 快照) — 全量
   const moOrders = db.stripAi(await mdb.collection('ai_mo_orders').find({}).toArray());
 
+  // line_id → line_name(code) 映射: ai_task_order_wip 只有 line_id(hash),需转成产线 code 再转中文名
+  // 从 ai_production 建(line_id + line_name 都有),缓存引用
+  const prodCol = mdb.collection('ai_production');
+  const lineIdRows = db.stripAi(await prodCol.find({}, {projection:{_id:0,ai_line_id:1,ai_line_name:1}}).toArray());
+  const lineIdToName = {};
+  lineIdRows.forEach(r => { if(r.line_id && r.line_name) lineIdToName[r.line_id] = r.line_name; });
+
   // 计划达成率: 全部在制工单 Σ(reported_completed_qty) / Σ(qty)
   const planTotalQty = moOrders.reduce((s, o) => s + (o.qty || 0), 0);
   const planCompletedQty = moOrders.reduce((s, o) => s + (o.reported_completed_qty || 0), 0);
@@ -1283,9 +1394,15 @@ async function computeDelivery(dateFrom, dateTo, lineName='') {
     byLine[lineKey].sum += h; byLine[lineKey].cnt++; byLine[lineKey].wip_qty += (w.wip_qty || 0);
   }
   const wipCycleHours = wipCnt > 0 ? +(wipSum / wipCnt).toFixed(1) : null;
-  const byLineArr = Object.entries(byLine).map(([line_id, v]) => ({
-    line: lineNameMap[line_id] || line_id, line_id, wip_cycle_hours: v.cnt > 0 ? +(v.sum / v.cnt).toFixed(1) : null, wip_count: v.cnt, wip_qty: v.wip_qty
-  })).sort((a, b) => (b.wip_qty || 0) - (a.wip_qty || 0));
+  const byLineArr = Object.entries(byLine).map(([line_id, v]) => {
+    const lineName = lineIdToName[line_id] || '';        // hash → 产线 code(如 ASS_Line3)
+    const lineDisplay = lineNameMap[lineName] || lineName || line_id;  // code → 中文名(如 整机3线),无则 fallback
+    return {
+      line: lineDisplay, line_id, line_name: lineName,
+      wip_cycle_hours: v.cnt > 0 ? +(v.sum / v.cnt).toFixed(1) : null,
+      wip_count: v.cnt, wip_qty: v.wip_qty
+    };
+  }).sort((a, b) => (b.wip_qty || 0) - (a.wip_qty || 0));
 
   return {
     plan_rate: planRate, plan_total_qty: planTotalQty, plan_completed_qty: planCompletedQty,
@@ -2397,10 +2514,11 @@ const server = http.createServer(async (req, res) => {
     if(path==='/api/wip'){
       const started=Date.now();
       const df=params.get('dateFrom')||today(),dt=params.get('dateTo')||df,line=params.get('lineName')||'';
-      const wKey=`wip|${df}|${dt}|${line}`;
+      const productModel=params.get('productModel')||'';  // 机型过滤(工艺路线选机型后按此取该机型WIP)
+      const wKey=`wip|${df}|${dt}|${line}|${productModel}`;
       const wHit=dashCache.getWithMeta(wKey);
       if(wHit.hit){ json({...wHit.val, cached:true, elapsed_ms:Date.now()-started}); return; }
-      const wipData = await computeWIP(df,dt,line);
+      const wipData = await computeWIP(df,dt,line,productModel||undefined);
       // 加入工序中文名(复用引用缓存, 避免全表扫描)
       try {
         const opMap = {};
@@ -2409,6 +2527,53 @@ const server = http.createServer(async (req, res) => {
       } catch(e) {}
       dashCache.set(wKey, wipData, isPastDate(dt) ? DASH_TTL_PAST : DASH_TTL_TODAY);
       json({...wipData, cached:false, elapsed_ms:Date.now()-started});return;
+    }
+    // 批次维度 WIP(计划工程师:每批次在制 SN 数 + 卡在哪工序 + 最久滞留)
+    if(path==='/api/wip/by-batch'){
+      const df=params.get('dateFrom')||today(),dt=params.get('dateTo')||df,line=params.get('lineName')||'';
+      const started=Date.now();
+      try {
+        const data = await computeWipByBatch(df,dt,line);
+        json({...data, cached:false, elapsed_ms:Date.now()-started});
+      } catch(e){ json({success:false, error:e.message}, 500); }
+      return;
+    }
+    // 按工单/批次取在制 SN 明细(下钻第2层:工单→SN)
+    if(path==='/api/wip/sns-by-order'){
+      const df=params.get('dateFrom')||today(),dt=params.get('dateTo')||df;
+      const taskNo=params.get('taskNo')||'';
+      const moLotNo=params.get('moLotNo')||'';
+      if(!taskNo&&!moLotNo){json({error:'需要 taskNo 或 moLotNo 参数'},400);return;}
+      const started=Date.now();
+      try {
+        const mongodb=db.getDb();
+        const prodCol=mongodb.collection('ai_production');
+        const taskCol=mongodb.collection('ai_task_orders');
+        const match={move_out_date:{$gte:df,$lte:dt}};
+        // 若只给 moLotNo,先查出对应 task_no 集合
+        let taskFilter={};
+        if(taskNo) taskFilter.task_order_no=taskNo;
+        else {
+          const taskRows=db.stripAi(await taskCol.find(db.prefixAi({mo_lot_no:moLotNo}),{projection:{_id:0,ai_task_no:1}}).toArray());
+          const nos=taskRows.map(r=>r.task_no).filter(Boolean);
+          if(!nos.length){json({success:true,items:[],total:0,elapsed_ms:Date.now()-started});return;}
+          taskFilter.task_order_no={$in:nos};
+        }
+        // 每个 SN 最后工序 + 滞留
+        const snLastOp=await prodCol.aggregate([
+          {$match:db.prefixAi({...match,...taskFilter})},
+          {$sort:{ai_move_out_time:1}},
+          {$group:{_id:'$ai_barcode',last_op:{$last:'$ai_work_operation_code'},last_sort:{$last:'$ai_sort_no'},line_name:{$last:'$ai_line_name'},product_model:{$last:'$ai_product_model'},task_order_no:{$last:'$ai_task_order_no'},mo_lot_no:{$last:'$ai_mo_lot_no'},last_time:{$last:'$ai_move_out_time'}}}
+        ]).toArray();
+        const now=new Date();
+        const items=snLastOp.map(s=>{
+          const waitMin=s.last_time?Math.round((now-new Date(s.last_time))/60000):0;
+          const wH=Math.floor(waitMin/60),wM=waitMin%60;
+          return {barcode:s._id,task_order_no:s.task_order_no||'',mo_lot_no:s.mo_lot_no||'',product_model:s.product_model||'',line_name:s.line_name||'',work_operation_code:s.last_op||'',sort_no:s.last_sort||0,last_time:s.last_time,wait_minutes:waitMin,wait_display:wH>0?wH+'h'+wM+'m':wM+'m'};
+        }).sort((a,b)=>b.wait_minutes-a.wait_minutes);
+        json({success:true,items:items,total:items.length,elapsed_ms:Date.now()-started});
+      } catch(e){ json({success:false,error:e.message},500); }
+      return;
     }
     // 12-KPI Phase1: 质量域
     if(path==='/api/quality'){

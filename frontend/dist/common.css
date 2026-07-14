@@ -1789,11 +1789,19 @@ html.vt-entered {
 }
 .drawer-mask.show { display: block; }
 .drawer {
-  position: fixed; top: 0; right: -580px; bottom: 0; width: 580px;
+  position: fixed; top: 0; bottom: 0;
+  --drawer-w: 580px;
+  width: var(--drawer-w);
+  right: calc(-1 * var(--drawer-w));
   background: var(--surface-1); border-left: 1px solid var(--line);
   z-index: 1000; transition: right var(--dur-slow) var(--ease); overflow-y: auto;
 }
 .drawer.show { right: 0; }
+/* WIP 专属加宽 modifier(oee 等他页不加此类,零影响) */
+.drawer--wide { --drawer-w: min(800px, 45vw); }
+@media (max-width: 720px) {
+  .drawer--wide { --drawer-w: 100vw; }
+}
 .drawer-header {
   padding: 16px 22px; border-bottom: 1px solid var(--line);
   display: flex; align-items: center; justify-content: space-between;
